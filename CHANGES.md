@@ -4,6 +4,12 @@
 
 ## Released
 
+### Version 0.0.1a4
+
+Released 2021-10-11
+
+* json import bug fixed within cli.
+
 ### Version 0.0.1a3
 
 Released 2021-10-11
