@@ -2,8 +2,7 @@ import graph_onedrive
 
 
 def main():
-    """ Interact with Microsoft Onedrive.
-    """
+    """Interact with Microsoft Onedrive."""
 
     # Set config
     client_id: str = ""
@@ -11,9 +10,11 @@ def main():
     tenant: str = "common"  # Optional, default set
     redirect_url: str = "http://localhost:8080"  # Optional, default set
     refresh_token: str = ""  # Optional: from last session
-    
+
     # Create session instance
-    onedrive = graph_onedrive.create(client_id, client_secret, tenant, redirect_url, refresh_token)
+    onedrive = graph_onedrive.create(
+        client_id, client_secret, tenant, redirect_url, refresh_token
+    )
 
     # Complete tasks using the instance. For this example we will just display the usage
     onedrive.get_usage(verbose=True)

@@ -1,3 +1,3 @@
 from setuptools import setup
 
-setup(name = "graph_onedrive")
+setup(name="graph_onedrive")
