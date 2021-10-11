@@ -1,4 +1,4 @@
-"""Microsoft Onedrive functions using the Graph API.
+"""Microsoft OneDrive functions using the Graph API.
 """
 import json
 import urllib
@@ -15,8 +15,8 @@ from typing import Optional, Union, Any, List, Dict, Tuple
 from graph_onedrive._decorators import token_required
 
 
-class Onedrive:
-    """Creates an instance to interact with Microsoft's Onedrive platform through their Graph API.
+class OneDrive:
+    """Creates an instance to interact with Microsoft's OneDrive platform through their Graph API.
         Positional arguments:
             client_id (str)     -- Azure app client id
             client_secret (str) -- Azure app client secret
@@ -178,7 +178,7 @@ class Onedrive:
 
     @token_required
     def get_usage(self, unit: str = "gb", refresh: bool = False, verbose: bool = False) -> Tuple[float, float, str]:
-        """Get the current usage and capacity of the connected Onedrive.
+        """Get the current usage and capacity of the connected OneDrive.
             Keyword arguments:
                 unit (str) -- unit to return value ["b", "kb", "mb", "gb"] (default = "gb")
                 refresh (bool) -- refresh the usage data (default = False)
@@ -213,7 +213,7 @@ class Onedrive:
 
     @token_required
     def list_directory(self, folder_id: Optional[str] = None, verbose: bool = False) -> List[Dict]:
-        """List the files and folders within the input folder/root of the connected Onedrive.
+        """List the files and folders within the input folder/root of the connected OneDrive.
             Keyword arguments:
                 folder_id (str) -- the item id of the folder to look into, None being the root directory (default = None)
                 verbose (bool) -- print the items along with their ids (default = False)
@@ -276,7 +276,7 @@ class Onedrive:
 
     @token_required
     def make_folder(self, folder_name: str, parent_folder_id: Optional[str] = None, check_existing: bool = True, if_exists: str = "rename") -> str:
-        """Creates a new folder within the input folder/root of the connected Onedrive.
+        """Creates a new folder within the input folder/root of the connected OneDrive.
             Positional arguments:
                 folder_name (str) -- the name of the new folder
             Keyword arguments:
@@ -326,7 +326,7 @@ class Onedrive:
 
     @token_required
     def move_item(self, item_id: str, new_folder_id: str, new_name: Optional[str] = None) -> Tuple[str, str]:
-        """Moves an item (folder/file) within the connected Onedrive. Optionally rename an item at the same time.
+        """Moves an item (folder/file) within the connected OneDrive. Optionally rename an item at the same time.
             Positional arguments:
                 item_id (str) -- item id of the folder or file to move
                 new_folder_id (str) -- item id of the folder to shift the item to
@@ -360,7 +360,7 @@ class Onedrive:
 
     @token_required
     def copy_item(self, item_id: str, new_folder_id: str, new_name: Optional[str] = None, confirm_complete: bool = False) -> str:
-        """Copies an item (folder/file) within the connected Onedrive server-side.
+        """Copies an item (folder/file) within the connected OneDrive server-side.
             Positional arguments:
                 item_id (str) -- item id of the folder or file to copy
                 new_folder_id (str) -- item id of the folder to copy the item to
@@ -408,7 +408,7 @@ class Onedrive:
 
     @token_required
     def rename_item(self, item_id: str, new_name: str) -> str:
-        """Renames an item (folder/file) without moving it within the connected Onedrive.
+        """Renames an item (folder/file) without moving it within the connected OneDrive.
             Positional arguments:
                 item_id (str) -- item id of the folder or file to rename
                 new_name (str) -- new item name with extension
@@ -434,7 +434,7 @@ class Onedrive:
 
     @token_required
     def delete_item(self, item_id: str, pre_confirm: bool = False) -> bool:
-        """Deletes an item (folder/file) within the connected Onedrive. Potentially restorable in the Onedrive web browser client.
+        """Deletes an item (folder/file) within the connected OneDrive. Potentially restorable in the OneDrive web browser client.
             Positional arguments:
                 item_id (str) -- item id of the folder or file to be deleted
             Keyword arguments:
@@ -498,7 +498,7 @@ class Onedrive:
             Positional arguments:
                 file_path (str|Path) -- path of the file on the drive
             Keyword arguments:
-                new_file_name (str) -- new name of the file as it should appear on Onedrive, without extension (default = None)
+                new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
                 parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
                 if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
             Returns:
@@ -560,7 +560,7 @@ class Onedrive:
             Positional arguments:
                 file_path (str|Path) -- path of the file on the drive
             Keyword arguments:
-                new_file_name (str) -- new name of the file as it should appear on Onedrive, without extension (default = None)
+                new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
                 parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
                 if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
             Returns:
@@ -666,7 +666,7 @@ class Onedrive:
         return item_id
 
 
-def create(client_id: str, client_secret: str, tenant: str = "common", redirect_url: str = "http://localhost:8080", refresh_token: Optional[str] = None) -> Onedrive:
+def create(client_id: str, client_secret: str, tenant: str = "common", redirect_url: str = "http://localhost:8080", refresh_token: Optional[str] = None) -> OneDrive:
     """Get headers to be supplied to Graph API requests, mainly containing an authorization token.
     Note this token usually has a life of about 1hr.
         Positional arguments:
@@ -677,14 +677,14 @@ def create(client_id: str, client_secret: str, tenant: str = "common", redirect_
             redirect_url (str)  -- Authentication redirection url (default = "http://localhost:8080")
             refresh_token (str) -- optional token from previous session (default = None)
         Returns:
-            onedrive_instance (Onedrive) -- Onedrive object instance
+            onedrive_instance (OneDrive) -- OneDrive object instance
     """
 
-    # Return the Onedrive object instance
-    return Onedrive(client_id = client_id, client_secret = client_secret, tenant = tenant, redirect_url = redirect_url, refresh_token = refresh_token)
+    # Return the OneDrive object instance
+    return OneDrive(client_id = client_id, client_secret = client_secret, tenant = tenant, redirect_url = redirect_url, refresh_token = refresh_token)
 
 
-def create_from_config_file(config_path: Union[str, Path], config_key: str = "onedrive") -> Onedrive:
+def create_from_config_file(config_path: Union[str, Path], config_key: str = "onedrive") -> OneDrive:
     """Get headers to be supplied to Graph API requests, mainly containing an authorization token.
     Note this token usually has a life of about 1hr.
         Positional arguments:
@@ -692,11 +692,11 @@ def create_from_config_file(config_path: Union[str, Path], config_key: str = "on
         Keyword arguments:
             config_key (str) -- key of the json item storing the configuration (default = "onedrive")
         Returns:
-            onedrive_instance (Onedrive) -- Onedrive object instance
+            onedrive_instance (OneDrive) -- OneDrive object instance
     """
 
     # Read configuration from config file
-    print("Reading Onedrive configs...")
+    print("Reading OneDrive configs...")
     config_path = Path(config_path)
     with open(config_path, "r") as config_file:
         config = json.load(config_file)
@@ -712,7 +712,7 @@ def create_from_config_file(config_path: Union[str, Path], config_key: str = "on
     except KeyError:
         refresh_token = None
 
-    # Create Onedrive object instance
+    # Create OneDrive object instance
     onedrive_instance = create(client_id = client_id, client_secret = client_secret, tenant = tenant_id, redirect_url = redirect_url, refresh_token = refresh_token)
 
     # Get refresh token from instance and update config file
@@ -723,14 +723,14 @@ def create_from_config_file(config_path: Union[str, Path], config_key: str = "on
     with open(config_path, "w") as config_file: 
         json.dump(config, config_file, indent=4)
 
-    # Return the Onedrive instance
+    # Return the OneDrive instance
     return onedrive_instance
 
 
-def save_to_config_file(onedrive_instance: Onedrive, config_path: Union[str, Path], config_key: str = "onedrive") -> None:
+def save_to_config_file(onedrive_instance: OneDrive, config_path: Union[str, Path], config_key: str = "onedrive") -> None:
     """Save the configuration to a json config file.
         Positional arguments:
-            onedrive_instance (Onedrive) -- instance with the config to save
+            onedrive_instance (OneDrive) -- instance with the config to save
             config_path (str|Path) -- path to configuration json file
         Keyword arguments:      
             config_key (str) -- key of the json item storing the configuration (default = "onedrive")

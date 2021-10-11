@@ -1,4 +1,4 @@
-"""Command line interface to create a config file and/or interact directly with Onedrive.
+"""Command line interface tools for the Python package Graph OneDrive.
 """
 import os
 import sys
@@ -8,31 +8,36 @@ import graph_onedrive._main as graph_onedrive
 
 
 def main(argv=sys.argv):
-    """Command line interface to interact with Microsoft Onedrive.
+    """Command line interface tools for the Python package Graph OneDrive.
     Options:
-        instance -- create an instance in the command line to interact with Onedrive.
-        auth -- generate config file containing authentication
+        instance -- create an instance in the command line to interact with OneDrive.
+        config -- generate a config file.
+        auth -- authenticate an existing config file.
     """
 
     try:
         operation = argv[1]
     except:
-        print("Command not recorgnised. Input argument 'instance' or 'auth'.")
-        return 1
+        operation = None
 
     if operation == "instance":
         menu()
         return 0
-    elif operation == "auth" or operation == "authenticate":
+    elif operation == "config":
+        config()
+        if input("Would you like to authenticate and create a refresh token? [Y/n]: ") not in ["n", "N"]:
+            authenticate()
+        return 0
+    elif operation == "auth":
         authenticate()
         return 0
     else:
-        print("Command not recorgnised. Input argument 'instance' or 'auth'.")
+        print("Command not recorgnised. Input argument 'instance', 'config', or 'auth'.")
         return 1
 
 
-def authenticate():
-    """Authenticate with Onedrive and then save the configuration to file.
+def config():
+    """Create a configuration file.
     """
     # Set basic app credentials
     tenant = input("tenant: " ).rstrip()
@@ -58,43 +63,55 @@ def authenticate():
         config_path = "/".join([os.getcwd(), "config.json"])
     config_path = Path(config_path)
 
-    # Create the instance
-    onedrive = graph_onedrive.create(client_id = client_id, client_secret = client_secret, tenant = tenant, redirect_url = redirect_url)
-
-    # Save the config
-    graph_onedrive.save_to_config_file(onedrive_instance = onedrive, config_path = config_path, config_key = config_key)
+    # Create the config
+    config = { config_key: {} }
+    config[config_key]["tenant_id"] = onedrive_instance._tenant_id
+    config[config_key]["client_id"] = onedrive_instance._client_id
+    config[config_key]["client_secret_value"] = onedrive_instance._client_secret
+    config[config_key]["redirect_url"] = onedrive_instance._redirect
+    config[config_key]["refresh_token"] = None
+    
+    # Save the configuration to config file
+    with open(config_path, "w") as config_file:      
+        json.dump(config, config_file, indent=4)
     print(f"Configuration saved to: {config_path}")
 
 
-def menu():
-    """Interact with Onedrive in the command line.
+def authenticate():
+    """Authenticate with Onedrive and then save the configuration to file.
     """
+    # Get the config file path
+    config_path = get_config_file_path()
+    
+    # Set config dictionary key
+    if input("Use config dictionary key default 'onedrive' [Y/n]: ") in ["n", "N"]:
+        config_key = input("Config dictionary key to use: ").rstrip()
+    else:
+        config_key = "onedrive"
 
-    # Welcome message.
-    print("Welcome to the Onedrive command-line interface tool.")
+    # Create the instance
+    try:
+        onedrive = graph_onedrive.create_from_config_file(config_path = config_path, config_key = config_key)
+    except KeyError:
+        print(f"The config file is not in an acceptable format or the dictionary key '{config_key}' is incorrect.")
+        exit()
+
+    # Save the config
+    graph_onedrive.save_to_config_file(onedrive_instance = onedrive, config_path = config_path, config_key = config_key)
+    print(f"Refresh token saved to configuration: {config_path}")
+
+
+def menu():
+    """Interact directly with OneDrive in the command line to perform simple tasks and test the configuration.
+    """
 
     # Load configuration
     if input("Load a configuration file [y/N]: ").rstrip() in ["y", "Y"]:
-
-        # Check for config.json file
-        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-        CWD = os.getcwd()
-        root_config_path = "/".join([ROOT_DIR, "config.json"])
-        cwd_config_path = "/".join([CWD, "config.json"])
-        if os.path.isfile(root_config_path):
-            config_path = root_config_path
-        elif os.path.isfile(cwd_config_path):
-            config_path = cwd_config_path
-        else:
-            config_path = False
-
-        while config_path == False:
-            user_config_path = input("Path to config file: ").rstrip()
-            if os.path.isfile(user_config_path):
-                onfig_path = user_config_path
-            else:
-                print("Path could not be validated, please try again.")
         
+        # Get the config file path
+        config_path = get_config_file_path()
+
+        # Set the config dict key
         if input("Use config dictionary key default 'onedrive' [Y/n]: ") in ["n", "N"]:
             config_key = input("Config dictionary key to use: ").rstrip()
         else:
@@ -210,6 +227,26 @@ def menu():
     except KeyboardInterrupt:
         graph_onedrive.save_to_config_file(onedrive, config_path)
         pass
+
+
+def get_config_file_path(try_filename = "config.json"):
+    """Sets a config path by trying a filename in the current working directory, else requests from user.
+        Keyword arguments:      
+            try_filename (str) -- file name to try (default = "config.json")
+    """
+    cwd_config_path = "/".join([os.getcwd(), try_filename])
+    if os.path.isfile(cwd_config_path):
+        print("config.json found in current working directory.")
+        if input("Use this config file? [Y/n]: ") not in ["n", "N"]:
+            config_path = cwd_config_path
+        else:
+            # Get the file path from the user
+            while True:
+                config_path = input("Path to config file (including extension: ").rstrip()
+                if os.path.isfile(config_path):
+                    break
+                print("Path could not be validated, please try again.")
+    return config_path
 
 
 if __name__ == "__main__":
