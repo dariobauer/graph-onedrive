@@ -43,9 +43,9 @@ def main(argv=sys.argv):
 def config():
     """Create a configuration file."""
     # Set basic app credentials
-    tenant = input("tenant: ").rstrip()
+    tenant_id = input("tenant: ").rstrip()
     client_id = input("client id: ").rstrip()
-    client_secret = input("client secret value: ").rstrip()
+    client_secret_value = input("client secret value: ").rstrip()
 
     # Set config dictionary key
     if input("Use redirect url default 'http://localhost:8080' [Y/n]: ") in ["n", "N"]:
@@ -68,10 +68,10 @@ def config():
 
     # Create the config
     config = {config_key: {}}
-    config[config_key]["tenant_id"] = onedrive_instance._tenant_id
-    config[config_key]["client_id"] = onedrive_instance._client_id
-    config[config_key]["client_secret_value"] = onedrive_instance._client_secret
-    config[config_key]["redirect_url"] = onedrive_instance._redirect
+    config[config_key]["tenant_id"] = tenant_id
+    config[config_key]["client_id"] = client_id
+    config[config_key]["client_secret_value"] = client_secret_value
+    config[config_key]["redirect_url"] = redirect_url
     config[config_key]["refresh_token"] = None
 
     # Save the configuration to config file

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## Released
+
+### Version 0.0.1a3
+
+Released 2021-10-11
+
+* Minor bug fix to cli.
+
 ### Version 0.0.1a2
 
 Released 2021-10-11
@@ -14,8 +22,6 @@ Released 2021-10-11
 * Reformatted all code using Black;
 * Updated CONTRIBUTING patch section;
 * Updated README.
-
-## Released
 
 ### Version 0.0.1a1
 
