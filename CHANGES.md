@@ -4,6 +4,12 @@
 
 ## Released
 
+### Version 0.0.1a6
+
+Released 2021-10-13
+
+* Minor doc fix.
+
 ### Version 0.0.1a5
 
 Released 2021-10-13
