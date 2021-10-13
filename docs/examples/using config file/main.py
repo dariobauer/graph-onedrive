@@ -7,8 +7,8 @@ def main():
     """Interact with Microsoft Onedrive. Setup using config.json file in the same directory."""
 
     # Set config path
-    ROOT_DIR = path.dirname(path.abspath(__file__))
-    config_path = "/".join([ROOT_DIR, "config.json"])
+    current_file_path = path.dirname(path.abspath(__file__))
+    config_path = path.join(current_file_path, "config.json")
 
     # Create session instance
     onedrive = graph_onedrive.create_from_config_file(config_path)

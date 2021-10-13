@@ -21,19 +21,39 @@ Note that some Microsoft work and school accounts will not allow apps to connect
 
 The package currently requires Python 3.7 or greater.
 
-General installation is using pip from PyPI, but depending on your installation you may need to use `pip3` instead.
+Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) which will use the releases hosted on [PyPI](https://pypi.org/project/graph-onedrive/#history). Further options in the docs.
 
     pip install graph-onedrive
-
-You can also install the in-development version:
-
-    pip install https://github.com/dariobauer/graph-onedrive/archive/master.zip
-
-Futher information is available in the [documentation](https://github.com/dariobauer/graph-onedrive/blob/main/docs/).
 
 ## Documentation
 
 Documentation and examples are provided on GitHub: <https://github.com/dariobauer/graph-onedrive/blob/main/docs/>
+
+### A simple example
+
+Run this command in the terminal after installation which will create a config file in the current folder.
+
+    $ graph-onedrive config
+
+Save the following in a .py file in the same folder.
+
+```
+import os
+import graph_onedrive
+
+# Set config path
+current_file_path = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(current_file_path, "config.json")
+
+# Create session instance
+my_onedrive = graph_onedrive.create_from_config_file(config_path)
+
+# Complete tasks using the instance. For this example we will just display the usage
+my_onedrive.get_usage(verbose=True)
+
+# Save the config to retain the refresh token.
+graph_onedrive.save_to_config_file(my_onedrive, config_path)
+```
 
 ## License
 
@@ -43,9 +63,10 @@ The Graph API is provided by Microsoft Corporation and subject to their [terms o
 
 ## Links
 
+* Documentation: <https://github.com/dariobauer/graph-onedrive/blob/main/docs/>
 * License: <https://github.com/dariobauer/graph-onedrive/blob/main/LICENSE>
 * Change Log: <https://github.com/dariobauer/graph-onedrive/blob/main/CHANGES.md>
 * PyPI Releases: <https://pypi.org/project/graph-onedrive>
 * Source Code: <https://github.com/dariobauer/graph-onedrive/>
-* Support info, feature requests: <https://github.com/dariobauer/graph-onedrive/blob/main/CONTRIBUTING.md>
+* Contributing: <https://github.com/dariobauer/graph-onedrive/blob/main/CONTRIBUTING.md>
 * Issue Tracker: <https://github.com/dariobauer/graph-onedrive/issues>

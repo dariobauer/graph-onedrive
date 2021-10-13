@@ -43,32 +43,50 @@ def main(argv=sys.argv):
 
 def config():
     """Create a configuration file."""
+
+    # Set the export directory
+    if input("Save config.json in current working directory [Y/n]: ") not in ["n", "N"]:
+        config_path = os.path.join(os.getcwd(), "config.json")
+    else:
+        config_path = input("Path to save config (including file name): ").rstrip()
+        if not config_path.endswith(".json"):
+            config_path = config_path + ".json"
+    config_path = Path(config_path)
+
+    # Set config dictionary key
+    if input("Use config dictionary key default 'onedrive' [Y/n]: ") not in ["n", "N"]:
+        config_key = "onedrive"
+    else:
+        config_key = input("Config dictionary key to use: ").rstrip()
+
+    # Load the current file if it exists, otherwsie create dictionary
+    if os.path.isfile(config_path):
+        with open(config_path, "r") as config_file:
+            config = json.load(config_file)
+        # For safety do not overwrite existing configs
+        if config_key in config:
+            sys.exit(
+                f"Error: {config_key} already exists in this file, overwrite not permitted."
+            )
+        config[config_key] = {}
+    else:
+        config = {config_key: {}}
+
     # Set basic app credentials
     tenant_id = input("tenant: ").rstrip()
     client_id = input("client id: ").rstrip()
     client_secret_value = input("client secret value: ").rstrip()
 
-    # Set config dictionary key
-    if input("Use redirect url default 'http://localhost:8080' [Y/n]: ") in ["n", "N"]:
-        redirect_url = input("Redirect url to use: ").rstrip()
-    else:
+    # Set redirect url
+    if input("Use redirect url default 'http://localhost:8080' [Y/n]: ") not in [
+        "n",
+        "N",
+    ]:
         redirect_url = "http://localhost:8080"
-
-    # Set config dictionary key
-    if input("Use config dictionary key default 'onedrive' [Y/n]: ") in ["n", "N"]:
-        config_key = input("Config dictionary key to use: ").rstrip()
     else:
-        config_key = "onedrive"
+        redirect_url = input("Redirect url to use: ").rstrip()
 
-    # Set the export directory
-    if input("Save config.json in current working directory [Y/n]: ") in ["n", "N"]:
-        config_path = input("Path to save config (including extention): ").rstrip()
-    else:
-        config_path = "/".join([os.getcwd(), "config.json"])
-    config_path = Path(config_path)
-
-    # Create the config
-    config = {config_key: {}}
+    # Format the config into the dictionary
     config[config_key]["tenant_id"] = tenant_id
     config[config_key]["client_id"] = client_id
     config[config_key]["client_secret_value"] = client_secret_value
@@ -82,15 +100,9 @@ def config():
 
 
 def authenticate():
-    """Authenticate with Onedrive and then save the configuration to file."""
+    """Authenticate with OneDrive and then save the configuration to file."""
     # Get the config file path
-    config_path = get_config_file_path()
-
-    # Set config dictionary key
-    if input("Use config dictionary key default 'onedrive' [Y/n]: ") in ["n", "N"]:
-        config_key = input("Config dictionary key to use: ").rstrip()
-    else:
-        config_key = "onedrive"
+    config_path, config_key = get_config_file()
 
     # Create the instance
     try:
@@ -110,20 +122,63 @@ def authenticate():
     print(f"Refresh token saved to configuration: {config_path}")
 
 
+def get_config_file():
+    """Sets a config path and key by searching the cwd with assistance from from user."""
+
+    config_path = None
+
+    # Look for json files in the current working directory and confirm with user
+    cwd_path = os.getcwd()
+    for root, dirs, files in os.walk(cwd_path):
+        for file_name in files:
+            if file_name.endswith(".json"):
+                print(f"Found: {file_name}")
+                if input("Is this a config file to use? [Y/n]: ").rstrip() not in [
+                    "n",
+                    "N",
+                ]:
+                    config_path = os.path.join(root, file_name)
+                    break
+        else:
+            continue
+        break
+
+    # Get the file path from the user
+    if not config_path:
+        while True:
+            config_path = input("Path to config file: ").rstrip()
+            if not config_path.endswith(".json"):
+                config_path = config_path + ".json"
+            if os.path.isfile(config_path):
+                break
+            print("Path could not be validated, please try again.")
+
+    # Open the config file
+    with open(config_path, "r") as config_file:
+        config = json.load(config_file)
+
+    # Check the config key
+    config_key = "onedrive"
+    if config_key in config:
+        if input(
+            "Config dictionary key 'onedrive' found. Use this key? [Y/n]: "
+        ).rstrip() in ["n", "N"]:
+            config_key = input("Config dictionary key to use: ").rstrip()
+    while config_key not in config:
+        print(f"Config dictionary key '{config_key}' not found.")
+        config_key = input("Config dictionary key to use: ").rstrip()
+
+    return config_path, config_key
+
+
 def menu():
     """Interact directly with OneDrive in the command line to perform simple tasks and test the configuration."""
 
     # Load configuration
-    if input("Load a configuration file [y/N]: ").rstrip() in ["y", "Y"]:
+    if input("Load an existing config file [Y/n]: ").rstrip() not in ["n", "N"]:
 
-        # Get the config file path
-        config_path = get_config_file_path()
-
-        # Set the config dict key
-        if input("Use config dictionary key default 'onedrive' [Y/n]: ") in ["n", "N"]:
-            config_key = input("Config dictionary key to use: ").rstrip()
-        else:
-            config_key = "onedrive"
+        # Get the config details
+        config_path, config_key = get_config_file()
 
         # Create session
         try:
@@ -250,35 +305,14 @@ def menu():
             elif command == "_refresh":
                 token = onedrive.refresh_token
                 print(token)
-
+            elif command == "exit" or command == "exit()":
+                exit()
             else:
-                print("Command not recognised. Press ^c to exit.")
+                print("Command not recognised. Input 'exit' or press ^c to exit.")
 
     except KeyboardInterrupt:
         graph_onedrive.save_to_config_file(onedrive, config_path)
         pass
-
-
-def get_config_file_path(try_filename="config.json"):
-    """Sets a config path by trying a filename in the current working directory, else requests from user.
-    Keyword arguments:
-        try_filename (str) -- file name to try (default = "config.json")
-    """
-    cwd_config_path = "/".join([os.getcwd(), try_filename])
-    if os.path.isfile(cwd_config_path):
-        print("config.json found in current working directory.")
-        if input("Use this config file? [Y/n]: ") not in ["n", "N"]:
-            config_path = cwd_config_path
-        else:
-            # Get the file path from the user
-            while True:
-                config_path = input(
-                    "Path to config file (including extension: "
-                ).rstrip()
-                if os.path.isfile(config_path):
-                    break
-                print("Path could not be validated, please try again.")
-    return config_path
 
 
 if __name__ == "__main__":

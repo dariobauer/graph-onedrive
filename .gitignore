@@ -1,8 +1,11 @@
+*.env
 *.egg-info
 *.pyc
+*.pyo
 *.gz
 *.whl
 *.DS_Store
+*.vscode
 /.coverage
 /.mypy_cache
 /.pytest_cache
@@ -10,4 +13,7 @@
 /venv
 /dist
 /__pycache__
+/build
+/docs/_build
 /config.json
+

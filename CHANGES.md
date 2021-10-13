@@ -4,6 +4,13 @@
 
 ## Released
 
+### Version 0.0.1a5
+
+Released 2021-10-13
+
+* Added safeties in cli to not overwrite existing configs;
+* Minor doc updates and fixes.
+
 ### Version 0.0.1a4
 
 Released 2021-10-11

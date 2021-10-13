@@ -57,7 +57,8 @@ The `redirect_url` and `refresh_token` values are default so these lines can be 
 
 The package currently requires Python 3.7 or greater.
 
-General installation is using pip from PyPI, but depending on your installation you may need to use `pip3` instead.
+Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) which will use the releases hosted on [PyPI](https://pypi.org/project/graph-onedrive/#history).
+Depending on your installation you may need to use `pip3` instead.
 
     pip install graph-onedrive
 
