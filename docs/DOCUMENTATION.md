@@ -39,16 +39,16 @@ Graph-OneDrive requires the Azure app credentials and a few other items of confi
 The configuration details required are below displayed in the typical configuration file format.
 
 ```json
-    {
-        "onedrive": {
-            "tenant_id": "",
-            "client_id": "",
-            "client_secret_value": "",
-            "redirect_url": "http://localhost:8080",
-            "refresh_token": null
-            }
+{
+    "onedrive": {
+        "tenant_id": "",
+        "client_id": "",
+        "client_secret_value": "",
+        "redirect_url": "http://localhost:8080",
+        "refresh_token": null
         }
     }
+}
 ```
 
 Note that the `onedrive` dictionary key can be any string and could facilitate multiple instances running from the same configuration file with different keys.
@@ -147,11 +147,11 @@ my_instance = graph_onedrive.create_from_config_file(config_path, config_key)
 This solution is slightly easier but could be a security issue, especially if sharing code.
 
 ```python
-    client_id = ""
-    client_secret_value = ""
-    tenant = ""
-    redirect_url = "http://localhost:8080",
-    my_instance = graph_onedrive.create(client_id, client_secret_value, tenant, redirect_url)
+client_id = ""
+client_secret_value = ""
+tenant = ""
+redirect_url = "http://localhost:8080",
+my_instance = graph_onedrive.create(client_id, client_secret_value, tenant, redirect_url)
 ```
 
 ### Authenticating the instance

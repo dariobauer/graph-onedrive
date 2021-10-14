@@ -36,7 +36,7 @@ Documentation and examples are provided on GitHub: <https://github.com/dariobaue
 Run this command in the terminal after installation which will create a config file in the current folder.
 
 ```console
-$ graph-onedrive config
+graph-onedrive config
 ```
 
 Save the following in a .py file in the same folder.
