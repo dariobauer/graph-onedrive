@@ -6,7 +6,8 @@
 
 Released _
 
-* Updated exits from cli.
+* Updated exits from cli;
+* Docs improved including syntax highlighting.
 
 ## Released
 

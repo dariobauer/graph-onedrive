@@ -419,9 +419,9 @@ class OneDrive:
         Positional arguments:
             item_id (str) -- item id of the folder or file to copy
             new_folder_id (str) -- item id of the folder to copy the item to
-            confirm_complete (bool) -- waits for the copy operation to finish before returning (default = False)
         Keyword arguments:
             new_name (str) -- optional new item name with extension (default = None)
+            confirm_complete (bool) -- waits for the copy operation to finish before returning (default = False)
         Returns:
             item_id (str) -- item id of the new item
         """
@@ -783,17 +783,16 @@ def create(
     redirect_url: str = "http://localhost:8080",
     refresh_token: Optional[str] = None,
 ) -> OneDrive:
-    """Get headers to be supplied to Graph API requests, mainly containing an authorization token.
-    Note this token usually has a life of about 1hr.
-        Positional arguments:
-            client_id (str) -- Azure app client id
-            client_secret (str) -- Azure app client secret
-        Keyword arguments:
-            tenant (str) -- Azure app org tentent id number, use default if multi-tenent (default = "common")
-            redirect_url (str)  -- Authentication redirection url (default = "http://localhost:8080")
-            refresh_token (str) -- optional token from previous session (default = None)
-        Returns:
-            onedrive_instance (OneDrive) -- OneDrive object instance
+    """Create an instance of the OneDrive class from arguments.
+    Positional arguments:
+        client_id (str) -- Azure app client id
+        client_secret (str) -- Azure app client secret
+    Keyword arguments:
+        tenant (str) -- Azure app org tentent id number, use default if multi-tenent (default = "common")
+        redirect_url (str)  -- Authentication redirection url (default = "http://localhost:8080")
+        refresh_token (str) -- optional token from previous session (default = None)
+    Returns:
+        onedrive_instance (OneDrive) -- OneDrive object instance
     """
 
     # Return the OneDrive object instance
@@ -809,14 +808,13 @@ def create(
 def create_from_config_file(
     config_path: Union[str, Path], config_key: str = "onedrive"
 ) -> OneDrive:
-    """Get headers to be supplied to Graph API requests, mainly containing an authorization token.
-    Note this token usually has a life of about 1hr.
-        Positional arguments:
-            config_path (str|Path) -- path to configuration json file
-        Keyword arguments:
-            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
-        Returns:
-            onedrive_instance (OneDrive) -- OneDrive object instance
+    """Create an instance of the OneDrive class from a config file.
+    Positional arguments:
+        config_path (str|Path) -- path to configuration json file
+    Keyword arguments:
+        config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+    Returns:
+        onedrive_instance (OneDrive) -- OneDrive object instance
     """
 
     # Read configuration from config file
