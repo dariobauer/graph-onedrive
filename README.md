@@ -23,7 +23,9 @@ The package currently requires Python 3.7 or greater.
 
 Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) which will use the releases hosted on [PyPI](https://pypi.org/project/graph-onedrive/#history). Further options in the docs.
 
-    pip install graph-onedrive
+```console
+pip install graph-onedrive
+```
 
 ## Documentation
 
@@ -33,11 +35,13 @@ Documentation and examples are provided on GitHub: <https://github.com/dariobaue
 
 Run this command in the terminal after installation which will create a config file in the current folder.
 
-    $ graph-onedrive config
+```console
+$ graph-onedrive config
+```
 
 Save the following in a .py file in the same folder.
 
-```
+```python
 import graph_onedrive
 
 # Set config file details

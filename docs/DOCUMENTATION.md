@@ -38,6 +38,7 @@ Graph-OneDrive requires the Azure app credentials and a few other items of confi
 
 The configuration details required are below displayed in the typical configuration file format.
 
+```json
     {
         "onedrive": {
             "tenant_id": "",
@@ -48,6 +49,7 @@ The configuration details required are below displayed in the typical configurat
             }
         }
     }
+```
 
 Note that the `onedrive` dictionary key can be any string and could facilitate multiple instances running from the same configuration file with different keys.
 
@@ -60,11 +62,15 @@ The package currently requires Python 3.7 or greater.
 Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) which will use the releases hosted on [PyPI](https://pypi.org/project/graph-onedrive/#history).
 Depending on your installation you may need to use `pip3` instead.
 
-    pip install graph-onedrive
+```console
+pip install graph-onedrive
+```
 
 You can also install the in-development version:
 
-    pip install https://github.com/dariobauer/graph-onedrive/archive/master.zip
+```console
+pip install https://github.com/dariobauer/graph-onedrive/archive/master.zip
+```
 
 ## Command-line interface
 
@@ -74,19 +80,25 @@ Command-line interface tools are provided with the typical installation.
 
 A cli tool is provided to generate a configuration file.
 
-    graph-onedrive config
+```console
+graph-onedrive config
+```
 
 ### Authenticate a configuration
 
 Using the cli it is possible to create an authenticated session from the config file to both test the configuration, and also save a refresh token to the input config file.
 
-    graph-onedrive auth
+```console
+graph-onedrive auth
+```
 
 ### Interacting directly with OneDrive
 
 Using a cli tool, it is possible to interact directly with OneDrive, which is useful to test the configuration or complete simple tasks.
 
-    graph-onedrive instance
+```console
+graph-onedrive instance
+```
 
 ## Limitations
 
@@ -110,7 +122,9 @@ It is however possible to use one config file to host multiple configurations wi
 
 ### Package import
 
-    import graph_onedrive
+```python
+import graph_onedrive
+```
 
 ### Creating an OneDrive instance
 
@@ -122,19 +136,23 @@ To create an instance, you need to provide the configuration.
 
 Refer above section on configuration to learn about config files.
 
-    config_path = ""  # path to .json file
-    config_key = "onedrive"  # optional parameter for the dictionary key (default = "onedrive")
-    my_instance = graph_onedrive.create_from_config_file(config_path, config_key)
+```python
+config_path = ""  # path to .json file
+config_key = "onedrive"  # optional parameter for the dictionary key (default = "onedrive")
+my_instance = graph_onedrive.create_from_config_file(config_path, config_key)
+```
 
 #### b) Using in-line configuration parameters
 
 This solution is slightly easier but could be a security issue, especially if sharing code.
 
+```python
     client_id = ""
     client_secret_value = ""
     tenant = ""
     redirect_url = "http://localhost:8080",
     my_instance = graph_onedrive.create(client_id, client_secret_value, tenant, redirect_url)
+```
 
 ### Authenticating the instance
 
@@ -148,7 +166,9 @@ The easiest option is to just create an instance as per above methods. A prompt 
 
 You can use a config file to authenticate in the command line ahead of instance creation which is useful if your production code will not be run in a terminal. This will save a refresh token (described in the next section) to your config file.
 
-    graph-onedrive auth
+```console
+graph-onedrive auth
+```
 
 WARNING: This configuration assumes that your use of the configuration file serves one user only. If using the same code to serve multiple users then the refresh token must be stored independently of the configuration file.
 
@@ -167,7 +187,9 @@ WARNING: Saving the refresh token presents a security risk as it could be used b
 
 If using a configuration file then you can have the helper functions save the refresh token to your configuration. Simply add the following call after your last API request.
 
-    graph_onedrive.save_to_config_file(my_instance, config_path, config_key = "onedrive")
+```python
+graph_onedrive.save_to_config_file(my_instance, config_path, config_key = "onedrive")
+```
 
 Then when creating the instance again using your config file, the refresh token will be used.
 
@@ -177,11 +199,15 @@ WARNING: This configuration assumes that your use of the configuration file serv
 
 You can get the refresh token from your instance:
 
-    refresh_token = my_instance.refresh_token
+```python
+refresh_token = my_instance.refresh_token
+```
 
 Then when creating an instance later, provide the refresh token:
 
-    my_instance = graph_onedrive.create(... , refresh_token = refresh_token)
+```python
+my_instance = graph_onedrive.create(... , refresh_token = refresh_token)
+```
 
 ### Making requests to the Graph API
 
@@ -191,7 +217,9 @@ These requests to the Graph API are made using the instance of the OneDrive clas
 
 Get the current usage and capacity of the connected OneDrive.
 
-    used, capacity, units = my_instance.get_usage(unit, refresh, verbose)
+```python
+used, capacity, units = my_instance.get_usage(unit, refresh, verbose)
+```
 
 Keyword arguments:
 
@@ -209,7 +237,9 @@ Returns:
 
 List the files and folders within the input folder/root of the connected OneDrive.
 
-    items = my_instance.list_directory(folder_id, verbose)
+```python
+items = my_instance.list_directory(folder_id, verbose)
+```
 
 Keyword arguments:
 
@@ -224,7 +254,9 @@ Returns:
 
 Retrieves the metadata for an item.
 
-    item_details = my_instance.detail_item(item_id, verbose)
+```python
+item_details = my_instance.detail_item(item_id, verbose)
+```
 
 Positional arguments:
 
@@ -242,7 +274,9 @@ Returns:
 
 Creates a new folder within the input folder/root of the connected OneDrive.
 
-    folder_id = my_instance.make_folder(folder_name, parent_folder_id, check_existing, if_exists)
+```python
+folder_id = my_instance.make_folder(folder_name, parent_folder_id, check_existing, if_exists)
+```
 
 Positional arguments:
 
@@ -262,7 +296,9 @@ Returns:
 
 Moves an item (folder/file) within the connected OneDrive. Optionally rename an item at the same time.
 
-    item_id, folder_id = my_instance.move_item(item_id, new_folder_id, new_name)
+```python
+item_id, folder_id = my_instance.move_item(item_id, new_folder_id, new_name)
+```
 
 Positional arguments:
 
@@ -282,7 +318,9 @@ Returns:
 
 Copies an item (folder/file) within the connected OneDrive server-side.
 
-    item_id = my_instance.copy_item(item_id, new_folder_id, new_name, confirm_complete)
+```python
+item_id = my_instance.copy_item(item_id, new_folder_id, new_name, confirm_complete)
+```
 
 Positional arguments:
 
@@ -302,7 +340,9 @@ Returns:
 
 Renames an item (folder/file) without moving it within the connected OneDrive.
 
-    item_name = my_instance.rename_item(item_id, new_name)
+```python
+item_name = my_instance.rename_item(item_id, new_name)
+```
 
 Positional arguments:
 
@@ -317,7 +357,9 @@ Returns:
 
 Deletes an item (folder/file) within the connected OneDrive. Potentially recoverable in the OneDrive web browser client.
 
-    confirmation = my_instance.delete_item(item_id, pre_confirm)
+```python
+confirmation = my_instance.delete_item(item_id, pre_confirm)
+```
 
 Positional arguments:
 
@@ -338,7 +380,9 @@ Note folders cannot be downloaded.
 
 Future development improvement: specify the file location and name.
 
-    file_name = my_instance.download_file(item_id)
+```python
+file_name = my_instance.download_file(item_id)
+```
 
 Positional arguments:
 
@@ -352,7 +396,9 @@ Returns:
 
 Uploads a file to a particular folder with a provided file name.
 
-    item_id = my_instance.upload_file(file_path, new_file_name, parent_folder_id, if_exists)
+```python
+item_id = my_instance.upload_file(file_path, new_file_name, parent_folder_id, if_exists)
+```
 
 Positional arguments:
 
