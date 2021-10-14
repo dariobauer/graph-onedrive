@@ -38,23 +38,20 @@ Run this command in the terminal after installation which will create a config f
 Save the following in a .py file in the same folder.
 
 ```
-import os
 import graph_onedrive
 
-# Set config path
+# Set config file details
+config_path = "config.json"
 config_key = "onedrive"
-config_file_name = "config.json"
-current_file_path = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(current_file_path, config_file_name)
 
 # Create session instance
-my_onedrive = graph_onedrive.create_from_config_file(config_path, config_key)
+my_drive = graph_onedrive.create_from_config_file(config_path, config_key)
 
-# Complete tasks using the instance. For this example we will just display the usage
-my_onedrive.get_usage(verbose=True)
+# Complete tasks using the instance. For example print the drive usage
+my_drive.get_usage(verbose=True)
 
-# Save the config to retain the refresh token.
-graph_onedrive.save_to_config_file(my_onedrive, config_path, config_key)
+# Save the config to retain the refresh token
+graph_onedrive.save_to_config_file(my_drive, config_path, config_key)
 ```
 
 ## License

@@ -65,8 +65,8 @@ def config():
             config = json.load(config_file)
         # For safety do not overwrite existing configs
         if config_key in config:
-            sys.exit(
-                f"Error: {config_key} already exists in this file, overwrite not permitted."
+            raise SystemExit(
+                f"Error: '{config_key}' already exists in file, overwrite not permitted."
             )
         config[config_key] = {}
     else:
@@ -110,10 +110,9 @@ def authenticate():
             config_path=config_path, config_key=config_key
         )
     except KeyError:
-        print(
-            f"The config file is not in an acceptable format or the dictionary key '{config_key}' is incorrect."
+        raise SystemExit(
+            f"Error: Config not in acceptable format or dict key '{config_key}' incorrect."
         )
-        exit()
 
     # Save the config
     graph_onedrive.save_to_config_file(
@@ -186,10 +185,9 @@ def menu():
                 config_path=config_path, config_key=config_key
             )
         except KeyError:
-            print(
-                f"The config file is not in an acceptable format or the dictionary key '{config_key}' is incorrect."
+            raise SystemExit(
+                f"Error: Config not in acceptable format or dict key '{config_key}' incorrect."
             )
-            exit()
 
     else:
         print("Manual configuration entry:")
@@ -306,14 +304,15 @@ def menu():
                 token = onedrive.refresh_token
                 print(token)
             elif command == "exit" or command == "exit()":
-                exit()
+                graph_onedrive.save_to_config_file(onedrive, config_path)
+                return 0
             else:
                 print("Command not recognised. Input 'exit' or press ^c to exit.")
 
     except KeyboardInterrupt:
         graph_onedrive.save_to_config_file(onedrive, config_path)
-        pass
+        return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

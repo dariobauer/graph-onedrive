@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Version 0.0.1a8
+
+Released _
+
+* Updated exits from cli.
+
 ## Released
 
 ### Version 0.0.1a7
