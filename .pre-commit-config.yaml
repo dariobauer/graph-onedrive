@@ -1,11 +1,10 @@
 ci:
   autoupdate_schedule: monthly
 repos:
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v2.29.0
+  - repo: https://github.com/asottile/setup-cfg-fmt
+    rev: v1.18.0
     hooks:
-      - id: pyupgrade
-        args: ["--py37-plus"]
+      - id: setup-cfg-fmt
   - repo: https://github.com/asottile/reorder_python_imports
     rev: v2.6.0
     hooks:
@@ -13,15 +12,34 @@ repos:
         name: Reorder Python imports (src, tests)
         files: "^(?!examples/)"
         args: ["--application-directories", "src"]
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.29.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py37-plus"]
   - repo: https://github.com/ambv/black
     rev: 21.9b0
     hooks:
     - id: black
       # Latest version of Python supported by the project
       language_version: python3.9
+  - repo: https://github.com/asottile/blacken-docs
+    rev: v1.11.0
+    hooks:
+      - id: blacken-docs
+        additional_dependencies: [black==21.9b0]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
-      - id: fix-byte-order-marker
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: double-quote-string-fixer
+      - id: name-tests-test
+      - id: requirements-txt-fixer
       - id: trailing-whitespace
+      - id: fix-byte-order-marker
       - id: end-of-file-fixer
