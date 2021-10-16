@@ -1,4 +1,4 @@
-"""Command line interface tools for the Python package Graph OneDrive.
+"""Command line interface tools for the Python package Graph-OneDrive.
 """
 import json
 import os
@@ -61,7 +61,7 @@ def config():
 
     # Load the current file if it exists, otherwsie create dictionary
     if os.path.isfile(config_path):
-        with open(config_path, "r") as config_file:
+        with open(config_path) as config_file:
             config = json.load(config_file)
         # For safety do not overwrite existing configs
         if config_key in config:
@@ -153,7 +153,7 @@ def get_config_file():
             print("Path could not be validated, please try again.")
 
     # Open the config file
-    with open(config_path, "r") as config_file:
+    with open(config_path) as config_file:
         config = json.load(config_file)
 
     # Check the config key
