@@ -124,10 +124,11 @@ def authenticate():
 def get_config_file():
     """Sets a config path and key by searching the cwd with assistance from from user."""
 
-    config_path = None
-
     # Look for json files in the current working directory and confirm with user
+    config_path = None
+    count = 0
     cwd_path = os.getcwd()
+
     for root, dirs, files in os.walk(cwd_path):
         for file_name in files:
             if file_name.endswith(".json"):
@@ -137,6 +138,10 @@ def get_config_file():
                     "N",
                 ]:
                     config_path = os.path.join(root, file_name)
+                    break
+                # Limit number of suggested files to top 5
+                count += 1
+                if count >= 5:
                     break
         else:
             continue

@@ -5,7 +5,7 @@ import json
 import os
 import secrets
 import shutil
-import urllib
+import urllib.parse
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
@@ -68,8 +68,8 @@ class OneDrive:
         self._auth_url = self._AUTH_BASE_URL + self._tenant_id + self._AUTH_ENDPOINT
         self._scope = "files.readwrite"
         self._redirect = redirect_url
-        self._access_token = None
-        self._access_expires = None
+        self._access_token = ""
+        self._access_expires = 0.0
         # Set public attributes
         self.refresh_token = refresh_token
         # Initiate generation of authorization tokens
@@ -104,18 +104,18 @@ class OneDrive:
         # Make the request
         response = requests.post(request_url, data=body)
         status_code = response.status_code
-        response = json.loads(response.text)
+        response_data = json.loads(response.text)
 
         # Check response was okay
         if status_code != 200:
-            raise Exception(f"API Error : {response['error_description']} ")
+            raise Exception(f"API Error : {response_data['error_description']} ")
 
         # Extract the token from the response
-        self._access_token = response["access_token"]
-        self.refresh_token = response["refresh_token"]
+        self._access_token = response_data["access_token"]
+        self.refresh_token = response_data["refresh_token"]
 
         # Set an expery time, removing 60 seconds assummed for processing
-        expires = response["expires_in"] - 60
+        expires = response_data["expires_in"] - 60
         expires = datetime.now() + timedelta(seconds=expires)
         self._access_expires = datetime.timestamp(expires)
 
@@ -192,17 +192,18 @@ class OneDrive:
         """INTERNAL: Gets the drive details"""
         # Generate request url
         request_url = self._API_URL + "me/drive/"
-        response = json.loads(requests.get(request_url, headers=self._headers).text)
+        response = requests.get(request_url, headers=self._headers)
+        response_data = json.loads(response.text)
         # Set drive details
-        self._drive_id = response["id"]
-        self._drive_name = response["name"]
-        self._drive_type = response["driveType"]
-        self._owner_id = response["owner"]["user"]["id"]
-        self._owner_email = response["owner"]["user"]["email"]
-        self._owner_name = response["owner"]["user"]["displayName"]
-        self._quota_used = response["quota"]["used"]
-        self._quota_remaining = response["quota"]["remaining"]
-        self._quota_total = response["quota"]["total"]
+        self._drive_id = response_data["id"]
+        self._drive_name = response_data["name"]
+        self._drive_type = response_data["driveType"]
+        self._owner_id = response_data["owner"]["user"]["id"]
+        self._owner_email = response_data["owner"]["user"]["email"]
+        self._owner_name = response_data["owner"]["user"]["displayName"]
+        self._quota_used = response_data["quota"]["used"]
+        self._quota_remaining = response_data["quota"]["remaining"]
+        self._quota_total = response_data["quota"]["total"]
 
     @token_required
     def get_usage(
@@ -294,31 +295,31 @@ class OneDrive:
             raise Exception(
                 f"API Error {response.status_code}: item could not be detailed."
             )
-        response = json.loads(response.text)
+        response_data = json.loads(response.text)
         # Print the item details
         if verbose:
-            print("id:", response["id"])
-            print("name:", response["name"])
-            if "folder" in response:
+            print("id:", response_data["id"])
+            print("name:", response_data["name"])
+            if "folder" in response_data:
                 print("type:", "folder")
             else:
                 print("type:", "file")
             print(
                 "created:",
-                response["createdDateTime"],
+                response_data["createdDateTime"],
                 "by:",
-                response["createdBy"]["user"]["displayName"],
+                response_data["createdBy"]["user"]["displayName"],
             )
             print(
                 "modified:",
-                response["lastModifiedDateTime"],
+                response_data["lastModifiedDateTime"],
                 "by:",
-                response["lastModifiedBy"]["user"]["displayName"],
+                response_data["lastModifiedBy"]["user"]["displayName"],
             )
-            print("size:", response["size"])
-            print("web url:", response["webUrl"])
+            print("size:", response_data["size"])
+            print("web url:", response_data["webUrl"])
         # Return the item details
-        return response
+        return response_data
 
     @token_required
     def make_folder(
@@ -375,8 +376,8 @@ class OneDrive:
         if response.status_code != 201:
             print(response.text)
             raise Exception(f"API Error {response.status_code}: folder was not created")
-        response = json.loads(response.text)
-        folder_id = response["id"]
+        response_data = json.loads(response.text)
+        folder_id = response_data["id"]
         # Return the folder item id
         return folder_id
 
@@ -397,7 +398,7 @@ class OneDrive:
         # Create request url based on input item id that should be moved
         request_url = self._API_URL + "me/drive/items/" + item_id
         # Create the request body
-        body = {"parentReference": {"id": new_folder_id}}
+        body: Dict[str, Any] = {"parentReference": {"id": new_folder_id}}
         if new_name:
             body["name"] = new_name
         # Make the Graph API request
@@ -408,9 +409,9 @@ class OneDrive:
             raise Exception(
                 f"API Error {response.status_code}: item could not be moved."
             )
-        response = json.loads(response.text)
-        item_id = response["id"]
-        parent_folder_id = response["parentReference"]["id"]
+        response_data = json.loads(response.text)
+        item_id = response_data["id"]
+        parent_folder_id = response_data["parentReference"]["id"]
         # Return the item id and parent folder id
         return item_id, parent_folder_id
 
@@ -435,7 +436,9 @@ class OneDrive:
         # Create request url based on input item id that should be moved
         request_url = self._API_URL + "me/drive/items/" + item_id + "copy"
         # Create the request body
-        body = {"parentReference": {"driveId": self._drive_id, "id": new_folder_id}}
+        body: Dict[str, Any] = {
+            "parentReference": {"driveId": self._drive_id, "id": new_folder_id}
+        }
         if new_name:
             body["name"] = new_name
         # Make the Graph API request
@@ -450,10 +453,10 @@ class OneDrive:
             while True:
                 sleep(wait_duration)
                 response = requests.get(monitor_url)
-                response = json.loads(response.text)
-                if response["status"] == "completed":
+                response_data = json.loads(response.text)
+                if response_data["status"] == "completed":
                     break
-                percentage_complete = response["percentageComplete"]
+                percentage_complete = response_data["percentageComplete"]
                 wait_duration = (
                     100.0 / (percentage_complete - previous_complete) * wait_duration
                     - wait_duration
@@ -462,7 +465,7 @@ class OneDrive:
                     wait_duration = 30
                 previous_complete = percentage_complete
 
-        new_item_id = response["resourceId"]
+        new_item_id = response_data["resourceId"]
         # Return the item id
         return new_item_id
 
@@ -487,8 +490,8 @@ class OneDrive:
             raise Exception(
                 f"API Error {response.status_code}: item could not be renamed."
             )
-        response = json.loads(response.text)
-        item_name = response["name"]
+        response_data = json.loads(response.text)
+        item_name = response_data["name"]
         # Return the item id and parent folder id
         return item_name
 
@@ -636,8 +639,8 @@ class OneDrive:
             raise Exception(
                 f"API Error {response.status_code}: could not upload file: {file_path}"
             )
-        response = json.loads(response.text)
-        item_id = response["id"]
+        response_data = json.loads(response.text)
+        item_id = response_data["id"]
         # Return the file item id
         return item_id
 
@@ -777,7 +780,7 @@ class OneDrive:
             raise Exception(
                 f"API Error {response.status_code}: could not upload file: {file_path}"
             )
-        response = json.loads(response.text)
-        item_id = response["id"]
+        response_data = json.loads(response.text)
+        item_id = response_data["id"]
         # Return the file item id
         return item_id

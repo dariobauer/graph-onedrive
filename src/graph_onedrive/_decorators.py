@@ -15,7 +15,7 @@ def token_required(func):
         # Get the current timestamp for comparison
         now = datetime.timestamp(datetime.now())
         # Refresh access token if expires does not exist or has expired
-        if (not expires) or (expires <= now):
+        if expires <= now:
             onedrive_instance._get_token()
             onedrive_instance._create_headers()
         # Fucnction that is wrapped runs here
