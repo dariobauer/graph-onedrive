@@ -7,6 +7,9 @@
 Released _
 
 * Updated exits from cli;
+* Moved OneDrive class from _main.py to _onedrive.py;
+* Moved testing and debugging decorators to /tests;
+* Updated some formatting using pre-commit hooks;
 * Docs improved including syntax highlighting.
 
 ## Released
