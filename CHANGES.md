@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+## Released
+
 ### Version 0.0.1a8
 
-Released _
+Released 2021-10-17
 
 * Updated exits from cli;
 * Moved OneDrive class from _main.py to _onedrive.py;
@@ -12,8 +14,6 @@ Released _
 * Updated some formatting using pre-commit hooks;
 * Docs improved including syntax highlighting;
 * Improved auth function to not require a session state (PR#1).
-
-## Released
 
 ### Version 0.0.1a7
 
