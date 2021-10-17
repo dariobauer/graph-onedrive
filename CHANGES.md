@@ -10,7 +10,8 @@ Released _
 * Moved OneDrive class from _main.py to _onedrive.py;
 * Moved testing and debugging decorators to /tests;
 * Updated some formatting using pre-commit hooks;
-* Docs improved including syntax highlighting.
+* Docs improved including syntax highlighting;
+* Improved auth function to not require a session state (PR#1).
 
 ## Released
 

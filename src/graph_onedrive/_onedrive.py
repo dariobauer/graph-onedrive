@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import shutil
+import re
 import urllib.parse
 from datetime import datetime
 from datetime import timedelta
@@ -156,11 +157,11 @@ class OneDrive:
         response = input("Step 4: paste the response here: ")
 
         # Verify the state which ensures the response is for this request
-        return_state = response[
-            (response.find("state") + len("state") + 1) : (
-                response.find("&session_state")
-            )
-        ]
+        match = re.search("&state=([^&]+)", response)
+        if match and match.lastindex > 0:
+            return_state = match.group(1)
+        else:
+            return_state = None
         if state != return_state:
             raise Exception(
                 "The response does not correspond to this original request."
