@@ -159,7 +159,7 @@ class OneDrive:
         # Verify the state which ensures the response is for this request
         return_state = re.search("&state=([^&]+)", response)
         if return_state:
-            if return_state.group(1) != return_state:
+            if return_state.group(1) != state:
                 raise Exception(
                     "The response does not correspond to this original request."
                 )

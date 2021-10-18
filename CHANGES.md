@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Fixed issue preventing auth to complete successfully
+ 
 ## Released
 
 ### Version 0.0.1a8
