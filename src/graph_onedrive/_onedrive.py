@@ -7,6 +7,7 @@ import re
 import secrets
 import shutil
 import urllib.parse
+import warnings
 from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
@@ -112,7 +113,22 @@ class OneDrive:
             raise Exception(f"API Error : {response_data['error_description']} ")
 
         # Extract the token from the response
-        self._access_token = response_data["access_token"]
+        access_token = response_data["access_token"]
+
+        # Validate the access token
+        # access token is a period-seperated (.) encoded string with a header (base64), payload (base64), and signiture (plain)
+        # this could be validated using https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens
+        # for simplicity the format is validated here, but not the token it self
+        base64 = "(?:[A-Za-z\\d+/]{4})*(?:[A-Za-z\\d+/]{3}=|[A-Za-z\\d+/]{2}==)?"
+        plain_except_period = "(?!.*\\.).*"
+        format_expected = f"(({base64}){{100,}}\\.){{2}}{plain_except_period}"
+        format_match = re.fullmatch(format_expected, access_token)
+        # Raise exception if the access_token does not match the expected format
+        if format_match is None:
+            raise Exception("Access token returned was not in the expected format.")
+
+        # Set the access and refresh tokens to the instance attributes
+        self._access_token = access_token
         self.refresh_token = response_data["refresh_token"]
 
         # Set an expery time, removing 60 seconds assummed for processing
@@ -161,27 +177,24 @@ class OneDrive:
         if return_state:
             if return_state.group(1) != state:
                 raise Exception(
-                    "The response does not correspond to this original request."
+                    "The 'state' in the response did not correspond to this original request. This typically happens when using a auth url from a previous attempt instead of the freshly provided one."
                 )
         else:
-            pass  # No state returned, so could not be checked.
+            warnings.warn(
+                "No 'state' in returned url, therefore could not be confirmed as being for this request."
+            )
 
         # Extract the code from the response
-        authorization_code = response[
-            (response.find("code") + len("code") + 1) : (response.find("&state"))
-        ]
+        authorization_code_re = re.search("code=([^&]+)", response)
+        if authorization_code_re is None:
+            raise Exception("The response did not contain an authorization code.")
+        authorization_code = authorization_code_re.group(1)
 
         # Return the authorization code to be used to get tokens
         return authorization_code
 
     def _create_headers(self) -> None:
         """INTENRAL: Create headers for the http request to the Graph API."""
-        # Check access token is reasonably long which should indicate that it is a valid access totken
-        if len(self._access_token) < 1800:
-            raise Exception(
-                "Invalid access token was provided (too short), try clearing it from the config.json file."
-            )
-        # Set headers
         self._headers = {
             "Accept": "*/*",
             "Authorization": "Bearer " + self._access_token,

@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-* Fixed issue preventing auth to complete successfully
- 
+* Improved validation of authorization codes and access tokens (Issues 3 & 4).
+
 ## Released
 
 ### Version 0.0.1a8
