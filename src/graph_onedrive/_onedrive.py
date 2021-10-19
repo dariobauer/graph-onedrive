@@ -115,17 +115,15 @@ class OneDrive:
         # Extract the token from the response
         access_token = response_data["access_token"]
 
-        # Validate the access token
-        # access token is a period-seperated (.) encoded string with a header (base64), payload (base64), and signiture (plain)
-        # this could be validated using https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens
-        # for simplicity the format is validated here, but not the token it self
-        base64 = "(?:[A-Za-z\\d+/]{4})*(?:[A-Za-z\\d+/]{3}=|[A-Za-z\\d+/]{2}==)?"
-        plain_except_period = "(?!.*\\.).*"
-        format_expected = f"(({base64}){{100,}}\\.){{2}}{plain_except_period}"
-        format_match = re.fullmatch(format_expected, access_token)
-        # Raise exception if the access_token does not match the expected format
+        # Validate the access token by checking that it is in a JSON Web Token (jwt) format
+        # To do: Content validation https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens
+        jwt_regex = "^([a-zA-Z0-9\\-_]+?\\.){2}([a-zA-Z0-9\\-_]+)?$"
+        format_match = re.fullmatch(jwt_regex, access_token)
         if format_match is None:
-            raise Exception("Access token returned was not in the expected format.")
+            # MS Docs note that Azure may not always use the jwt format
+            warnings.warn(
+                "Access token returned was not in the expected format, trying to proceed anyway."
+            )
 
         # Set the access and refresh tokens to the instance attributes
         self._access_token = access_token
