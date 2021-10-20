@@ -30,7 +30,7 @@ class OneDrive:
         client_id (str)     -- Azure app client id
         client_secret (str) -- Azure app client secret
     Keyword arguments:
-        tenant (str)        -- Azure app org tentent id number, use default if multi-tenent (default = "common")
+        tenant (str)        -- Azure app org tenant id number, use default if multi-tenant (default = "common")
         redirect_url (str)  -- Authentication redirection url (default = "http://localhost:8080")
         refresh_token (str) -- optional token from previous session (default = None)
     Attributes:
@@ -46,7 +46,7 @@ class OneDrive:
         delete_item         -- deletes an item
         download_file       -- downloads a file to the working directory
         upload_file         -- uploads a file as a single piece if small and otherwise calls upload_large_file
-        upload_large_file   -- uploads a file in chunks, typically calling upload_file is suuggested
+        upload_large_file   -- uploads a file in chunks, typically calling upload_file is suggested
     """
 
     # Set class constants for the Graph API
@@ -113,27 +113,21 @@ class OneDrive:
 
         # Check response was okay
         if status_code != 200:
-            raise Exception(f"API Error : {response_data['error_description']} ")
-
-        # Extract the token from the response
-        access_token = response_data["access_token"]
-
-        # Validate the access token by checking that it is in a JSON Web Token (jwt) format
-        # To do: Content validation https://docs.microsoft.com/en-us/azure/active-directory/develop/access-tokens
-        jwt_regex = "^([a-zA-Z0-9\\-_]+?\\.){2}([a-zA-Z0-9\\-_]+)?$"
-        format_match = re.fullmatch(jwt_regex, access_token)
-        if format_match is None:
-            # MS Docs note that Azure may not always use the jwt format
-            warnings.warn(
-                "Access token returned was not in the expected format, trying to proceed anyway.",
-                stacklevel=2,
+            error_descrpition = response_data.get(
+                "error_description", "unknown error - no error description returned"
             )
+            raise Exception(f"API Error : {error_descrpition} ")
 
         # Set the access and refresh tokens to the instance attributes
-        self._access_token = access_token
-        self.refresh_token = response_data["refresh_token"]
+        try:
+            self._access_token = response_data["access_token"]
+            self.refresh_token = response_data["refresh_token"]
+        except KeyError:
+            raise Exception(
+                f"API Error : response did not return access and refresh tokens"
+            )
 
-        # Set an expery time, removing 60 seconds assummed for processing
+        # Set an expiry time, removing 60 seconds assumed for processing
         expires = response_data["expires_in"] - 60
         expires = datetime.now() + timedelta(seconds=expires)
         self._access_expires = datetime.timestamp(expires)
@@ -160,17 +154,15 @@ class OneDrive:
         request_url += "&state=" + state
 
         # Make request (manually)
-        print("AUTHORIZATION URL - COPY BELOW ------------")
-        print(request_url)
-        print("COPY ABOVE --------------------------------")
         print("Manual app authorization required.")
-        print("Step 1: Copy the above URL and paste into a web browser.")
+        print("Step 1: Copy the below URL and paste into a web browser.")
+        print("AUTHORIZATION URL --------------")
+        print(request_url)
+        print("--------------------------------")
         print("Step 2: Authorize the app using your account.")
+        print("You will be redirected (potentially to an error page - this is normal)")
         print(
-            "Following authorization you will be redirected to a browser error page - this is normal..."
-        )
-        print(
-            "Step 3: On that error page, copy the response URL - click into the address bar and copy all."
+            "Step 3: Copy the response URL - click into the address bar and copy all."
         )
         response = input("Step 4: paste the response here: ")
 
@@ -179,7 +171,7 @@ class OneDrive:
         if return_state:
             if return_state.group(1) != state:
                 raise Exception(
-                    "The 'state' in the response did not correspond to this original request. This typically happens when using an auth url from a previous attempt instead of the freshly provided one."
+                    "Response Error : response 'state' did not correspond to request. Typically occurs when reusing an old authorization url."
                 )
         else:
             warnings.warn(
