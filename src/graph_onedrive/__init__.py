@@ -1,4 +1,4 @@
-__version__ = "0.0.1a8"
+__version__ = "0.0.1a9"
 
 # 1.2.0.dev1  # Development release
 # 1.2.0a1     # Alpha Release

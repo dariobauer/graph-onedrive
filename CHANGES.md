@@ -2,11 +2,17 @@
 
 ## Unreleased
 
+
+
+## Released
+
+### Version 0.0.1a9
+
+Released 2021-10-20
+
 * Improved code typing;
 * Updated code formating;
 * Improved validation of authorization codes and access tokens (Issues 3 & 4).
-
-## Released
 
 ### Version 0.0.1a8
 
