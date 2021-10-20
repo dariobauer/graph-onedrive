@@ -114,17 +114,21 @@ class OneDrive:
         # Check response was okay
         if status_code != 200:
             error_descrpition = response_data.get(
-                "error_description", "unknown error - no error description returned"
+                "error_description", "Unknown error - no error description returned"
             )
             raise Exception(f"API Error : {error_descrpition} ")
 
         # Set the access and refresh tokens to the instance attributes
         try:
             self._access_token = response_data["access_token"]
+        except KeyError:
+            raise Exception("Response Error : Response did not return an access token")
+        try:
             self.refresh_token = response_data["refresh_token"]
         except KeyError:
-            raise Exception(
-                f"API Error : response did not return access and refresh tokens"
+            warnings.warn(
+                "Response Warn : Response did not return a refresh token, existing config not updated",
+                stacklevel=2,
             )
 
         # Set an expiry time, removing 60 seconds assumed for processing
@@ -171,11 +175,11 @@ class OneDrive:
         if return_state:
             if return_state.group(1) != state:
                 raise Exception(
-                    "Response Error : response 'state' did not correspond to request. Typically occurs when reusing an old authorization url."
+                    "Response Error : Response 'state' did not correspond to request, typically occurs when reusing an old authorization url"
                 )
         else:
             warnings.warn(
-                "No 'state' in returned url, therefore could not be confirmed as being for this request.",
+                "Response Warn : Response 'state' was not in returned url, response could not be confirmed as being for this request",
                 stacklevel=2,
             )
 

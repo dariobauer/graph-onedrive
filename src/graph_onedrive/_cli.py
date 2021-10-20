@@ -188,14 +188,9 @@ def menu() -> int:
         config_path, config_key = get_config_file()
 
         # Create session
-        try:
-            onedrive = graph_onedrive.create_from_config_file(
-                config_path=config_path, config_key=config_key
-            )
-        except KeyError:
-            raise SystemExit(
-                f"Error: Config not in acceptable format or dict key '{config_key}' incorrect."
-            )
+        onedrive = graph_onedrive.create_from_config_file(
+            config_path=config_path, config_key=config_key
+        )
 
     else:
         print("Manual configuration entry:")

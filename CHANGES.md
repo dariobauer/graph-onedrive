@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Removed access token validation (Issue 4)
+* Allowed access token response to continue when no refresh token provided (Issue 6)
 
 ## Released
 

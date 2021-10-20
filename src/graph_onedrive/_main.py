@@ -55,9 +55,14 @@ def create_from_config_file(
     config_path = Path(config_path)
     with open(config_path) as config_file:
         config = json.load(config_file)
-    tenant_id = config[config_key]["tenant_id"]
-    client_id = config[config_key]["client_id"]
-    client_secret = config[config_key]["client_secret_value"]
+    if config_key not in config:
+        raise Exception(f"Config Error : Config dict key '{config_key}' incorrect")
+    try:
+        tenant_id = config[config_key]["tenant_id"]
+        client_id = config[config_key]["client_id"]
+        client_secret = config[config_key]["client_secret_value"]
+    except KeyError:
+        raise Exception("Config Error : Config not in acceptable format")
     try:
         redirect_url = config[config_key]["redirect_url"]
     except KeyError:
@@ -105,7 +110,10 @@ def save_to_config_file(
         with open(config_path) as config_file:
             config = json.load(config_file)
     except FileNotFoundError:
-        config = {config_key: {}}
+        config = {}
+
+    if config_key not in config:
+        config[config_key] = {}
 
     # Set the new configuation
     config[config_key]["tenant_id"] = onedrive_instance._tenant_id
