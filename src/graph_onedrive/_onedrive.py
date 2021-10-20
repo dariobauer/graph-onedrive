@@ -73,7 +73,10 @@ class OneDrive:
         self._access_token = ""
         self._access_expires = 0.0
         # Set public attributes
-        self.refresh_token = refresh_token
+        if refresh_token:
+            self.refresh_token: str = refresh_token
+        else:
+            self.refresh_token = ""
         # Initiate generation of authorization tokens
         self._get_token()
         self._create_headers()
@@ -95,7 +98,7 @@ class OneDrive:
 
         # Set grant type
         # If no refresh token provided, get new authorization code
-        if self.refresh_token:
+        if self.refresh_token != "":
             body["grant_type"] = "refresh_token"
             body["refresh_token"] = self.refresh_token
         else:
@@ -122,7 +125,8 @@ class OneDrive:
         if format_match is None:
             # MS Docs note that Azure may not always use the jwt format
             warnings.warn(
-                "Access token returned was not in the expected format, trying to proceed anyway."
+                "Access token returned was not in the expected format, trying to proceed anyway.",
+                stacklevel=2,
             )
 
         # Set the access and refresh tokens to the instance attributes
@@ -175,11 +179,12 @@ class OneDrive:
         if return_state:
             if return_state.group(1) != state:
                 raise Exception(
-                    "The 'state' in the response did not correspond to this original request. This typically happens when using a auth url from a previous attempt instead of the freshly provided one."
+                    "The 'state' in the response did not correspond to this original request. This typically happens when using an auth url from a previous attempt instead of the freshly provided one."
                 )
         else:
             warnings.warn(
-                "No 'state' in returned url, therefore could not be confirmed as being for this request."
+                "No 'state' in returned url, therefore could not be confirmed as being for this request.",
+                stacklevel=2,
             )
 
         # Extract the code from the response
@@ -258,7 +263,7 @@ class OneDrive:
     @token_required
     def list_directory(
         self, folder_id: Optional[str] = None, verbose: bool = False
-    ) -> List[Dict]:
+    ) -> List[Dict[Any, Any]]:
         """List the files and folders within the input folder/root of the connected OneDrive.
         Keyword arguments:
             folder_id (str) -- the item id of the folder to look into, None being the root directory (default = None)

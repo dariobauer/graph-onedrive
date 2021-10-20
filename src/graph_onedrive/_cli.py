@@ -4,11 +4,14 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import graph_onedrive._main as graph_onedrive
 
 
-def main(argv=sys.argv):
+def main(argv: List[str] = sys.argv) -> int:
     """Command line interface tools for the Python package Graph OneDrive.
     Options:
         instance -- create an instance in the command line to interact with OneDrive.
@@ -17,7 +20,7 @@ def main(argv=sys.argv):
     """
 
     try:
-        operation = argv[1]
+        operation: Optional[str] = argv[1]
     except:
         operation = None
 
@@ -41,17 +44,17 @@ def main(argv=sys.argv):
         return 1
 
 
-def config():
+def config() -> None:
     """Create a configuration file."""
 
     # Set the export directory
     if input("Save config.json in current working directory [Y/n]: ") not in ["n", "N"]:
-        config_path = os.path.join(os.getcwd(), "config.json")
+        config_path_str = os.path.join(os.getcwd(), "config.json")
     else:
-        config_path = input("Path to save config (including file name): ").rstrip()
-        if not config_path.endswith(".json"):
-            config_path = config_path + ".json"
-    config_path = Path(config_path)
+        config_path_str = input("Path to save config (including file name): ").rstrip()
+        if not config_path_str.endswith(".json"):
+            config_path_str = config_path_str + ".json"
+    config_path = Path(config_path_str)
 
     # Set config dictionary key
     if input("Use config dictionary key default 'onedrive' [Y/n]: ") not in ["n", "N"]:
@@ -99,7 +102,7 @@ def config():
     print(f"Configuration saved to: {config_path}")
 
 
-def authenticate():
+def authenticate() -> None:
     """Authenticate with OneDrive and then save the configuration to file."""
     # Get the config file path
     config_path, config_key = get_config_file()
@@ -121,7 +124,7 @@ def authenticate():
     print(f"Refresh token saved to configuration: {config_path}")
 
 
-def get_config_file():
+def get_config_file() -> Tuple[str, str]:
     """Sets a config path and key by searching the cwd with assistance from from user."""
 
     # Look for json files in the current working directory and confirm with user
@@ -175,7 +178,7 @@ def get_config_file():
     return config_path, config_key
 
 
-def menu():
+def menu() -> int:
     """Interact directly with OneDrive in the command line to perform simple tasks and test the configuration."""
 
     # Load configuration
@@ -198,14 +201,12 @@ def menu():
         print("Manual configuration entry:")
         client_id = input("client_id: ").rstrip()
         client_secret = input("client_secret: ").rstrip()
-        tenant = input("tenant (leave blank to use 'common':").rstrip()
+        tenant = input("tenant (leave blank to use 'common': ").rstrip()
         if tenant == "":
             tenant = "common"
         refresh_token = input(
             "refresh_token (leave blank to reauthenticate): "
         ).rstrip()
-        if refresh_token == "":
-            refresh_token = None
         onedrive = graph_onedrive.create(
             client_id, client_secret, tenant, refresh_token
         )
@@ -221,7 +222,9 @@ def menu():
                 onedrive.get_usage(verbose=True)
 
             elif command == "li":
-                folder_id = input("Folder id to look into (enter nothing for root): ")
+                folder_id: Optional[str] = input(
+                    "Folder id to look into (enter nothing for root): "
+                )
                 if folder_id == "":
                     folder_id = None
                 onedrive.list_directory(folder_id, verbose=True)
@@ -231,7 +234,7 @@ def menu():
                 onedrive.detail_item(item_id, verbose=True)
 
             elif command == "mkdir":
-                parent_folder_id = input(
+                parent_folder_id: Optional[str] = input(
                     "Parent folder id (enter nothing for root): "
                 ).rstrip()
                 if parent_folder_id == "":
@@ -244,7 +247,9 @@ def menu():
                 item_id = input("Item id of the file/folder to move: ").rstrip()
                 new_folder_id = input("New parent folder id: ").rstrip()
                 if input("Specify a new file name? [y/N]: ") == "y":
-                    new_file_name = input("New file name (with extension): ").rstrip()
+                    new_file_name: Optional[str] = input(
+                        "New file name (with extension): "
+                    ).rstrip()
                 else:
                     new_file_name = None
                 response = onedrive.move_item(item_id, new_folder_id, new_file_name)
@@ -283,8 +288,8 @@ def menu():
                 )
 
             elif command == "ul":
-                file_path = input("Provide full file path: ").rstrip()
-                file_path = Path(file_path)
+                file_path_input = input("Provide full file path: ").rstrip()
+                file_path = Path(file_path_input)
                 if input("Rename file? [y/N]: ") == "y":
                     new_file_name = input(
                         "Upload as file name (with extension): "

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Improved code typing;
+* Updated code formating;
 * Improved validation of authorization codes and access tokens (Issues 3 & 4).
 
 ## Released

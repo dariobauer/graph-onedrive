@@ -3,7 +3,7 @@ from os import path
 import graph_onedrive
 
 
-def main():
+def main() -> None:
     """Load my OneDrive from a config file and print the drive usage."""
 
     # Set config path

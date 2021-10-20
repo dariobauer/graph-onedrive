@@ -2,8 +2,10 @@
 """
 from datetime import datetime
 from functools import wraps
+from typing import no_type_check
 
 
+@no_type_check
 def token_required(func):
     """INTERNAL: Graph-OneDrive decorator to check for and refresh the access token when calling methods."""
 

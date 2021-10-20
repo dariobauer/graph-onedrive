@@ -1,7 +1,7 @@
 import graph_onedrive
 
 
-def main():
+def main() -> None:
     """Print the usage of my OneDrive."""
 
     # Set config
