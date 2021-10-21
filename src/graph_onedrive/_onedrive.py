@@ -575,6 +575,7 @@ class OneDrive:
         return file_name
 
     async def _download_async(self, download_url, file_name, size):
+        """INTENRAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
         s = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
         co = list()
         parts = 8
@@ -602,6 +603,7 @@ class OneDrive:
             fw.close()
 
     async def _download_part(self, lf_name: Path, lstart, lend, ldownload_url, ls: httpx.AsyncClient):
+        """INTENRAL: Downloads a single part of a file asynchronously"""
         async with aiofiles.open(lf_name, "wb") as fw:
             headers = {"Range": "bytes={}-{}".format(lstart, lend)}
             headers.update(self._headers)
