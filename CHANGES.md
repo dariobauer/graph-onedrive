@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Major improvements to the cli, now uses argparse, docs updated
 * Removed access token validation (Issue 4)
 * Allowed access token response to continue when no refresh token provided (Issue 6)
 * Various dictionary value lookups improved to account for missing keys (Issue 7)
