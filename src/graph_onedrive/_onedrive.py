@@ -92,7 +92,7 @@ class OneDrive:
         body = {
             "client_id": self._client_id,
             "client_secret": self._client_secret,
-            "scope": self._scope,  # "offline_access%20" + self.scope,
+            "scope": "offline_access " + self._scope,
             "redirect_uri": self._redirect,
         }
 
@@ -207,15 +207,17 @@ class OneDrive:
         response = requests.get(request_url, headers=self._headers)
         response_data = json.loads(response.text)
         # Set drive details
-        self._drive_id = response_data["id"]
-        self._drive_name = response_data["name"]
-        self._drive_type = response_data["driveType"]
-        self._owner_id = response_data["owner"]["user"]["id"]
-        self._owner_email = response_data["owner"]["user"]["email"]
-        self._owner_name = response_data["owner"]["user"]["displayName"]
-        self._quota_used = response_data["quota"]["used"]
-        self._quota_remaining = response_data["quota"]["remaining"]
-        self._quota_total = response_data["quota"]["total"]
+        self._drive_id = response_data.get("id")
+        self._drive_name = response_data.get("name")
+        self._drive_type = response_data.get("driveType")
+        response_data_user = response_data.get("owner", {}).get("user", {})
+        self._owner_id = response_data_user.get("id")
+        self._owner_email = response_data_user.get("email")
+        self._owner_name = response_data_user.get("displayName")
+        response_data_quota = response_data.get("quota", {})
+        self._quota_used = response_data_quota.get("used")
+        self._quota_remaining = response_data_quota.get("remaining")
+        self._quota_total = response_data_quota.get("total")
 
     @token_required
     def get_usage(
@@ -279,7 +281,7 @@ class OneDrive:
             print(response.text)
             raise Exception(f"API Error! : {response.status_code}")
         items = json.loads(response.text)
-        items = items["value"]
+        items = items.get("value", {})
         # Print the items in the directory along with their item ids
         if verbose:
             for entries in range(len(items)):
@@ -310,26 +312,28 @@ class OneDrive:
         response_data = json.loads(response.text)
         # Print the item details
         if verbose:
-            print("id:", response_data["id"])
-            print("name:", response_data["name"])
+            print("id:", response_data.get("id"))
+            print("name:", response_data.get("name"))
             if "folder" in response_data:
                 print("type:", "folder")
             else:
                 print("type:", "file")
             print(
                 "created:",
-                response_data["createdDateTime"],
+                response_data.get("createdDateTime"),
                 "by:",
-                response_data["createdBy"]["user"]["displayName"],
+                response_data.get("createdBy", {}).get("user", {}).get("displayName"),
             )
             print(
                 "modified:",
-                response_data["lastModifiedDateTime"],
+                response_data.get("lastModifiedDateTime"),
                 "by:",
-                response_data["lastModifiedBy"]["user"]["displayName"],
+                response_data.get("lastModifiedBy", {})
+                .get("user", {})
+                .get("displayName"),
             )
-            print("size:", response_data["size"])
-            print("web url:", response_data["webUrl"])
+            print("size:", response_data.get("size"))
+            print("web url:", response_data.get("webUrl"))
         # Return the item details
         return response_data
 
@@ -373,7 +377,7 @@ class OneDrive:
         if check_existing:
             items = self.list_directory(parent_folder_id)
             for i, entry in enumerate(items):
-                if entry["name"] == folder_name and "folder" in entry:
+                if entry.get("name") == folder_name and "folder" in entry:
                     return entry["id"]
 
         # Create the request body
