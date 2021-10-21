@@ -33,10 +33,10 @@ Documentation and examples are provided on GitHub: <https://github.com/dariobaue
 
 ### A simple example
 
-Run this command in the terminal after installation which will create a config file in the current folder.
+Run this command in the terminal after installation which will create a config file in the current working directory.
 
 ```console
-graph-onedrive config
+graph-onedrive --configure --file "config.json" --key "onedrive"
 ```
 
 Save the following in a .py file in the same folder.

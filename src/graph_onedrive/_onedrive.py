@@ -168,7 +168,7 @@ class OneDrive:
         print(
             "Step 3: Copy the response URL - click into the address bar and copy all."
         )
-        response = input("Step 4: paste the response here: ")
+        response = input("Step 4: paste the response here: ").strip()
 
         # Verify the state which ensures the response is for this request
         return_state = re.search("&state=([^&]+)", response)
@@ -523,10 +523,12 @@ class OneDrive:
         """
         # Get the user to confirm that they want to delete
         if not pre_confirm:
-            confirm = input(
-                "Deleted files may not be restorable. Are you sure that you want to delete this file? [y/N]: "
+            confirm = (
+                input("Deleted files may not be restorable. Type 'delete' to confirm: ")
+                .strip()
+                .lower()
             )
-            if confirm != "y":
+            if confirm != "delete":
                 print("Aborted.")
                 return False
         # Create request url based on input item id that should be deleted
