@@ -1,6 +1,6 @@
 """Contains the OneDrive object class to interact through the Graph API using the Python package Graph-OneDrive.
 """
-import functools
+import asyncio
 import json
 import os
 import re
@@ -19,6 +19,8 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+import aiofiles
+import httpx
 import requests
 
 from graph_onedrive._decorators import token_required
@@ -568,13 +570,47 @@ class OneDrive:
         download_url = response.headers["Location"]
         # Download the file
         file_name = details["name"]
-        # file_name = url.split("/")[-1]
-        with requests.get(download_url, stream=True) as r:
-            r.raw.read = functools.partial(r.raw.read, decode_content=True)
-            with open(file_name, "wb") as f:
-                shutil.copyfileobj(r.raw, f, length=16 * 1024 * 1024)
-        # Return the data in a text format
+        size = details["size"]
+        asyncio.run(self._download_async(download_url, file_name, size))
         return file_name
+
+    async def _download_async(self, download_url, file_name, size):
+        s = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        co = list()
+        parts = 8
+        amount = int(size / parts)
+        rest = size % parts
+        if rest > 0:
+            parts += 1
+        for i in range(parts):
+            f_name = Path(file_name + "." + str(i))
+            start = amount * i
+            if rest > 0 and i == parts - 1:
+                end = start + rest - 1
+            else:
+                end = start + amount - 1
+            co.append(self._download_part(f_name, start, end, download_url, s))
+        await asyncio.gather(*co)
+        await s.aclose()
+        with open(file_name, "wb") as fw:
+            for q in range(parts):
+                f = Path(file_name + "." + str(q))
+                with open(f, "rb") as fr:
+                    shutil.copyfileobj(fr, fw)
+                    fr.close()
+                    f.unlink()
+            fw.close()
+
+    async def _download_part(self, lf_name: Path, lstart, lend, ldownload_url, ls: httpx.AsyncClient):
+        async with aiofiles.open(lf_name, "wb") as fw:
+            headers = {"Range": "bytes={}-{}".format(lstart, lend)}
+            headers.update(self._headers)
+            print("Starting", lf_name.suffix.lstrip("."))
+            async with ls.stream("GET", ldownload_url, headers=headers) as r:
+                async for chunk in r.aiter_bytes(65536):
+                    await fw.write(chunk)
+            await fw.close()
+            print(lf_name.suffix.lstrip("."), "ended.")
 
     @token_required
     def upload_file(
