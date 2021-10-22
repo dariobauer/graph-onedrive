@@ -592,6 +592,9 @@ class OneDrive:
         tmp_dir = tempfile.gettempdir()
         # Number of concurrent parts downloaded at once
         parts = 8
+        # Files smaller than 1 MB are downloaded in one shot
+        if size < (1 * 1024 * 1024):
+            parts = 1
         # Size of each part
         amount = int(size / parts)
         # If the file size is not an exact multiple of `parts`, `rest` will be > 0 and
@@ -643,7 +646,8 @@ class OneDrive:
             # Create an AsyncIterator over our GET request
             async with ls.stream("GET", ldownload_url, headers=headers) as r:
                 # Iterates over incoming bytes in chunks of 64 * 1024 bytes
-                async for chunk in r.aiter_bytes(65536):
+                chunk_size = 64 * 1024
+                async for chunk in r.aiter_bytes(chunk_size):
                     await fw.write(chunk)
             await fw.close()
             print("Part", part_name, "ended.")
