@@ -46,7 +46,6 @@ The configuration details required are below displayed in the typical configurat
         "client_secret_value": "",
         "redirect_url": "http://localhost:8080",
         "refresh_token": null
-        }
     }
 }
 ```
@@ -69,36 +68,52 @@ pip install graph-onedrive
 You can also install the in-development version:
 
 ```console
-pip install https://github.com/dariobauer/graph-onedrive/archive/master.zip
+pip install https://github.com/dariobauer/graph-onedrive/archive/main.zip
 ```
 
 ## Command-line interface
 
-Command-line interface tools are provided with the typical installation.
+A command-line interface tool is provided with the typical installation.
 
-### Configuration file creation
-
-A cli tool is provided to generate a configuration file.
+You can run the cli using ```graph-onedrive``` or ```python3 -m graph-onedrive```.
 
 ```console
-graph-onedrive config
+graph-onedrive [-h] [-c] [-a] [-i] [-V] [-f PATH] [-k KEY]
 ```
 
-### Authenticate a configuration
+### Main actions
 
-Using the cli it is possible to create an authenticated session from the config file to both test the configuration, and also save a refresh token to the input config file.
+One of the main actions must be given as an input.
+
+Action argument | Description
+---|---
+-c, --configure | Create a new configuration file, or add to an existing one with a different dictionary key
+-a, --authenticate | Authenticate a configuration file
+-i, --instance | Interact with OneDrive to test your config and perform simple tasks
+
+You can combine these to run multiple tasks in succession, with a common one being `graph-onedrive -cai` which will create a config file, authenticate it, and then run an instance.
+
+### Options to input configuration file path and key
+
+You can use flags to sepcify the config file path and/or dictionary key.
+
+Optional argument | Description
+---|---
+-f, --file PATH | Optional path to config json file
+-k, --key KEY | Optional config file dictionary key
+
+Use these flags by using the flag folowed by the input, for example:
 
 ```console
-graph-onedrive auth
+graph-onedrive -cai -f "config.json" -k "onedrive"
 ```
 
-### Interacting directly with OneDrive
+### Other commands
 
-Using a cli tool, it is possible to interact directly with OneDrive, which is useful to test the configuration or complete simple tasks.
-
-```console
-graph-onedrive instance
-```
+Other arguments | Description
+---|---
+-V, --version | Returns the version of Graph-Onedrive installed
+-h, --help | Displays help, including a list of attributes
 
 ## Limitations
 
@@ -169,7 +184,7 @@ The easiest option is to just create an instance as per above methods. A prompt 
 You can use a config file to authenticate in the command line ahead of instance creation which is useful if your production code will not be run in a terminal. This will save a refresh token (described in the next section) to your config file.
 
 ```console
-graph-onedrive auth
+graph-onedrive -a
 ```
 
 WARNING: This configuration assumes that your use of the configuration file serves one user only. If using the same code to serve multiple users then the refresh token must be stored independently of the configuration file.
