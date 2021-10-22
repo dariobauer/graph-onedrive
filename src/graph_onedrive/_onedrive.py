@@ -632,12 +632,14 @@ class OneDrive:
                     file_part.unlink()
             fw.close()
 
-    async def _download_part(self, lf_name: Path, lstart, lend, ldownload_url, ls: httpx.AsyncClient):
+    async def _download_part(
+        self, lf_name: Path, lstart, lend, ldownload_url, ls: httpx.AsyncClient
+    ):
         """INTERNAL: Downloads a single part of a file asynchronously"""
         # Each coroutines opens its own file part to write into
         async with aiofiles.open(lf_name, "wb") as fw:
             # We build the Range HTTP header.
-            headers = {"Range": "bytes={}-{}".format(lstart, lend)}
+            headers = {"Range": f"bytes={lstart}-{lend}"}
             # Join the object headers (with auth infos)
             headers.update(self._headers)
             # Obtain the part number - just to be able to print something
