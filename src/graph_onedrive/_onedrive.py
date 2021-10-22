@@ -6,6 +6,7 @@ import os
 import re
 import secrets
 import shutil
+import tempfile
 import urllib.parse
 import warnings
 from datetime import datetime
@@ -575,44 +576,71 @@ class OneDrive:
         return file_name
 
     async def _download_async(self, download_url, file_name, size):
-        """INTENRAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
-        s = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        """INTERNAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
         co = list()
+        file_part_names = list()
+        # This httpx.AsyncClient instance will be shared among the coroutines, passed as an argument
+        s = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        # Get the temp dir to store the file parts. Should work on any platform
+        # https://docs.python.org/3.8/library/tempfile.html#tempfile.gettempdir
+        tmp_dir = tempfile.gettempdir()
+        # Number of concurrent parts downloaded at once
         parts = 8
+        # Size of each part
         amount = int(size / parts)
+        # If the file size is not an exact multiple of `parts`, `rest` will be > 0 and
+        # the part number is increased by one to allow the download of the last smaller piece
         rest = size % parts
         if rest > 0:
             parts += 1
         for i in range(parts):
-            f_name = Path(file_name + "." + str(i))
+            # Get the file part Path, placed in the temp directory
+            f_name = Path(tmp_dir).joinpath(file_name + "." + str(i))
+            # We save the file part Path for later use
+            file_part_names.append(f_name)
+            # On first iteration will be 0
             start = amount * i
-            if rest > 0 and i == parts - 1:
-                end = start + rest - 1
+            # If this is the last part, the `end` will be set to the file size minus one
+            # This is needed to handle the case `rest` is > 0.
+            if i == parts - 1:
+                end = size - 1
             else:
                 end = start + amount - 1
+            # We append the coroutine call to the co list. Since we are not awaiting it yet,
+            # it is not executed, just added to the list
             co.append(self._download_part(f_name, start, end, download_url, s))
+        # This starts all the coroutines in the `co` list at once and waits for them all to return
         await asyncio.gather(*co)
+        # Closing the httpx.AsyncClient instance
         await s.aclose()
+        # We will join the downloaded file parts using shutil.copyfileobj()
+        print("Joining parts...")
         with open(file_name, "wb") as fw:
-            for q in range(parts):
-                f = Path(file_name + "." + str(q))
-                with open(f, "rb") as fr:
+            for file_part in file_part_names:
+                with open(file_part, "rb") as fr:
                     shutil.copyfileobj(fr, fw)
                     fr.close()
-                    f.unlink()
+                    file_part.unlink()
             fw.close()
 
     async def _download_part(self, lf_name: Path, lstart, lend, ldownload_url, ls: httpx.AsyncClient):
-        """INTENRAL: Downloads a single part of a file asynchronously"""
+        """INTERNAL: Downloads a single part of a file asynchronously"""
+        # Each coroutines opens its own file part to write into
         async with aiofiles.open(lf_name, "wb") as fw:
+            # We build the Range HTTP header.
             headers = {"Range": "bytes={}-{}".format(lstart, lend)}
+            # Join the object headers (with auth infos)
             headers.update(self._headers)
-            print("Starting", lf_name.suffix.lstrip("."))
+            # Obtain the part number - just to be able to print something
+            part_name = lf_name.suffix.lstrip(".")
+            print("Starting part", part_name)
+            # Create an AsyncIterator over our GET request
             async with ls.stream("GET", ldownload_url, headers=headers) as r:
+                # Iterates over incoming bytes in chunks of 64 * 1024 bytes
                 async for chunk in r.aiter_bytes(65536):
                     await fw.write(chunk)
             await fw.close()
-            print(lf_name.suffix.lstrip("."), "ended.")
+            print("Part", part_name, "ended.")
 
     @token_required
     def upload_file(
