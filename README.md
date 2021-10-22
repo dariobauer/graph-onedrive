@@ -1,3 +1,5 @@
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/dariobauer/graph-onedrive/main.svg)](https://results.pre-commit.ci/latest/github/dariobauer/graph-onedrive/main)
+
 # Graph-OneDrive
 
 Interact with Microsoft's OneDrive service using the Graph API.
@@ -6,10 +8,10 @@ The Graph-OneDrive package facilitates the creation of OneDrive class instances 
 
 Functions include:
 
-* listing directories;
-* moving, copying, and renaming files and folders;
-* uploading and downloading files;
-* getting drive metadata including usage.
+* listing directories
+* moving, copying, and renaming files and folders
+* uploading and downloading files
+* getting file and drive metadata including usage
 
 ## Azure app requirement
 
@@ -36,7 +38,7 @@ Documentation and examples are provided on GitHub: <https://github.com/dariobaue
 Run this command in the terminal after installation which will create a config file in the current working directory.
 
 ```console
-graph-onedrive --configure --file "config.json" --key "onedrive"
+graph-onedrive --configure --authenticate -f "config.json" -k "onedrive"
 ```
 
 Save the following in a .py file in the same folder.

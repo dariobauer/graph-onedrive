@@ -68,7 +68,7 @@ pip install graph-onedrive
 You can also install the in-development version:
 
 ```console
-pip install https://github.com/dariobauer/graph-onedrive/archive/master.zip
+pip install https://github.com/dariobauer/graph-onedrive/archive/main.zip
 ```
 
 ## Command-line interface
