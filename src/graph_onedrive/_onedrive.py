@@ -724,7 +724,9 @@ class OneDrive:
         upload_url = upload_url["uploadUrl"]
         # Determine the upload file size and chunks
         file_size = os.path.getsize(file_path)
-        chunk_size = 320 * 1024 * 10  # Has to be multiple of 320 kb
+        chunk_size = (
+            1024 * 320 * 16
+        )  # = 5MiB. Docs: Must be multiple of 320KiB, reccommend 5-10MiB.
         no_of_uploads = -(-file_size // chunk_size)
         content_range_start = 0
         if file_size < chunk_size:
