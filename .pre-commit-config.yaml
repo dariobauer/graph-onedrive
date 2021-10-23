@@ -46,4 +46,4 @@ repos:
     rev: v0.910-1
     hooks:
       - id: mypy
-        additional_dependencies: [types-requests, types-all]
+        additional_dependencies: [types-all]
