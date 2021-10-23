@@ -68,7 +68,7 @@ class OneDrive:
         self._client_secret = client_secret
         self._tenant_id = tenant
         self._auth_url = self._AUTH_BASE_URL + self._tenant_id + self._AUTH_ENDPOINT
-        self._scope = "files.readwrite"
+        self._scope = "offline_access files.readwrite"
         self._redirect = redirect_url
         self._access_token = ""
         self._access_expires = 0.0
@@ -92,7 +92,7 @@ class OneDrive:
         body = {
             "client_id": self._client_id,
             "client_secret": self._client_secret,
-            "scope": "offline_access " + self._scope,
+            "scope": self._scope,
             "redirect_uri": self._redirect,
         }
 
@@ -154,7 +154,7 @@ class OneDrive:
         request_url += "&response_type=code"
         request_url += "&redirect_uri=" + urllib.parse.quote_plus(self._redirect)
         request_url += "&response_mode=query"
-        request_url += "&scope=offline_access%20" + self._scope
+        request_url += "&scope=" + urllib.parse.quote(self._scope)
         request_url += "&state=" + state
 
         # Make request (manually)
