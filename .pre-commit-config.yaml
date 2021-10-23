@@ -1,5 +1,5 @@
 ci:
-  autofix_commit_msg: "[pre-commit-ci] auto fixes from hooks"
+  autofix_commit_msg: "[pre-commit.ci] auto fixes from hooks"
   autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/asottile/setup-cfg-fmt
