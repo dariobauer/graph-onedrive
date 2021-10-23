@@ -581,7 +581,9 @@ class OneDrive:
         asyncio.run(self._download_async(download_url, file_name, size))
         return file_name
 
-    async def _download_async(self, download_url, file_name, size):
+    async def _download_async(
+        self, download_url: str, file_name: str, size: int
+    ) -> None:
         """INTERNAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
         co = list()
         file_part_names = list()
@@ -617,7 +619,11 @@ class OneDrive:
                 end = start + amount - 1
             # We append the coroutine call to the co list. Since we are not awaiting it yet,
             # it is not executed, just added to the list
-            co.append(self._download_part(f_name, start, end, download_url, s))
+            co.append(
+                asyncio.create_task(
+                    self._download_part(f_name, start, end, download_url, s)
+                )
+            )
         # This starts all the coroutines in the `co` list at once and waits for them all to return
         await asyncio.gather(*co)
         # Closing the httpx.AsyncClient instance
@@ -633,8 +639,13 @@ class OneDrive:
             fw.close()
 
     async def _download_part(
-        self, lf_name: Path, lstart, lend, ldownload_url, ls: httpx.AsyncClient
-    ):
+        self,
+        lf_name: Path,
+        lstart: int,
+        lend: int,
+        ldownload_url: str,
+        ls: httpx.AsyncClient,
+    ) -> None:
         """INTERNAL: Downloads a single part of a file asynchronously"""
         # Each coroutines opens its own file part to write into
         async with aiofiles.open(lf_name, "wb") as fw:
