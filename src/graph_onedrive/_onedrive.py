@@ -628,7 +628,7 @@ class OneDrive:
         basic_file_limit = 4 * 1024 * 1024
         if file_size > basic_file_limit:
             print(f"Large file, uploading in chunks")
-            response = self.upload_large_file(
+            response = self._upload_large_file(
                 file_path, file_name, parent_folder_id, if_exists
             )
             return response
@@ -663,14 +663,14 @@ class OneDrive:
         return item_id
 
     @token_required
-    def upload_large_file(
+    def _upload_large_file(
         self,
         file_path: Union[str, Path],
         new_file_name: Optional[str] = None,
         parent_folder_id: Optional[str] = None,
         if_exists: str = "rename",
     ) -> str:
-        """Uploads a file in chunks to a particular folder with a provided file name.
+        """INTERNAL: Uploads a file in chunks to a particular folder with a provided file name.
         Positional arguments:
             file_path (str|Path) -- path of the file on the drive
         Keyword arguments:
@@ -724,15 +724,10 @@ class OneDrive:
         upload_url = upload_url["uploadUrl"]
         # Determine the upload file size and chunks
         file_size = os.path.getsize(file_path)
-        chunk_size = (
+        chunk_size: int = (
             1024 * 320 * 16
         )  # = 5MiB. Docs: Must be multiple of 320KiB, reccommend 5-10MiB.
-        no_of_uploads = -(-file_size // chunk_size)
-        content_range_start = 0
-        if file_size < chunk_size:
-            content_range_end = file_size
-        else:
-            content_range_end = chunk_size - 1
+        no_of_uploads: int = -(-file_size // chunk_size)
         # Open the file pointer
         print("Loading file")
         data = open(file_path, "rb")
@@ -744,6 +739,8 @@ class OneDrive:
                 # Print the upload status
                 n += 1
                 if n == 1:
+                    content_range_start = 0
+                    content_range_end = chunk_size - 1
                     print(f"Uploading chunk {n}/{no_of_uploads}")
                 else:
                     print(
@@ -753,12 +750,7 @@ class OneDrive:
                 if (file_size - data.tell()) > chunk_size:
                     # Typical chunk upload
                     headers = {
-                        "Content-Range": "bytes "
-                        + str(content_range_start)
-                        + "-"
-                        + str(content_range_end)
-                        + "/"
-                        + str(file_size)
+                        "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
                     response = requests.put(upload_url, headers=headers, data=content)
@@ -776,12 +768,7 @@ class OneDrive:
                     # Final chunk upload
                     content_range_end = file_size - 1
                     headers = {
-                        "Content-Range": "bytes "
-                        + str(content_range_start)
-                        + "-"
-                        + str(content_range_end)
-                        + "/"
-                        + str(file_size)
+                        "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
                     response = requests.put(upload_url, headers=headers, data=content)
