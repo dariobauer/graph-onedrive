@@ -585,85 +585,86 @@ class OneDrive:
         self, download_url: str, file_name: str, size: int
     ) -> None:
         """INTERNAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
-        co = list()
+        tasks = list()
         file_part_names = list()
         # This httpx.AsyncClient instance will be shared among the coroutines, passed as an argument
-        s = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
-        # Get the temp dir to store the file parts. Should work on any platform
-        # https://docs.python.org/3.8/library/tempfile.html#tempfile.gettempdir
-        tmp_dir = tempfile.gettempdir()
-        # Number of concurrent parts downloaded at once
-        parts = 8
-        # Files smaller than 1 MB are downloaded in one shot
-        if size < (1 * 1024 * 1024):
-            parts = 1
-        # Size of each part
-        amount = int(size / parts)
-        # If the file size is not an exact multiple of `parts`, `rest` will be > 0 and
-        # the part number is increased by one to allow the download of the last smaller piece
-        rest = size % parts
-        if rest > 0:
-            parts += 1
-        for i in range(parts):
-            # Get the file part Path, placed in the temp directory
-            f_name = Path(tmp_dir).joinpath(file_name + "." + str(i))
-            # We save the file part Path for later use
-            file_part_names.append(f_name)
-            # On first iteration will be 0
-            start = amount * i
-            # If this is the last part, the `end` will be set to the file size minus one
-            # This is needed to handle the case `rest` is > 0.
-            if i == parts - 1:
-                end = size - 1
-            else:
-                end = start + amount - 1
-            # We append the coroutine call to the co list. Since we are not awaiting it yet,
-            # it is not executed, just added to the list
-            co.append(
-                asyncio.create_task(
-                    self._download_part(f_name, start, end, download_url, s)
+        client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        # Creates a new temp directory via TemporaryDirectory
+        # https://docs.python.org/3.8/library/tempfile.html#tempfile.TemporaryDirectory
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # # Get the path to the new temp dir
+            # tmp_dir = tmp_dir_obj.name
+            # Number of concurrent parts downloaded at once
+            parts = 8
+            # Files smaller than 1 MB are downloaded in one shot
+            if size < (1 * 1024 * 1024):
+                parts = 1
+            # Size of each part
+            amount = int(size / parts)
+            # If the file size is not an exact multiple of `parts`, `rest` will be > 0 and
+            # the part number is increased by one to allow the download of the last smaller piece
+            rest = size % parts
+            if rest > 0:
+                parts += 1
+            for i in range(parts):
+                # Get the file part Path, placed in the temp directory
+                f_name = Path(tmp_dir).joinpath(file_name + "." + str(i))
+                # We save the file part Path for later use
+                file_part_names.append(f_name)
+                # On first iteration will be 0
+                start = amount * i
+                # If this is the last part, the `end` will be set to the file size minus one
+                # This is needed to handle the case `rest` is > 0.
+                if i == parts - 1:
+                    end = size - 1
+                else:
+                    end = start + amount - 1
+                # We append the coroutine call to the co list. Since we are not awaiting it yet,
+                # it is not executed, just added to the list
+                tasks.append(
+                    asyncio.create_task(
+                        self._download_async_part(
+                            f_name, start, end, download_url, client
+                        )
+                    )
                 )
-            )
-        # This starts all the coroutines in the `co` list at once and waits for them all to return
-        await asyncio.gather(*co)
-        # Closing the httpx.AsyncClient instance
-        await s.aclose()
-        # We will join the downloaded file parts using shutil.copyfileobj()
-        print("Joining parts...")
-        with open(file_name, "wb") as fw:
-            for file_part in file_part_names:
-                with open(file_part, "rb") as fr:
-                    shutil.copyfileobj(fr, fw)
-                    fr.close()
+            # This awaits all the tasks in the `task` list at once
+            await asyncio.gather(*tasks)
+            # Closing the httpx.AsyncClient instance
+            await client.aclose()
+            # We will join the downloaded file parts using shutil.copyfileobj()
+            print("Joining parts...")
+            with open(file_name, "wb") as fw:
+                for file_part in file_part_names:
+                    with open(file_part, "rb") as fr:
+                        shutil.copyfileobj(fr, fw)
                     file_part.unlink()
-            fw.close()
 
-    async def _download_part(
+    async def _download_async_part(
         self,
-        lf_name: Path,
-        lstart: int,
-        lend: int,
-        ldownload_url: str,
-        ls: httpx.AsyncClient,
+        f_name: Path,
+        start: int,
+        end: int,
+        download_url: str,
+        client: httpx.AsyncClient,
     ) -> None:
         """INTERNAL: Downloads a single part of a file asynchronously"""
         # Each coroutines opens its own file part to write into
-        async with aiofiles.open(lf_name, "wb") as fw:
+        async with aiofiles.open(f_name, "wb") as fw:
             # We build the Range HTTP header.
-            headers = {"Range": f"bytes={lstart}-{lend}"}
+            headers = {"Range": f"bytes={start}-{end}"}
             # Join the object headers (with auth infos)
             headers.update(self._headers)
             # Obtain the part number - just to be able to print something
-            part_name = lf_name.suffix.lstrip(".")
-            print("Starting part", part_name)
+            part_name = f_name.suffix.lstrip(".")
+            print(f"Starting download of file segment {part_name}")
             # Create an AsyncIterator over our GET request
-            async with ls.stream("GET", ldownload_url, headers=headers) as r:
+            async with client.stream("GET", download_url, headers=headers) as r:
                 # Iterates over incoming bytes in chunks of 64 * 1024 bytes
                 chunk_size = 64 * 1024
                 async for chunk in r.aiter_bytes(chunk_size):
                     await fw.write(chunk)
-            await fw.close()
-            print("Part", part_name, "ended.")
+            print(f"Finished download of file segment {part_name}")
 
     @token_required
     def upload_file(
