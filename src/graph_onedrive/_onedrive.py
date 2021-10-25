@@ -548,7 +548,7 @@ class OneDrive:
         return True
 
     @token_required
-    def download_file(self, item_id: str) -> str:
+    def download_file(self, item_id: str, max_parts: int = 8) -> str:
         """Downloads the file to the current working directory. Note folders cannot be downloaded.
         Positional arguments:
             item_id (str) -- item id of the file to be deleted
@@ -562,6 +562,12 @@ class OneDrive:
             raise Exception(
                 "Item id provided is for a folder which this function does not permit."
             )
+        file_name = details["name"]
+        size = details["size"]
+        # If the file is empty, just create it and return
+        if size == 0:
+            Path(file_name).touch()
+            return file_name
         # Create request url based on input item id to be downloaded
         request_url = self._API_URL + "me/drive/items/" + item_id + "/content"
         # Make the Graph API request
@@ -576,51 +582,44 @@ class OneDrive:
             )
         download_url = response.headers["Location"]
         # Download the file
-        file_name = details["name"]
-        size = details["size"]
-        asyncio.run(self._download_async(download_url, file_name, size))
+        asyncio.run(self._download_async(download_url, file_name, size, max_parts))
         return file_name
 
     async def _download_async(
-        self, download_url: str, file_name: str, size: int
+        self, download_url: str, file_name: str, size: int, max_num_coroutines: int
     ) -> None:
         """INTERNAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
         tasks = list()
         file_part_names = list()
         # This httpx.AsyncClient instance will be shared among the coroutines, passed as an argument
         client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
-        # Creates a new temp directory via TemporaryDirectory
+        # Creates a new temp directory via tempfile.TemporaryDirectory()
         # https://docs.python.org/3.8/library/tempfile.html#tempfile.TemporaryDirectory
         with tempfile.TemporaryDirectory() as tmp_dir:
-            # # Get the path to the new temp dir
-            # tmp_dir = tmp_dir_obj.name
-            # Number of concurrent parts downloaded at once
-            parts = 8
-            # Files smaller than 1 MB are downloaded in one shot
-            if size < (1 * 1024 * 1024):
-                parts = 1
-            # Size of each part
-            amount = int(size / parts)
-            # If the file size is not an exact multiple of `parts`, `rest` will be > 0 and
-            # the part number is increased by one to allow the download of the last smaller piece
-            rest = size % parts
-            if rest > 0:
-                parts += 1
-            for i in range(parts):
+            # Minimum chunk size, used to calculate the number of concurrent connections
+            # in relation of the file size
+            min_typ_chunk_size = 1 * 1024 * 1024  # 1 MiB
+            # Effective number of concurrent connections
+            num_coroutines = size // (2 * min_typ_chunk_size) + 1
+            # Assures the max number of coroutines/concurrent connections is equal to the provided one
+            if num_coroutines > max_num_coroutines:
+                num_coroutines = max_num_coroutines
+            # Calculates the final size of the chunk that each coroutine will download
+            typ_chunk_size = size // num_coroutines
+            for i in range(num_coroutines):
                 # Get the file part Path, placed in the temp directory
                 f_name = Path(tmp_dir).joinpath(file_name + "." + str(i))
                 # We save the file part Path for later use
                 file_part_names.append(f_name)
                 # On first iteration will be 0
-                start = amount * i
+                start = typ_chunk_size * i
                 # If this is the last part, the `end` will be set to the file size minus one
-                # This is needed to handle the case `rest` is > 0.
-                if i == parts - 1:
+                # This is needed to be sure we download the entire file.
+                if i == num_coroutines - 1:
                     end = size - 1
                 else:
-                    end = start + amount - 1
-                # We append the coroutine call to the co list. Since we are not awaiting it yet,
-                # it is not executed, just added to the list
+                    end = start + typ_chunk_size - 1
+                # We create a task and append it to the `task` list.
                 tasks.append(
                     asyncio.create_task(
                         self._download_async_part(
@@ -628,7 +627,7 @@ class OneDrive:
                         )
                     )
                 )
-            # This awaits all the tasks in the `task` list at once
+            # This awaits all the tasks in the `task` list to return
             await asyncio.gather(*tasks)
             # Closing the httpx.AsyncClient instance
             await client.aclose()
@@ -660,7 +659,7 @@ class OneDrive:
             print(f"Starting download of file segment {part_name}")
             # Create an AsyncIterator over our GET request
             async with client.stream("GET", download_url, headers=headers) as r:
-                # Iterates over incoming bytes in chunks of 64 * 1024 bytes
+                # Iterates over incoming bytes in chunks of 64 * 1024 bytes (64 KiB)
                 chunk_size = 64 * 1024
                 async for chunk in r.aiter_bytes(chunk_size):
                     await fw.write(chunk)
