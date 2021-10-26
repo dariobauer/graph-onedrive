@@ -1,11 +1,12 @@
 """Contains the OneDrive object class to interact through the Graph API using the Python package Graph-OneDrive.
 """
-import functools
+import asyncio
 import json
 import os
 import re
 import secrets
 import shutil
+import tempfile
 import urllib.parse
 import warnings
 from datetime import datetime
@@ -19,6 +20,8 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+import aiofiles
+import httpx
 import requests
 
 from graph_onedrive._decorators import token_required
@@ -545,7 +548,7 @@ class OneDrive:
         return True
 
     @token_required
-    def download_file(self, item_id: str) -> str:
+    def download_file(self, item_id: str, max_parts: int = 8) -> str:
         """Downloads the file to the current working directory. Note folders cannot be downloaded.
         Positional arguments:
             item_id (str) -- item id of the file to be deleted
@@ -559,6 +562,12 @@ class OneDrive:
             raise Exception(
                 "Item id provided is for a folder which this function does not permit."
             )
+        file_name = details["name"]
+        size = details["size"]
+        # If the file is empty, just create it and return
+        if size == 0:
+            Path(file_name).touch()
+            return file_name
         # Create request url based on input item id to be downloaded
         request_url = self._API_URL + "me/drive/items/" + item_id + "/content"
         # Make the Graph API request
@@ -573,14 +582,88 @@ class OneDrive:
             )
         download_url = response.headers["Location"]
         # Download the file
-        file_name = details["name"]
-        # file_name = url.split("/")[-1]
-        with requests.get(download_url, stream=True) as r:
-            r.raw.read = functools.partial(r.raw.read, decode_content=True)
-            with open(file_name, "wb") as f:
-                shutil.copyfileobj(r.raw, f, length=16 * 1024 * 1024)
-        # Return the data in a text format
+        asyncio.run(self._download_async(download_url, file_name, size, max_parts))
         return file_name
+
+    async def _download_async(
+        self, download_url: str, file_name: str, size: int, max_num_coroutines: int
+    ) -> None:
+        """INTERNAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
+        tasks = list()
+        file_part_names = list()
+        # This httpx.AsyncClient instance will be shared among the coroutines, passed as an argument
+        client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        # Creates a new temp directory via tempfile.TemporaryDirectory()
+        # https://docs.python.org/3.8/library/tempfile.html#tempfile.TemporaryDirectory
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Minimum chunk size, used to calculate the number of concurrent connections
+            # in relation of the file size
+            min_typ_chunk_size = 1 * 1024 * 1024  # 1 MiB
+            # Effective number of concurrent connections
+            num_coroutines = size // (2 * min_typ_chunk_size) + 1
+            # Assures the max number of coroutines/concurrent connections is equal to the provided one
+            if num_coroutines > max_num_coroutines:
+                num_coroutines = max_num_coroutines
+            # Calculates the final size of the chunk that each coroutine will download
+            typ_chunk_size = size // num_coroutines
+            for i in range(num_coroutines):
+                # Get the file part Path, placed in the temp directory
+                f_name = Path(tmp_dir).joinpath(file_name + "." + str(i))
+                # We save the file part Path for later use
+                file_part_names.append(f_name)
+                # On first iteration will be 0
+                start = typ_chunk_size * i
+                # If this is the last part, the `end` will be set to the file size minus one
+                # This is needed to be sure we download the entire file.
+                if i == num_coroutines - 1:
+                    end = size - 1
+                else:
+                    end = start + typ_chunk_size - 1
+                # We create a task and append it to the `task` list.
+                tasks.append(
+                    asyncio.create_task(
+                        self._download_async_part(
+                            f_name, start, end, download_url, client
+                        )
+                    )
+                )
+            # This awaits all the tasks in the `task` list to return
+            await asyncio.gather(*tasks)
+            # Closing the httpx.AsyncClient instance
+            await client.aclose()
+            # We will join the downloaded file parts using shutil.copyfileobj()
+            print("Joining parts...")
+            with open(file_name, "wb") as fw:
+                for file_part in file_part_names:
+                    with open(file_part, "rb") as fr:
+                        shutil.copyfileobj(fr, fw)
+                    file_part.unlink()
+
+    async def _download_async_part(
+        self,
+        f_name: Path,
+        start: int,
+        end: int,
+        download_url: str,
+        client: httpx.AsyncClient,
+    ) -> None:
+        """INTERNAL: Downloads a single part of a file asynchronously"""
+        # Each coroutines opens its own file part to write into
+        async with aiofiles.open(f_name, "wb") as fw:
+            # We build the Range HTTP header.
+            headers = {"Range": f"bytes={start}-{end}"}
+            # Join the object headers (with auth infos)
+            headers.update(self._headers)
+            # Obtain the part number - just to be able to print something
+            part_name = f_name.suffix.lstrip(".")
+            print(f"Starting download of file segment {part_name}")
+            # Create an AsyncIterator over our GET request
+            async with client.stream("GET", download_url, headers=headers) as r:
+                # Iterates over incoming bytes in chunks of 64 * 1024 bytes (64 KiB)
+                chunk_size = 64 * 1024
+                async for chunk in r.aiter_bytes(chunk_size):
+                    await fw.write(chunk)
+            print(f"Finished download of file segment {part_name}")
 
     @token_required
     def upload_file(
