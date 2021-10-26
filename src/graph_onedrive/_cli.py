@@ -18,7 +18,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     """
     # Create the argument parser
     cli_description = "Graph-OneDrive helper functions to create and authenticate configs and interact with OneDrive to test your configuration."
-    cli_epilog = "Note: use of the Graph API is subject to the Microsoft terms of use avaliable at https://docs.microsoft.com/en-us/legal/microsoft-apis/terms-of-use"
+    cli_epilog = "Note: use of the Graph API is subject to the Microsoft terms of use available at https://docs.microsoft.com/en-us/legal/microsoft-apis/terms-of-use"
     parser = argparse.ArgumentParser(description=cli_description, epilog=cli_epilog)
     # Add arguments
     parser_actions = parser.add_argument_group("actions")
@@ -113,7 +113,7 @@ def config(config_path: Optional[str] = None, config_key: Optional[str] = None) 
         else:
             config_key = "onedrive"
 
-    # Load the current file if it exists, otherwsie create dictionary
+    # Load the current file if it exists, otherwise create dictionary
     if os.path.isfile(config_path):
         with open(config_path) as config_file:
             config = json.load(config_file)
@@ -354,14 +354,13 @@ def instance(
             elif command in ["dl", "download"]:
                 item_id = input("Item id to download: ").strip()
                 print("Downloading...")
-                response = onedrive.download_file(item_id)
+                response = onedrive.download_file(item_id, verbose=True)
                 print(
                     f"Item was downloaded in the current working directory as {response}"
                 )
 
             elif command in ["ul", "upload"]:
-                file_path_input = input("Provide full file path: ").strip()
-                file_path = file_path_input
+                file_path = input("Provide full file path: ").strip()
                 if input("Rename file? [y/N]: ").strip().lower() == "y":
                     new_file_name = input(
                         "Upload as file name (with extension): "
@@ -374,7 +373,7 @@ def instance(
                 if parent_folder_id == "":
                     parent_folder_id = None
                 response = onedrive.upload_file(
-                    file_path, new_file_name, parent_folder_id
+                    file_path, new_file_name, parent_folder_id, verbose=True
                 )
                 print(response)
 
@@ -417,7 +416,7 @@ def instance(
                 break
 
             else:
-                print("Command not recognised. Use 'help' for info or 'exit' to quit.")
+                print("Command not recognized. Use 'help' for info or 'exit' to quit.")
 
     except KeyboardInterrupt:
         if use_config_file:

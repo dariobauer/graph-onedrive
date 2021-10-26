@@ -40,14 +40,16 @@ Please first discuss any deviations from the current documentation formats alrea
 ## Submitting patches
 
 If there is not an open issue for what you want to submit, the preference is for you to open one for discussion before working on a pull request. You can work on any issue that doesn't have an open PR linked to it or a maintainer assigned to it. These show up in the sidebar. There is no need to ask if you can work on an issue that interests you.
-It is suggested that you fork to a branch named after the issue (ie not main) to simplify merge/rebase.
+It is suggested that you fork to a branch named after the issue (ie not `main`) to simplify merge/rebase.
 
 When submitting your patch, please ensure that you:
 
 1. Test your code;
-2. Update any relevant docs pages and doc-strings;
-3. Format your code using [Black](https://github.com/psf/black), a [pre-commit yaml](https://github.com/dariobauer/graph-onedrive/blob/main/.pre-commit-config.yaml) is provided to assist with this.
-4. Add an entry in `CHANGES.md`.
+2. Include type annotations;
+3. Update any relevant docs pages and doc-strings;
+4. Add an entry in `CHANGES.md`;
+5. Ideally run [pre-commit](https://pre-commit.com), and correct any issues.
+
 
 
 [1]: <https://github.com/dariobauer/graph-onedrive/issues> "GitHub issues"

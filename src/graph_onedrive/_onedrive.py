@@ -288,7 +288,7 @@ class OneDrive:
         # Print the items in the directory along with their item ids
         if verbose:
             for entries in range(len(items)):
-                print(items[entries]["name"], "| item-id >", items[entries]["id"])
+                print(items[entries]["id"], items[entries]["name"])
         # Return the items dictionary
         return items
 
@@ -365,7 +365,7 @@ class OneDrive:
             )
         else:
             request_url = self._API_URL + "me/drive/root/children"
-        # Set conflict behaviour
+        # Set conflict behavior
         if if_exists == "fail":
             conflictBehavior = "fail"
         elif if_exists == "replace":
@@ -548,29 +548,38 @@ class OneDrive:
         return True
 
     @token_required
-    def download_file(self, item_id: str, max_parts: int = 8) -> str:
-        """Downloads the file to the current working directory. Note folders cannot be downloaded.
+    def download_file(
+        self, item_id: str, max_connections: int = 8, verbose: bool = False
+    ) -> str:
+        """Downloads a file to the current working directory asynchronously.
+        Note folders cannot be downloaded, you need to use a loop instead.
         Positional arguments:
             item_id (str) -- item id of the file to be deleted
+        Keyword arguments:
+            max_connections (int) -- max concurrent open http requests
+            verbose (bool) -- prints status message during the download process (default = False)
         Returns:
             file_name (str) -- returns the name of the file including extension
         """
         # Get item details
-        details = self.detail_item(item_id)
+        file_details = self.detail_item(item_id)
         # Check that it is not a folder
-        if "folder" in details:
+        if "folder" in file_details:
             raise Exception(
                 "Item id provided is for a folder which this function does not permit."
             )
-        file_name = details["name"]
-        size = details["size"]
+        file_name = file_details["name"]
+        size = file_details["size"]
         # If the file is empty, just create it and return
         if size == 0:
             Path(file_name).touch()
+            warnings.warn(f"Empty file {file_name} created.")
             return file_name
         # Create request url based on input item id to be downloaded
         request_url = self._API_URL + "me/drive/items/" + item_id + "/content"
         # Make the Graph API request
+        if verbose:
+            print("Getting the file download url")
         response = requests.get(
             request_url, headers=self._headers, allow_redirects=False
         )
@@ -581,49 +590,69 @@ class OneDrive:
                 f"API Error {response.status_code}: item could not be downloaded."
             )
         download_url = response.headers["Location"]
-        # Download the file
-        asyncio.run(self._download_async(download_url, file_name, size, max_parts))
+        # Download the file asynchronously
+        asyncio.run(
+            self._download_async(
+                download_url, file_name, size, max_connections, verbose
+            )
+        )
+        # Return the file name
         return file_name
 
     async def _download_async(
-        self, download_url: str, file_name: str, size: int, max_num_coroutines: int
+        self,
+        download_url: str,
+        file_name: str,
+        file_size: int,
+        max_num_coroutines: int,
+        verbose: bool = False,
     ) -> None:
-        """INTERNAL: Creates a list of coroutines each downloading one part of the file, and starts them"""
+        """INTERNAL: Creates a list of co-routines each downloading one part of the file, and starts them.
+        Positional arguments:
+            download_url (str) -- url of the file to download
+            file_name (str) -- name of the final file
+            file_size (int) -- size of the file being downloaded
+        Keyword arguments:
+            max_connections (int) -- max concurrent open http requests
+            verbose (bool) -- prints status message during the download process (default = False)
+        """
         tasks = list()
         file_part_names = list()
-        # This httpx.AsyncClient instance will be shared among the coroutines, passed as an argument
+        # This httpx.AsyncClient instance will be shared among the co-routines, passed as an argument
         client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
         # Creates a new temp directory via tempfile.TemporaryDirectory()
-        # https://docs.python.org/3.8/library/tempfile.html#tempfile.TemporaryDirectory
         with tempfile.TemporaryDirectory() as tmp_dir:
-            # Minimum chunk size, used to calculate the number of concurrent connections
-            # in relation of the file size
+            # Min chunk size, used to calculate the  number of concurrent connections based on file size
             min_typ_chunk_size = 1 * 1024 * 1024  # 1 MiB
             # Effective number of concurrent connections
-            num_coroutines = size // (2 * min_typ_chunk_size) + 1
-            # Assures the max number of coroutines/concurrent connections is equal to the provided one
+            num_coroutines = file_size // (2 * min_typ_chunk_size) + 1
+            # Assures the max number of co-routines/concurrent connections is equal to the provided one
             if num_coroutines > max_num_coroutines:
                 num_coroutines = max_num_coroutines
-            # Calculates the final size of the chunk that each coroutine will download
-            typ_chunk_size = size // num_coroutines
+            # Calculates the final size of the chunk that each co-routine will download
+            typ_chunk_size = file_size // num_coroutines
+            if verbose:
+                print(
+                    f"File {file_name} ({round(file_size/100000,1)}mb) will be downloaded in {num_coroutines} segments."
+                )
             for i in range(num_coroutines):
                 # Get the file part Path, placed in the temp directory
-                f_name = Path(tmp_dir).joinpath(file_name + "." + str(i))
+                part_file_path = Path(tmp_dir).joinpath(file_name + "." + str(i + 1))
                 # We save the file part Path for later use
-                file_part_names.append(f_name)
+                file_part_names.append(part_file_path)
                 # On first iteration will be 0
                 start = typ_chunk_size * i
                 # If this is the last part, the `end` will be set to the file size minus one
                 # This is needed to be sure we download the entire file.
                 if i == num_coroutines - 1:
-                    end = size - 1
+                    end = file_size - 1
                 else:
                     end = start + typ_chunk_size - 1
                 # We create a task and append it to the `task` list.
                 tasks.append(
                     asyncio.create_task(
                         self._download_async_part(
-                            f_name, start, end, download_url, client
+                            client, download_url, part_file_path, start, end, verbose
                         )
                     )
                 )
@@ -631,8 +660,9 @@ class OneDrive:
             await asyncio.gather(*tasks)
             # Closing the httpx.AsyncClient instance
             await client.aclose()
-            # We will join the downloaded file parts using shutil.copyfileobj()
-            print("Joining parts...")
+            # Join the downloaded file parts
+            if verbose:
+                print("Joining individual segments into single file...")
             with open(file_name, "wb") as fw:
                 for file_part in file_part_names:
                     with open(file_part, "rb") as fr:
@@ -641,29 +671,41 @@ class OneDrive:
 
     async def _download_async_part(
         self,
-        f_name: Path,
+        client: httpx.AsyncClient,
+        download_url: str,
+        part_file_path: Path,
         start: int,
         end: int,
-        download_url: str,
-        client: httpx.AsyncClient,
+        verbose: bool = False,
     ) -> None:
-        """INTERNAL: Downloads a single part of a file asynchronously"""
-        # Each coroutines opens its own file part to write into
-        async with aiofiles.open(f_name, "wb") as fw:
-            # We build the Range HTTP header.
+        """INTERNAL: Co-routine to download a part of a file asynchronously.
+        Positional arguments:
+            client (httpx) -- client object to use to make request
+            download_url (str) -- url of the file to download
+            part_file_path (str) -- path to the temporary part file
+            start (int) -- byte range to start the download at
+            end (int) -- byte range to end the download at
+        Keyword arguments:
+            verbose (bool) -- prints status message during the download process (default = False)
+        """
+        # Each co-routine opens its own file part to write into
+        async with aiofiles.open(part_file_path, "wb") as fw:
+            # Build the Range HTTP header and add the auth header
             headers = {"Range": f"bytes={start}-{end}"}
-            # Join the object headers (with auth infos)
             headers.update(self._headers)
-            # Obtain the part number - just to be able to print something
-            part_name = f_name.suffix.lstrip(".")
-            print(f"Starting download of file segment {part_name}")
+            if verbose:
+                part_name = part_file_path.suffix.lstrip(".")
+                print(
+                    f"Starting download of file segment {part_name} (bytes {start}-{end})"
+                )
             # Create an AsyncIterator over our GET request
-            async with client.stream("GET", download_url, headers=headers) as r:
-                # Iterates over incoming bytes in chunks of 64 * 1024 bytes (64 KiB)
-                chunk_size = 64 * 1024
-                async for chunk in r.aiter_bytes(chunk_size):
+            async with client.stream("GET", download_url, headers=headers) as response:
+                # Iterates over incoming bytes in chunks and saves them to file
+                write_chunk_size = 64 * 1024  # 64 KiB
+                async for chunk in response.aiter_bytes(write_chunk_size):
                     await fw.write(chunk)
-            print(f"Finished download of file segment {part_name}")
+            if verbose:
+                print(f"Finished download of file segment {part_name}")
 
     @token_required
     def upload_file(
@@ -672,6 +714,7 @@ class OneDrive:
         new_file_name: Optional[str] = None,
         parent_folder_id: Optional[str] = None,
         if_exists: str = "rename",
+        verbose: bool = False,
     ) -> str:
         """Uploads a file to a particular folder with a provided file name.
         Delegates the upload task to the upload_large_file function if required.
@@ -681,10 +724,11 @@ class OneDrive:
                 new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
                 parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
                 if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
+                verbose (bool) -- prints status message during the download process (default = False)
             Returns:
                 item_id (str) -- item id of the newly uploaded file
         """
-        # Set conflict behaviour
+        # Set conflict behavior
         if if_exists == "fail":
             conflict_behavior = "fail"
         elif if_exists == "replace":
@@ -710,9 +754,10 @@ class OneDrive:
         file_size = os.path.getsize(file_path)
         basic_file_limit = 4 * 1024 * 1024
         if file_size > basic_file_limit:
-            print(f"Large file, uploading in chunks")
+            if verbose:
+                print(f"Large file, uploading in chunks")
             response = self._upload_large_file(
-                file_path, file_name, parent_folder_id, if_exists
+                file_path, file_name, parent_folder_id, if_exists, verbose
             )
             return response
         # Create request url based on input values
@@ -720,17 +765,14 @@ class OneDrive:
             request_url = self._API_URL + "me/drive/items/" + parent_folder_id + ":/"
         else:
             request_url = self._API_URL + "me/drive/root:/"
-        request_url += (
-            file_name
-            + ":/content"
-            + "?@microsoft.graph.conflictBehavior="
-            + conflict_behavior
-        )
+        request_url += f"{file_name}:/content?@microsoft.graph.conflictBehavior={conflict_behavior}"
         # Open the file into memory
-        print("Loading file")
+        if verbose:
+            print("Loading file")
         content = open(file_path, "rb")
         # Make the Graph API request
-        print("Uploading file")
+        if verbose:
+            print("Uploading file")
         response = requests.put(request_url, headers=self._headers, data=content)
         # Close file
         content.close()
@@ -752,6 +794,7 @@ class OneDrive:
         new_file_name: Optional[str] = None,
         parent_folder_id: Optional[str] = None,
         if_exists: str = "rename",
+        verbose: bool = False,
     ) -> str:
         """INTERNAL: Uploads a file in chunks to a particular folder with a provided file name.
         Positional arguments:
@@ -760,10 +803,11 @@ class OneDrive:
             new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
             parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
             if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
+            verbose (bool) -- prints status message during the download process (default = False)
         Returns:
             item_id (str) -- item id of the newly uploaded file
         """
-        # Set conflict behaviour
+        # Set conflict behavior
         if if_exists == "fail":
             conflict_behavior = "fail"
         elif if_exists == "replace":
@@ -795,7 +839,8 @@ class OneDrive:
             }
         }
         # Make the Graph API request for the upload session
-        print(f"Requesting upload session using url")
+        if verbose:
+            print(f"Requesting upload session using url")
         response = requests.post(request_url, headers=self._headers)
         # Validate upload session request response and parse
         if response.status_code != 200:
@@ -809,10 +854,11 @@ class OneDrive:
         file_size = os.path.getsize(file_path)
         chunk_size: int = (
             1024 * 320 * 16
-        )  # = 5MiB. Docs: Must be multiple of 320KiB, reccommend 5-10MiB.
+        )  # = 5MiB. Docs: Must be multiple of 320KiB, recommend 5-10MiB.
         no_of_uploads: int = -(-file_size // chunk_size)
         # Open the file pointer
-        print("Loading file")
+        if verbose:
+            print("Loading file")
         data = open(file_path, "rb")
         # Run in a try block to capture user cancellation request
         try:
@@ -824,11 +870,13 @@ class OneDrive:
                 if n == 1:
                     content_range_start = 0
                     content_range_end = chunk_size - 1
-                    print(f"Uploading chunk {n}/{no_of_uploads}")
+                    if verbose:
+                        print(f"Uploading segment {n}/{no_of_uploads}")
                 else:
-                    print(
-                        f"Uploading chunk {n}/{no_of_uploads}  (~{int((n-1)/no_of_uploads*100)}% complete)"
-                    )
+                    if verbose:
+                        print(
+                            f"Uploading segment {n}/{no_of_uploads}  (~{int((n-1)/no_of_uploads*100)}% complete)"
+                        )
                 # Upload chunks
                 if (file_size - data.tell()) > chunk_size:
                     # Typical chunk upload
@@ -855,12 +903,14 @@ class OneDrive:
                     }
                     content = data.read(chunk_size)
                     response = requests.put(upload_url, headers=headers, data=content)
-                    print("Upload complete")
+                    if verbose:
+                        print("Upload complete")
         except KeyboardInterrupt:
             # Upload cancelled, send delete request
             data.close()
             response2 = requests.delete(upload_url)
-            print("Upload cancelled by user.")
+            if verbose:
+                print("Upload cancelled by user.")
         # Close the file
         data.close()
         # Validate request response and parse

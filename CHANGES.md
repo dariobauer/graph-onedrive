@@ -3,7 +3,10 @@
 ## Unreleased
 
 
-
+* Improved file download to asynchronously download using multiple connections
+* Added HTTPX and aiofiles packages as dependencies - issue #11 opened to replace Requests
+* Added verbose keyword arguments to download and upload functions
+* Documentation updates
 
 ## Released
 
@@ -21,7 +24,7 @@ Released 2021-10-21
 Released 2021-10-20
 
 * Improved code typing
-* Updated code formating
+* Updated code formatting
 * Improved validation of authorization codes and access tokens (Issues 3 & 4)
 
 ### Version 0.0.1a8

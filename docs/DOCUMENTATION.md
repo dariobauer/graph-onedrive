@@ -56,7 +56,11 @@ The `redirect_url` and `refresh_token` values are default so these lines can be 
 
 ### Installation
 
+#### Requirements
+
 The package currently requires Python 3.7 or greater.
+
+#### Install
 
 Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) which will use the releases hosted on [PyPI](https://pypi.org/project/graph-onedrive/#history).
 Depending on your installation you may need to use `pip3` instead.
@@ -70,6 +74,12 @@ You can also install the in-development version:
 ```console
 pip install https://github.com/dariobauer/graph-onedrive/archive/main.zip
 ```
+
+#### Dependencies
+
+The package currently requires [Requests](https://pypi.org/project/requests/), [HTTPX](https://pypi.org/project/httpx/), and [aiofiles](https://pypi.org/project/aiofiles/). These will be installed automatically if using pip as described above.
+
+Note: We are in a phase of replacing Requests completely with HTTPX.
 
 ## Command-line interface
 
@@ -95,14 +105,14 @@ You can combine these to run multiple tasks in succession, with a common one bei
 
 ### Options to input configuration file path and key
 
-You can use flags to sepcify the config file path and/or dictionary key.
+You can use flags to specify the config file path and/or dictionary key.
 
 Optional argument | Description
 ---|---
 -f, --file PATH | Optional path to config json file
 -k, --key KEY | Optional config file dictionary key
 
-Use these flags by using the flag folowed by the input, for example:
+Use these flags by using the flag followed by the input, for example:
 
 ```console
 graph-onedrive -cai -f "config.json" -k "onedrive"
@@ -251,7 +261,7 @@ Positional arguments:
 
 Keyword arguments:
 
-* tenant (str) -- Azure app org tentent id number, use default if multi-tenent (default = "common")
+* tenant (str) -- Azure app org tenant id number, use default if multi-tenant (default = "common")
 * redirect_url (str)  -- Authentication redirection url (default = "http://localhost:8080")
 * refresh_token (str) -- optional token from previous session (default = None)
 
@@ -474,18 +484,23 @@ Returns:
 
 #### download_file
 
-Downloads the file to the current working directory.
-Note folders cannot be downloaded.
+Downloads a file to the current working directory asynchronously with multiple concurrent http requests file files larger than 1mb.
+Note folders cannot be downloaded, you need to implement a loop instead.
 
 Future development improvement: specify the file location and name.
 
 ```python
-file_name = my_instance.download_file(item_id)
+file_name = my_instance.download_file(item_id, max_connections=8, verbose=False)
 ```
 
 Positional arguments:
 
 * item_id (str) -- item id of the file to be deleted
+
+Keyword arguments:
+
+* max_connections (int) -- max concurrent open http requests, refer throttling warning in the gotcha section at the bottom of the docs
+* verbose (bool) -- prints the download progress (default = False)
 
 Returns:
 
@@ -497,7 +512,11 @@ Uploads a file to a particular folder with a provided file name.
 
 ```python
 item_id = my_instance.upload_file(
-    file_path, new_file_name=None, parent_folder_id=None, if_exists="rename"
+    file_path,
+    new_file_name=None,
+    parent_folder_id=None,
+    if_exists="rename",
+    verbose=False,
 )
 ```
 
@@ -510,6 +529,7 @@ Keyword arguments:
 * new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
 * parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
 * if_exists (str) -- action to take if the new folder already exists, either "fail", "replace", "rename" (default = "rename")
+* verbose (bool) -- prints the upload progress (default = False)
 
 Returns:
 
@@ -518,6 +538,19 @@ Returns:
 ## Examples
 
 Examples are provided to aid in development: <https://github.com/dariobauer/graph-onedrive/blob/main/docs/examples/>
+
+## Gotchas / Warnings
+
+### Throttling limits
+
+DLDR; keep max_connections ≤ 16
+
+Depending on your internet connection and the sizes of the files that you and transferring may see increased transfer speeds with more connections than the default. Graph-OneDrive currently will create a new connection for every 1MiB if not limited by the max_connections. If you have a really fast connection having many connections may slow the overall performance.
+
+A word of caution on too many connections - the Graph API may throttle requests. This can be a hard throttle where all existing connections are cut and a cool-down period is enforced.
+Throttling can be applied at the user level or the whole organization. [Details on throttling](https://docs.microsoft.com/en-us/graph/throttling) are available, however the [exact limits are not provided](https://docs.microsoft.com/en-us/graph/throttling).
+
+We recommended to not exceed 16 connections for performance and to avoid throttling.
 
 ## Support and issues
 
