@@ -4,7 +4,6 @@ from setuptools import setup
 setup(
     name="graph_onedrive",
     install_requires=[
-        "requests",
         "aiofiles",
         "httpx",
     ],  # To-do: specify a min version based on testing
