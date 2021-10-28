@@ -770,7 +770,12 @@ class OneDrive:
         # Make the Graph API request
         if verbose:
             print("Uploading file")
-        response = httpx.put(request_url, headers=self._headers, content=content, timeout=httpx.Timeout(30.0))
+        response = httpx.put(
+            request_url,
+            headers=self._headers,
+            content=content,
+            timeout=httpx.Timeout(30.0),
+        )
         # Close file
         content.close()
         # Validate request response and parse
@@ -881,7 +886,12 @@ class OneDrive:
                         "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
-                    response = httpx.put(upload_url, headers=headers, content=content, timeout=httpx.Timeout(30.0))
+                    response = httpx.put(
+                        upload_url,
+                        headers=headers,
+                        content=content,
+                        timeout=httpx.Timeout(30.0),
+                    )
                     # Validate request response
                     if response.status_code != 202:
                         data.close()
@@ -899,7 +909,12 @@ class OneDrive:
                         "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
-                    response = httpx.put(upload_url, headers=headers, content=content, timeout=httpx.Timeout(30.0))
+                    response = httpx.put(
+                        upload_url,
+                        headers=headers,
+                        content=content,
+                        timeout=httpx.Timeout(30.0),
+                    )
                     if verbose:
                         print("Upload complete")
         except KeyboardInterrupt:
