@@ -22,7 +22,6 @@ from typing import Union
 
 import aiofiles
 import httpx
-import requests
 
 from graph_onedrive._decorators import token_required
 
@@ -110,7 +109,7 @@ class OneDrive:
             body["code"] = authorization_code
 
         # Make the request
-        response = requests.post(request_url, data=body)
+        response = httpx.post(request_url, data=body)
         status_code = response.status_code
         response_data = json.loads(response.text)
 
@@ -196,7 +195,7 @@ class OneDrive:
         return authorization_code
 
     def _create_headers(self) -> None:
-        """INTENRAL: Create headers for the http request to the Graph API."""
+        """INTERNAL: Create headers for the http request to the Graph API."""
         self._headers = {
             "Accept": "*/*",
             "Authorization": "Bearer " + self._access_token,
@@ -207,7 +206,7 @@ class OneDrive:
         """INTERNAL: Gets the drive details"""
         # Generate request url
         request_url = self._API_URL + "me/drive/"
-        response = requests.get(request_url, headers=self._headers)
+        response = httpx.get(request_url, headers=self._headers)
         response_data = json.loads(response.text)
         # Set drive details
         self._drive_id = response_data.get("id")
@@ -278,7 +277,7 @@ class OneDrive:
         else:
             request_url = self._API_URL + "me/drive/root/children"
         # Make the Graph API request
-        response = requests.get(request_url, headers=self._headers)
+        response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
         if response.status_code != 200:
             print(response.text)
@@ -305,7 +304,7 @@ class OneDrive:
         # Create request url based on input item id
         request_url = self._API_URL + "me/drive/items/" + item_id
         # Make the Graph API request
-        response = requests.get(request_url, headers=self._headers)
+        response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
         if response.status_code != 200:
             print(response.text)
@@ -390,7 +389,7 @@ class OneDrive:
             "@microsoft.graph.conflictBehavior": conflictBehavior,
         }
         # Make the Graph API request
-        response = requests.post(request_url, headers=self._headers, json=body)
+        response = httpx.post(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 201:
             print(response.text)
@@ -421,7 +420,7 @@ class OneDrive:
         if new_name:
             body["name"] = new_name
         # Make the Graph API request
-        response = requests.patch(request_url, headers=self._headers, json=body)
+        response = httpx.patch(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 200:
             print(response.text)
@@ -453,7 +452,7 @@ class OneDrive:
             item_id (str) -- item id of the new item
         """
         # Create request url based on input item id that should be moved
-        request_url = self._API_URL + "me/drive/items/" + item_id + "copy"
+        request_url = self._API_URL + "me/drive/items/" + item_id + "/copy"
         # Create the request body
         body: Dict[str, Any] = {
             "parentReference": {"driveId": self._drive_id, "id": new_folder_id}
@@ -461,17 +460,17 @@ class OneDrive:
         if new_name:
             body["name"] = new_name
         # Make the Graph API request
-        response = requests.post(request_url, headers=self._headers, json=body)
+        response = httpx.post(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 202:
             raise Exception(f"API Error: item could not be copied.")
-        monitor_url = response.url
+        monitor_url = response.headers.get("Location")
         if confirm_complete:
             wait_duration = 10
             previous_complete = 0
             while True:
                 sleep(wait_duration)
-                response = requests.get(monitor_url)
+                response = httpx.get(monitor_url)
                 response_data = json.loads(response.text)
                 if response_data["status"] == "completed":
                     break
@@ -502,7 +501,7 @@ class OneDrive:
         # Create the request body
         body = {"name": new_name}
         # Make the Graph API request
-        response = requests.patch(request_url, headers=self._headers, json=body)
+        response = httpx.patch(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 200:
             print(response.text)
@@ -537,7 +536,7 @@ class OneDrive:
         # Create request url based on input item id that should be deleted
         request_url = self._API_URL + "me/drive/items/" + item_id
         # Make the Graph API request
-        response = requests.delete(request_url, headers=self._headers)
+        response = httpx.delete(request_url, headers=self._headers)
         # Validate request response
         if response.status_code != 204:
             print(response.text)
@@ -580,9 +579,7 @@ class OneDrive:
         # Make the Graph API request
         if verbose:
             print("Getting the file download url")
-        response = requests.get(
-            request_url, headers=self._headers, allow_redirects=False
-        )
+        response = httpx.get(request_url, headers=self._headers, follow_redirects=False)
         # Validate request response and parse
         if response.status_code != 302:
             print(response.text)
@@ -604,7 +601,7 @@ class OneDrive:
         download_url: str,
         file_name: str,
         file_size: int,
-        max_num_coroutines: int,
+        max_connections: int = 8,
         verbose: bool = False,
     ) -> None:
         """INTERNAL: Creates a list of co-routines each downloading one part of the file, and starts them.
@@ -627,8 +624,8 @@ class OneDrive:
             # Effective number of concurrent connections
             num_coroutines = file_size // (2 * min_typ_chunk_size) + 1
             # Assures the max number of co-routines/concurrent connections is equal to the provided one
-            if num_coroutines > max_num_coroutines:
-                num_coroutines = max_num_coroutines
+            if num_coroutines > max_connections:
+                num_coroutines = max_connections
             # Calculates the final size of the chunk that each co-routine will download
             typ_chunk_size = file_size // num_coroutines
             if verbose:
@@ -773,7 +770,7 @@ class OneDrive:
         # Make the Graph API request
         if verbose:
             print("Uploading file")
-        response = requests.put(request_url, headers=self._headers, data=content)
+        response = httpx.put(request_url, headers=self._headers, content=content, timeout=httpx.Timeout(30.0))
         # Close file
         content.close()
         # Validate request response and parse
@@ -841,7 +838,7 @@ class OneDrive:
         # Make the Graph API request for the upload session
         if verbose:
             print(f"Requesting upload session using url")
-        response = requests.post(request_url, headers=self._headers)
+        response = httpx.post(request_url, headers=self._headers)
         # Validate upload session request response and parse
         if response.status_code != 200:
             print(response.text)
@@ -884,11 +881,11 @@ class OneDrive:
                         "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
-                    response = requests.put(upload_url, headers=headers, data=content)
+                    response = httpx.put(upload_url, headers=headers, content=content, timeout=httpx.Timeout(30.0))
                     # Validate request response
                     if response.status_code != 202:
                         data.close()
-                        response2 = requests.delete(upload_url)
+                        response2 = httpx.delete(upload_url)
                         raise Exception(
                             f"API Error {response.status_code}: could not upload chuck {n} of {no_of_uploads}"
                         )
@@ -902,13 +899,13 @@ class OneDrive:
                         "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
-                    response = requests.put(upload_url, headers=headers, data=content)
+                    response = httpx.put(upload_url, headers=headers, content=content, timeout=httpx.Timeout(30.0))
                     if verbose:
                         print("Upload complete")
         except KeyboardInterrupt:
             # Upload cancelled, send delete request
             data.close()
-            response2 = requests.delete(upload_url)
+            response2 = httpx.delete(upload_url)
             if verbose:
                 print("Upload cancelled by user.")
         # Close the file
@@ -916,7 +913,7 @@ class OneDrive:
         # Validate request response and parse
         if response.status_code != 201 and response.status_code != 200:
             print(response.text)
-            response2 = requests.delete(upload_url)
+            response2 = httpx.delete(upload_url)
             raise Exception(
                 f"API Error {response.status_code}: could not upload file: {file_path}"
             )
