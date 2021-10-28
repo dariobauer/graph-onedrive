@@ -301,7 +301,7 @@ def instance(
                     folder_id = None
                 onedrive.list_directory(folder_id, verbose=True)
 
-            elif command in ["d", "detail"]:
+            elif command in ["de", "detail"]:
                 item_id = input("Item id to detail: ").strip()
                 onedrive.detail_item(item_id, verbose=True)
 
