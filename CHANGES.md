@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-
+* Added py.typed for mypy typing support
 
 
 ## Released
