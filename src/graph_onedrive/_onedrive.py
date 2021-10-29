@@ -1,7 +1,6 @@
 """Contains the OneDrive object class to interact through the Graph API using the Python package Graph-OneDrive.
 """
 import asyncio
-import json
 import os
 import re
 import secrets
@@ -41,14 +40,16 @@ class OneDrive:
         get_usage           -- account current usage and total capacity
         list_directory      -- lists all of the items and their attributes within a directory
         detail_item         -- get item details
+        item_type           -- get item type, folder or file
+        is_folder           -- check if an item is a folder
+        is_file             -- check if an item is a file
         make_folder         -- creates a folder
         move_item           -- moves an item
         copy_item           -- copies an item
         rename_item         -- renames an item
         delete_item         -- deletes an item
         download_file       -- downloads a file to the working directory
-        upload_file         -- uploads a file as a single piece if small and otherwise calls upload_large_file
-        upload_large_file   -- uploads a file in chunks, typically calling upload_file is suggested
+        upload_file         -- uploads a file
     """
 
     # Set class constants for the Graph API
@@ -110,15 +111,20 @@ class OneDrive:
 
         # Make the request
         response = httpx.post(request_url, data=body)
-        status_code = response.status_code
-        response_data = json.loads(response.text)
 
         # Check response was okay
-        if status_code != 200:
-            error_descrpition = response_data.get(
-                "error_description", "Unknown error - no error description returned"
+        if response.status_code != 200:
+            try:
+                response_data = response.json()
+                error_message = response_data.get("error", {}).get("message")
+                error_message2 = response_data.get("error_description")
+            except:
+                error_message = ""
+            raise Exception(
+                f"API Error : drive details not available ({error_message} {error_message2})"
             )
-            raise Exception(f"API Error : {error_descrpition} ")
+
+        response_data = response.json()
 
         # Set the access and refresh tokens to the instance attributes
         try:
@@ -207,7 +213,16 @@ class OneDrive:
         # Generate request url
         request_url = self._API_URL + "me/drive/"
         response = httpx.get(request_url, headers=self._headers)
-        response_data = json.loads(response.text)
+        if response.status_code != 200:
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(
+                f"API Error : could not get drive details ({error_message})"
+            )
+        response_data = response.json()
         # Set drive details
         self._drive_id = response_data.get("id")
         self._drive_name = response_data.get("name")
@@ -280,9 +295,15 @@ class OneDrive:
         response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
         if response.status_code != 200:
-            print(response.text)
-            raise Exception(f"API Error! : {response.status_code}")
-        items = json.loads(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(
+                f"API Error : directory could not be listed ({error_message})"
+            )
+        items = response.json()
         items = items.get("value", {})
         # Print the items in the directory along with their item ids
         if verbose:
@@ -307,11 +328,13 @@ class OneDrive:
         response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
         if response.status_code != 200:
-            print(response.text)
-            raise Exception(
-                f"API Error {response.status_code}: item could not be detailed."
-            )
-        response_data = json.loads(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : item could not be detailed ({error_message})")
+        response_data = response.json()
         # Print the item details
         if verbose:
             print("id:", response_data.get("id"))
@@ -339,6 +362,45 @@ class OneDrive:
         # Return the item details
         return response_data
 
+    def item_type(self, item_id: str) -> str:
+        """Returns the item type in str format.
+        Positional arguments:
+            item_id (str) -- item id of the folder or file
+        Returns:
+            type (str) -- "folder" or "file"
+        """
+        item_details = self.detail_item(item_id)
+        if "folder" in item_details:
+            return "folder"
+        else:
+            return "file"
+
+    def is_folder(self, item_id: str) -> bool:
+        """Checks if an item is a folder.
+        Positional arguments:
+            item_id (str) -- item id of the folder or file
+        Returns:
+            folder (bool) -- True if folder, else false.
+        """
+        item_type = self.item_type(item_id)
+        if item_type == "folder":
+            return True
+        else:
+            return False
+
+    def is_file(self, item_id: str) -> bool:
+        """Checks if an item is a file.
+        Positional arguments:
+            item_id (str) -- item id of the folder or file
+        Returns:
+            file (bool) -- True if file, else false.
+        """
+        item_type = self.item_type(item_id)
+        if item_type == "file":
+            return True
+        else:
+            return False
+
     @token_required
     def make_folder(
         self,
@@ -357,6 +419,12 @@ class OneDrive:
         Returns:
             folder_id (str) -- newly created folder item id
         """
+        # Set conflict behavior
+        conflict_behavior = if_exists
+        if conflict_behavior not in ["fail", "replace", "rename"]:
+            raise Exception(
+                "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
+            )
         # Create request url based on input parent folder
         if parent_folder_id:
             request_url = (
@@ -364,17 +432,6 @@ class OneDrive:
             )
         else:
             request_url = self._API_URL + "me/drive/root/children"
-        # Set conflict behavior
-        if if_exists == "fail":
-            conflictBehavior = "fail"
-        elif if_exists == "replace":
-            conflictBehavior = "replace"
-        elif if_exists == "rename":
-            conflictBehavior = "rename"
-        else:
-            raise Exception(
-                "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
-            )
         # Check if folder already exists
         if check_existing:
             items = self.list_directory(parent_folder_id)
@@ -386,15 +443,19 @@ class OneDrive:
         body = {
             "name": folder_name,
             "folder": {},
-            "@microsoft.graph.conflictBehavior": conflictBehavior,
+            "@microsoft.graph.conflictBehavior": conflict_behavior,
         }
         # Make the Graph API request
         response = httpx.post(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 201:
-            print(response.text)
-            raise Exception(f"API Error {response.status_code}: folder was not created")
-        response_data = json.loads(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : folder not created ({error_message})")
+        response_data = response.json()
         folder_id = response_data["id"]
         # Return the folder item id
         return folder_id
@@ -423,11 +484,13 @@ class OneDrive:
         response = httpx.patch(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 200:
-            print(response.text)
-            raise Exception(
-                f"API Error {response.status_code}: item could not be moved."
-            )
-        response_data = json.loads(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : item not moved ({error_message})")
+        response_data = response.json()
         item_id = response_data["id"]
         parent_folder_id = response_data["parentReference"]["id"]
         # Return the item id and parent folder id
@@ -439,17 +502,19 @@ class OneDrive:
         item_id: str,
         new_folder_id: str,
         new_name: Optional[str] = None,
-        confirm_complete: bool = False,
-    ) -> str:
+        confirm_complete: bool = True,
+        verbose: bool = False,
+    ) -> Union[str, None]:
         """Copies an item (folder/file) within the connected OneDrive server-side.
         Positional arguments:
             item_id (str) -- item id of the folder or file to copy
             new_folder_id (str) -- item id of the folder to copy the item to
         Keyword arguments:
             new_name (str) -- optional new item name with extension (default = None)
-            confirm_complete (bool) -- waits for the copy operation to finish before returning (default = False)
+            confirm_complete (bool) -- waits for the copy operation to finish before returning (default = True)
+            verbose (bool) -- prints status message during the download process (default = False)
         Returns:
-            item_id (str) -- item id of the new item
+            item_id (str | None) -- item id of the new item (None returned if confirm_complete set to False)
         """
         # Create request url based on input item id that should be moved
         request_url = self._API_URL + "me/drive/items/" + item_id + "/copy"
@@ -463,29 +528,45 @@ class OneDrive:
         response = httpx.post(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 202:
-            raise Exception(f"API Error: item could not be copied.")
-        monitor_url = response.headers.get("Location")
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : item not copied ({error_message})")
+        if verbose:
+            print("Copy request sent.")
         if confirm_complete:
-            wait_duration = 10
+            monitor_url = response.headers.get("Location")
+            wait_duration = 3
             previous_complete = 0
             while True:
+                if verbose:
+                    print(f"Waiting {wait_duration}s before checking progress")
                 sleep(wait_duration)
-                response = httpx.get(monitor_url)
-                response_data = json.loads(response.text)
+                response = httpx.get(monitor_url, follow_redirects=True)
+                response_data = response.json()
                 if response_data["status"] == "completed":
+                    if verbose:
+                        print("Copy confirmed complete.")
                     break
                 percentage_complete = response_data["percentageComplete"]
+                if verbose:
+                    print("Percentage Complete = {percentage_complete}%")
                 wait_duration = (
                     100.0 / (percentage_complete - previous_complete) * wait_duration
                     - wait_duration
                 )
                 if wait_duration > 30:
                     wait_duration = 30
+                elif wait_duration < 2:
+                    wait_duration = 2
                 previous_complete = percentage_complete
-
-        new_item_id = response_data["resourceId"]
-        # Return the item id
-        return new_item_id
+            new_item_id = response_data["resourceId"]
+            # Return the item id
+            return new_item_id
+        else:
+            return None
 
     @token_required
     def rename_item(self, item_id: str, new_name: str) -> str:
@@ -504,11 +585,13 @@ class OneDrive:
         response = httpx.patch(request_url, headers=self._headers, json=body)
         # Validate request response and parse
         if response.status_code != 200:
-            print(response.text)
-            raise Exception(
-                f"API Error {response.status_code}: item could not be renamed."
-            )
-        response_data = json.loads(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : item not renamed ({error_message})")
+        response_data = response.json()
         item_name = response_data["name"]
         # Return the item id and parent folder id
         return item_name
@@ -539,10 +622,12 @@ class OneDrive:
         response = httpx.delete(request_url, headers=self._headers)
         # Validate request response
         if response.status_code != 204:
-            print(response.text)
-            raise Exception(
-                f"API Error {response.status_code}: item could not be deleted."
-            )
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : item not deleted ({error_message})")
         # Return confirmation of deletion
         return True
 
@@ -579,13 +664,15 @@ class OneDrive:
         # Make the Graph API request
         if verbose:
             print("Getting the file download url")
-        response = httpx.get(request_url, headers=self._headers, follow_redirects=False)
+        response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
         if response.status_code != 302:
-            print(response.text)
-            raise Exception(
-                f"API Error {response.status_code}: item could not be downloaded."
-            )
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : could not get download url ({error_message})")
         download_url = response.headers["Location"]
         # Download the file asynchronously
         asyncio.run(
@@ -630,7 +717,7 @@ class OneDrive:
             typ_chunk_size = file_size // num_coroutines
             if verbose:
                 print(
-                    f"File {file_name} ({round(file_size/100000,1)}mb) will be downloaded in {num_coroutines} segments."
+                    f"File {file_name} ({round(file_size/1000000,1)}mb) will be downloaded in {num_coroutines} segments."
                 )
             for i in range(num_coroutines):
                 # Get the file part Path, placed in the temp directory
@@ -698,6 +785,15 @@ class OneDrive:
             # Create an AsyncIterator over our GET request
             async with client.stream("GET", download_url, headers=headers) as response:
                 # Iterates over incoming bytes in chunks and saves them to file
+                if response.status_code != 206 and response.status_code != 200:
+                    try:
+                        error = response.json()["error"]
+                        error_message = error.get("message")
+                    except:
+                        error_message = ""
+                    raise Exception(
+                        f"API Error : item not downloaded ({error_message})"
+                    )
                 write_chunk_size = 64 * 1024  # 64 KiB
                 async for chunk in response.aiter_bytes(write_chunk_size):
                     await fw.write(chunk)
@@ -726,13 +822,8 @@ class OneDrive:
                 item_id (str) -- item id of the newly uploaded file
         """
         # Set conflict behavior
-        if if_exists == "fail":
-            conflict_behavior = "fail"
-        elif if_exists == "replace":
-            conflict_behavior = "replace"
-        elif if_exists == "rename":
-            conflict_behavior = "rename"
-        else:
+        conflict_behavior = if_exists
+        if conflict_behavior not in ["fail", "replace", "rename"]:
             raise Exception(
                 "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
             )
@@ -754,7 +845,7 @@ class OneDrive:
             if verbose:
                 print(f"Large file, uploading in chunks")
             response = self._upload_large_file(
-                file_path, file_name, parent_folder_id, if_exists, verbose
+                file_path, file_name, parent_folder_id, conflict_behavior, verbose
             )
             return response
         # Create request url based on input values
@@ -780,11 +871,13 @@ class OneDrive:
         content.close()
         # Validate request response and parse
         if response.status_code != 201 and response.status_code != 200:
-            print(response.text)
-            raise Exception(
-                f"API Error {response.status_code}: could not upload file: {file_path}"
-            )
-        response_data = json.loads(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : item not uploaded ({error_message})")
+        response_data = response.json()
         item_id = response_data["id"]
         # Return the file item id
         return item_id
@@ -795,7 +888,7 @@ class OneDrive:
         file_path: Union[str, Path],
         new_file_name: Optional[str] = None,
         parent_folder_id: Optional[str] = None,
-        if_exists: str = "rename",
+        conflict_behavior: str = "rename",
         verbose: bool = False,
     ) -> str:
         """INTERNAL: Uploads a file in chunks to a particular folder with a provided file name.
@@ -804,22 +897,13 @@ class OneDrive:
         Keyword arguments:
             new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
             parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
-            if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
+            conflict_behavior (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
             verbose (bool) -- prints status message during the download process (default = False)
         Returns:
             item_id (str) -- item id of the newly uploaded file
         """
-        # Set conflict behavior
-        if if_exists == "fail":
-            conflict_behavior = "fail"
-        elif if_exists == "replace":
-            conflict_behavior = "replace"
-        elif if_exists == "rename":
-            conflict_behavior = "rename"
-        else:
-            raise Exception(
-                f"if_exists={if_exists} not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
-            )
+        # Check conflict behavior
+        assert conflict_behavior in ["fail", "replace", "rename"]
         # Ensure file_path is a Path type
         file_path = Path(file_path)
         # Set file name
@@ -846,24 +930,30 @@ class OneDrive:
         response = httpx.post(request_url, headers=self._headers)
         # Validate upload session request response and parse
         if response.status_code != 200:
-            print(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
             raise Exception(
-                f"API Error {response.status_code}, could not upload file: {file_path}"
+                f"API Error : upload session could not be created ({error_message})"
             )
-        upload_url = json.loads(response.text)
-        upload_url = upload_url["uploadUrl"]
+        upload_url = response.json()["uploadUrl"]
         # Determine the upload file size and chunks
         file_size = os.path.getsize(file_path)
         chunk_size: int = (
             1024 * 320 * 16
         )  # = 5MiB. Docs: Must be multiple of 320KiB, recommend 5-10MiB.
         no_of_uploads: int = -(-file_size // chunk_size)
-        # Open the file pointer
-        if verbose:
-            print("Loading file")
-        data = open(file_path, "rb")
+        # Create an upload connection client
+        timeout = httpx.Timeout(10.0, read=180.0, write=180.0)
+        client = httpx.Client(timeout=timeout)
         # Run in a try block to capture user cancellation request
         try:
+            # Open the file pointer
+            if verbose:
+                print("Loading file")
+                data = open(file_path, "rb")
             # Start the upload in a loop for as long as there is data left to upload
             n = 0
             while data.tell() < file_size:
@@ -886,16 +976,14 @@ class OneDrive:
                         "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
-                    response = httpx.put(
+                    response = client.put(
                         upload_url,
                         headers=headers,
                         content=content,
-                        timeout=httpx.Timeout(30.0),
                     )
                     # Validate request response
                     if response.status_code != 202:
-                        data.close()
-                        response2 = httpx.delete(upload_url)
+                        httpx.delete(upload_url)
                         raise Exception(
                             f"API Error {response.status_code}: could not upload chuck {n} of {no_of_uploads}"
                         )
@@ -909,30 +997,32 @@ class OneDrive:
                         "Content-Range": f"bytes {content_range_start}-{content_range_end}/{file_size}"
                     }
                     content = data.read(chunk_size)
-                    response = httpx.put(
+                    response = client.put(
                         upload_url,
                         headers=headers,
                         content=content,
-                        timeout=httpx.Timeout(30.0),
                     )
                     if verbose:
                         print("Upload complete")
         except KeyboardInterrupt:
             # Upload cancelled, send delete request
-            data.close()
-            response2 = httpx.delete(upload_url)
+            httpx.delete(upload_url)
             if verbose:
                 print("Upload cancelled by user.")
-        # Close the file
-        data.close()
+        finally:
+            data.close()
+            client.close()
         # Validate request response and parse
         if response.status_code != 201 and response.status_code != 200:
-            print(response.text)
-            response2 = httpx.delete(upload_url)
-            raise Exception(
-                f"API Error {response.status_code}: could not upload file: {file_path}"
-            )
-        response_data = json.loads(response.text)
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(f"API Error : item not uploaded ({error_message})")
+        if verbose:
+            print("Upload complete")
+        response_data = response.json()
         item_id = response_data["id"]
         # Return the file item id
         return item_id

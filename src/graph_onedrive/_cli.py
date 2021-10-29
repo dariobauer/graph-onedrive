@@ -267,9 +267,8 @@ def instance(
             client_id, client_secret, tenant, refresh_token
         )
 
-    # Present menu to user and trigger commands
-    try:
-        help_info = """
+    # Command menu for the user
+    help_info = """
     Graph-OneDrive cli instance actions:
     u / usage      :  prints the OneDrive usage
     od / onedrive  :  print the OneDrive details
@@ -283,7 +282,10 @@ def instance(
     dl / download  :  download a file
     ul / upload    :  upload a file
     exit / quit    :  exit the menu\n"""
-        print(help_info)
+    print(help_info)
+
+    # Ask for input and trigger commands
+    try:
         while True:
             command = input("Please enter command: ").strip().lower()
 
@@ -299,6 +301,9 @@ def instance(
                 ).strip()
                 if folder_id == "":
                     folder_id = None
+                elif not onedrive.is_folder(str(folder_id)):
+                    print("The item id is not a folder.")
+                    continue
                 onedrive.list_directory(folder_id, verbose=True)
 
             elif command in ["de", "detail"]:
@@ -311,6 +316,9 @@ def instance(
                 ).strip()
                 if parent_folder_id == "":
                     parent_folder_id = None
+                elif not onedrive.is_folder(str(parent_folder_id)):
+                    print("The item id is not a folder.")
+                    continue
                 folder_name = input("Name of the new folder: ").strip()
                 response = onedrive.make_folder(folder_name, parent_folder_id)
                 print(response)
@@ -334,7 +342,13 @@ def instance(
                     new_file_name = input("New file name (with extension): ").strip()
                 else:
                     new_file_name = None
-                response = onedrive.copy_item(item_id, new_folder_id, new_file_name)
+                response = onedrive.copy_item(
+                    item_id,
+                    new_folder_id,
+                    new_file_name,
+                    confirm_complete=True,
+                    verbose=True,
+                )
                 print(
                     f"Item was copied to folder {new_folder_id} with new item id {response}"
                 )
@@ -352,7 +366,10 @@ def instance(
                     print(f"Item {item_id} was successfully removed.")
 
             elif command in ["dl", "download"]:
-                item_id = input("Item id to download: ").strip()
+                item_id = input("File item id to download: ").strip()
+                if onedrive.is_folder(item_id):
+                    print("Item id is a folder. Folders cannot be downloaded.")
+                    continue
                 print("Downloading...")
                 response = onedrive.download_file(item_id, verbose=True)
                 print(
@@ -372,6 +389,9 @@ def instance(
                 ).strip()
                 if parent_folder_id == "":
                     parent_folder_id = None
+                elif not onedrive.is_folder(str(parent_folder_id)):
+                    print("The item id is not a folder.")
+                    continue
                 response = onedrive.upload_file(
                     file_path, new_file_name, parent_folder_id, verbose=True
                 )
@@ -407,18 +427,12 @@ def instance(
                 print(onedrive.refresh_token)
 
             elif command in ["exit", "exit()", "quit", "q", "end"]:
-                if use_config_file:
-                    graph_onedrive.save_to_config_file(
-                        onedrive,
-                        config_path=config_path_verified,
-                        config_key=config_key_verified,
-                    )
                 break
 
             else:
                 print("Command not recognized. Use 'help' for info or 'exit' to quit.")
 
-    except KeyboardInterrupt:
+    finally:
         if use_config_file:
             graph_onedrive.save_to_config_file(
                 onedrive,

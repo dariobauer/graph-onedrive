@@ -77,9 +77,7 @@ pip install https://github.com/dariobauer/graph-onedrive/archive/main.zip
 
 #### Dependencies
 
-The package currently requires [Requests](https://pypi.org/project/requests/), [HTTPX](https://pypi.org/project/httpx/), and [aiofiles](https://pypi.org/project/aiofiles/). These will be installed automatically if using pip as described above.
-
-Note: We are in a phase of replacing Requests completely with HTTPX.
+The package currently requires [HTTPX](https://pypi.org/project/httpx/), and [aiofiles](https://pypi.org/project/aiofiles/). These will be installed automatically if using pip as described above.
 
 ## Command-line interface
 
@@ -142,6 +140,17 @@ Some Microsoft work and school accounts will not allow apps to connect with them
 The package currently has the option to save refresh tokens for a user. While it is possible to create multiple instances with a different user for each instance, it is not possible to use a single config file for multiple users.
 
 It is however possible to use one config file to host multiple configurations within itself by using the dictionary key described in the config file section.
+
+### Throttling limits
+
+TLDR; for file transfer methods keep max_connections ≤ 16
+
+Depending on your internet connection and the sizes of the files that you and transferring may see increased transfer speeds with more connections than the default. Graph-OneDrive currently will create a new connection for every 1MiB if not limited by the max_connections. If you have a really fast connection having many connections may slow the overall performance.
+
+A word of caution on too many connections - the Graph API may throttle requests. This can be a hard throttle where all existing connections are cut and a cool-down period is enforced.
+Throttling can be applied at the user level or the whole organization. [Details on throttling](https://docs.microsoft.com/en-us/graph/throttling) are available, however the [exact limits are not provided](https://docs.microsoft.com/en-us/graph/throttling).
+
+We recommended to not exceed 16 connections for performance and to avoid throttling.
 
 ## Package use
 
@@ -375,6 +384,54 @@ Returns:
 
 * items (dict) -- metadata of the requested item
 
+#### item_type
+
+Returns the item type in str format.
+
+```python
+item_type = my_instance.item_type(item_id)
+```
+
+Positional arguments:
+
+* item_id (str) -- item id of the folder or file
+
+Returns:
+
+* type (str) -- "folder" or "file"
+
+#### is_folder
+
+Checks if an item is a folder.
+
+```python
+item_type = my_instance.is_folder(item_id)
+```
+
+Positional arguments:
+
+* item_id (str) -- item id of the folder or file
+
+Returns:
+
+* folder (bool) -- True if folder, else false.
+
+#### is_file
+
+Checks if an item is a file.
+
+```python
+item_type = my_instance.is_file(item_id)
+```
+
+Positional arguments:
+
+* item_id (str) -- item id of the folder or file
+
+Returns:
+
+* file (bool) -- True if file, else false.
+
 #### make_folder
 
 Creates a new folder within the input folder/root of the connected OneDrive.
@@ -427,7 +484,7 @@ Copies an item (folder/file) within the connected OneDrive server-side.
 
 ```python
 item_id = my_instance.copy_item(
-    item_id, new_folder_id, new_name=None, confirm_complete=False
+    item_id, new_folder_id, new_name=None, confirm_complete=True, verbose=False
 )
 ```
 
@@ -439,11 +496,12 @@ Positional arguments:
 Keyword arguments:
 
 * new_name (str) -- optional new item name with extension (default = None)
-* confirm_complete (bool) -- waits for the copy operation to finish before returning (default = False)
+* confirm_complete (bool) -- waits for the copy operation to finish before returning (default = True)
+* verbose (bool) -- prints status message during the download process (default = False)
 
 Returns:
 
-* item_id (str) -- item id of the new item
+* item_id (str | None) -- item id of the new item (None returned if confirm_complete set to False)
 
 #### rename_item
 
@@ -538,19 +596,6 @@ Returns:
 ## Examples
 
 Examples are provided to aid in development: <https://github.com/dariobauer/graph-onedrive/blob/main/docs/examples/>
-
-## Gotchas / Warnings
-
-### Throttling limits
-
-DLDR; keep max_connections ≤ 16
-
-Depending on your internet connection and the sizes of the files that you and transferring may see increased transfer speeds with more connections than the default. Graph-OneDrive currently will create a new connection for every 1MiB if not limited by the max_connections. If you have a really fast connection having many connections may slow the overall performance.
-
-A word of caution on too many connections - the Graph API may throttle requests. This can be a hard throttle where all existing connections are cut and a cool-down period is enforced.
-Throttling can be applied at the user level or the whole organization. [Details on throttling](https://docs.microsoft.com/en-us/graph/throttling) are available, however the [exact limits are not provided](https://docs.microsoft.com/en-us/graph/throttling).
-
-We recommended to not exceed 16 connections for performance and to avoid throttling.
 
 ## Support and issues
 

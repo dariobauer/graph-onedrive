@@ -4,9 +4,15 @@
 
 
 * Improved file download to asynchronously download using multiple connections
-* Added HTTPX and aiofiles packages as dependencies - issue #11 opened to replace Requests
+* Added HTTPX and aiofiles packages as dependencies
+* Replaced Requests package with HTTPX (Issue #11)
 * Added verbose keyword arguments to download and upload functions
+* Improved error handling
+* item_type, is_file, is_folder methods added
+* Fixed a bug in the copy_item method
+* Set the copy_item method to confirm the copy by default
 * Documentation updates
+* Updates to authors.md to include significant contributor (Shub77)
 
 ## Released
 
@@ -15,9 +21,9 @@
 Released 2021-10-21
 
 * Major improvements to the cli, now uses argparse, docs updated
-* Removed access token validation (Issue 4)
-* Allowed access token response to continue when no refresh token provided (Issue 6)
-* Various dictionary value lookups improved to account for missing keys (Issue 7)
+* Removed access token validation (Issue #4)
+* Allowed access token response to continue when no refresh token provided (Issue #6)
+* Various dictionary value lookups improved to account for missing keys (Issue #7)
 
 ### Version 0.0.1a9
 
@@ -25,7 +31,7 @@ Released 2021-10-20
 
 * Improved code typing
 * Updated code formatting
-* Improved validation of authorization codes and access tokens (Issues 3 & 4)
+* Improved validation of authorization codes and access tokens (Issues #3 & #4)
 
 ### Version 0.0.1a8
 
@@ -36,7 +42,7 @@ Released 2021-10-17
 * Moved testing and debugging decorators to /tests
 * Updated some formatting using pre-commit hooks
 * Docs improved including syntax highlighting
-* Improved auth function to not require a session state (PR#1)
+* Improved auth function to not require a session state (Pull Request #1)
 
 ### Version 0.0.1a7
 
