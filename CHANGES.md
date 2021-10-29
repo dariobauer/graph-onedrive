@@ -3,6 +3,14 @@
 ## Unreleased
 
 
+
+
+## Released
+
+### Version 0.1.0
+
+Released 2021-10-29
+
 * Improved file download to asynchronously download using multiple connections
 * Added HTTPX and aiofiles packages as dependencies
 * Replaced Requests package with HTTPX (Issue #11)
@@ -13,8 +21,6 @@
 * Set the copy_item method to confirm the copy by default
 * Documentation updates
 * Updates to authors.md to include significant contributor (Shub77)
-
-## Released
 
 ### Version 0.0.1a10
 

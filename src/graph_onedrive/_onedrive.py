@@ -703,7 +703,8 @@ class OneDrive:
         tasks = list()
         file_part_names = list()
         # This httpx.AsyncClient instance will be shared among the co-routines, passed as an argument
-        client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        timeout = httpx.Timeout(10.0, read=180.0)
+        client = httpx.AsyncClient(timeout=timeout)
         # Creates a new temp directory via tempfile.TemporaryDirectory()
         with tempfile.TemporaryDirectory() as tmp_dir:
             # Min chunk size, used to calculate the  number of concurrent connections based on file size
@@ -861,11 +862,12 @@ class OneDrive:
         # Make the Graph API request
         if verbose:
             print("Uploading file")
+        timeout = httpx.Timeout(10.0, write=180.0)
         response = httpx.put(
             request_url,
             headers=self._headers,
             content=content,
-            timeout=httpx.Timeout(30.0),
+            timeout=timeout,
         )
         # Close file
         content.close()
