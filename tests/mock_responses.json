@@ -1,0 +1,580 @@
+{
+  "drive-details": {
+    "id": "b!t18F8ybsHUq1z3...",
+    "driveType": "business",
+    "owner": {
+      "user": {
+        "id": "f22fca32-227...",
+        "displayName": "Ryan Gregg"
+      }
+    },
+    "quota": {
+      "deleted": 256938,
+      "used": 64274237,
+      "remaining": 1099447353539,
+      "state": "normal",
+      "total": 1099511627776
+    }
+  },
+  "list-directory": {
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('f22fca32-227...')/drive/root/children",
+    "value": [
+      {
+        "createdDateTime": "2020-01-28T00:52:40Z",
+        "eTag": "\"{1878A356-4DAA...},3\"",
+        "id": "01KDJMOTN...",
+        "lastModifiedDateTime": "2020-01-28T00:55:17Z",
+        "name": "Ryan AUS Working",
+        "webUrl": "https://constco.sharepoint.com/personal/example/Documents/Ryan%20AUS%20Working",
+        "cTag": "\"c:{187356AC-4DAA-...},0\"",
+        "size": 0,
+        "createdBy": {
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!utE9eKjXB1CQIfGQu_DO8J4...",
+          "driveType": "business",
+          "id": "01KDJMOTN6Y...",
+          "path": "/drive/root:"
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2020-01-28T00:52:40Z",
+          "lastModifiedDateTime": "2020-01-28T00:55:17Z"
+        },
+        "folder": {
+          "childCount": 0
+        }
+      },
+      {
+        "createdDateTime": "2020-03-23T20:32:12Z",
+        "eTag": "\"{C1D22356-9435-4...},1\"",
+        "id": "01KDJMOTN6ETJMCN...",
+        "lastModifiedDateTime": "2020-03-23T20:32:12Z",
+        "name": "Microsoft Teams Chat Files",
+        "webUrl": "https://constco.sharepoint.com/personal/example/Documents/Microsoft%20Teams%20Chat%20Files",
+        "cTag": "\"c:{C1D356BE-9435-...},0\"",
+        "size": 356907817,
+        "createdBy": {
+          "application": {
+            "id": "cc15fd57-2c6c-...",
+            "displayName": "Microsoft Teams Services"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "application": {
+            "id": "cc15fd57-2c6c...",
+            "displayName": "Microsoft Teams Services"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!utE9eKjXB1CQIfGQu...",
+          "driveType": "business",
+          "id": "01KDJMOTN6Y2...",
+          "path": "/drive/root:"
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2020-03-23T20:32:12Z",
+          "lastModifiedDateTime": "2020-03-23T20:32:12Z"
+        },
+        "folder": {
+          "childCount": 94
+        }
+      },
+      {
+        "createdDateTime": "2021-10-24T08:56:48Z",
+        "eTag": "\"{C5011356-6D0...},1\"",
+        "id": "01KDJMOTNGD...",
+        "lastModifiedDateTime": "2021-10-24T08:56:48Z",
+        "name": "temp",
+        "webUrl": "https://constco.sharepoint.com/personal/example/Documents/temp",
+        "cTag": "\"c:{C50356A6-6D0...},0\"",
+        "size": 19528345,
+        "createdBy": {
+          "application": {
+            "id": "5d7c20aa-5ff9-...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "application": {
+            "id": "5d7c20aa-5ff...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!utE9eKjXB1CQIfGQ...",
+          "driveType": "business",
+          "id": "01KDJMOTN6...",
+          "path": "/drive/root:"
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2021-10-24T08:56:48Z",
+          "lastModifiedDateTime": "2021-10-24T08:56:48Z"
+        },
+        "folder": {
+          "childCount": 5
+        }
+      },
+      {
+        "createdDateTime": "2021-08-20T23:42:25Z",
+        "eTag": "\"{A4F03356-94F5...},1\"",
+        "id": "01KDJMOTNXG7YKJ...",
+        "lastModifiedDateTime": "2021-08-20T23:42:25Z",
+        "name": "HelloWorld",
+        "webUrl": "https://constco.sharepoint.com/personal/example/Documents/HelloWorld",
+        "cTag": "\"c:{A4F356B7-94F5-45AA-87...},0\"",
+        "size": 2430887768,
+        "createdBy": {
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!ut39eKjVRjQIfGQu_DO8J...",
+          "driveType": "business",
+          "id": "01KDJMOTN6...",
+          "path": "/drive/root:"
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2021-08-20T23:42:25Z",
+          "lastModifiedDateTime": "2021-08-20T23:42:25Z"
+        },
+        "folder": {
+          "childCount": 2
+        }
+      },
+      {
+        "createdDateTime": "2021-01-20T04:03:50Z",
+        "eTag": "\"{E07AC356-2AC3-40...},1\"",
+        "id": "01KDJMOTISYJ5OBQZKZ...",
+        "lastModifiedDateTime": "2021-01-20T04:03:50Z",
+        "name": "Ryan",
+        "webUrl": "https://constco.sharepoint.com/personal/example/_layouts/15/Doc.aspx?sourcedoc=%7BE07AC212-2A...%7D&file=Ryan&action=edit&mobileredirect=true&wdorigin=Sharepoint",
+        "cTag": "\"c:{E0734912-2AC3-40C...},0\"",
+        "size": 12399,
+        "createdBy": {
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!utE9eKjXB1C...",
+          "driveType": "business",
+          "id": "01KDJMOTN6Y2GOVW...",
+          "path": "/drive/root:"
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2021-01-20T04:03:50Z",
+          "lastModifiedDateTime": "2021-01-20T04:03:50Z"
+        },
+        "package": {
+          "type": "oneNote"
+        }
+      },
+      {
+        "@microsoft.graph.downloadUrl": "https://consco.sharepoint.com/personal/consco/_layouts/15/download.aspx?UniqueId=b7aaf6cc-1580-4f6d-...c&Translate=false&tempauth=eyJ0eXAiOiJKV...&ApiVersion=2.0",
+        "createdDateTime": "2021-10-23T23:24:56Z",
+        "eTag": "\"{B7AAF6CC-15...},4\"",
+        "id": "01KDJMOTOM62V...",
+        "lastModifiedDateTime": "2021-10-23T23:25:48Z",
+        "name": "2021-02-08 18.53.41.mov",
+        "webUrl": "https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov",
+        "cTag": "\"c:{B7AAF6CC-15...},2\"",
+        "media": {
+          "aboutVisibility": "none",
+          "isNoiseSuppressionControlShown": true,
+          "noiseSuppressionEnabledByDefault": false,
+          "tableOfContentsVisibility": "none",
+          "viewpoint": {
+            "isTranscriptionAllowed": true
+          }
+        },
+        "size": 4926874,
+        "createdBy": {
+          "application": {
+            "id": "5d7c20aa-5f...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "application": {
+            "id": "5d7c20aa-5ff9-4...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!hjR1eJjX...",
+          "driveType": "business",
+          "id": "01KDJMOTNGDMA4...",
+          "path": "/drive/root:/temp"
+        },
+        "file": {
+          "mimeType": "video/quicktime",
+          "hashes": {
+            "quickXorHash": "wFwchJC3Iwr99ytGd+8vuSXCe0A="
+          }
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2021-10-23T23:24:56Z",
+          "lastModifiedDateTime": "2021-10-23T23:25:48Z"
+        },
+        "photo": {
+          "takenDateTime": "2021-02-08T05:53:41Z"
+        },
+        "video": {
+          "audioBitsPerSample": 16,
+          "audioChannels": 1,
+          "audioFormat": "AAC",
+          "audioSamplesPerSecond": 44100,
+          "bitrate": 6495944,
+          "duration": 6033,
+          "fourCC": "H264",
+          "frameRate": 29.834,
+          "height": 1280,
+          "width": 720
+        }
+      },
+      {
+        "@microsoft.graph.downloadUrl": "https://consco.sharepoint.com/personal/consco/_layouts/15/download.aspx?UniqueId=7834c954-1d7...&Translate=false&tempauth=eyJ0eXAiOiJKV1QiLCJhbGciOi...&ApiVersion=2.0",
+        "createdDateTime": "2021-10-29T07:33:30Z",
+        "eTag": "\"{7834C954-1...},4\"",
+        "id": "01KDJMOTKUZE2...",
+        "lastModifiedDateTime": "2021-10-29T07:34:19Z",
+        "name": "2021-06-02_002.JPG",
+        "webUrl": "https://consco.sharepoint.com/personal/consco/Documents/temp/2021-06-02_002.JPG",
+        "cTag": "\"c:{7834C954-1D79-4...},3\"",
+        "size": 5259248,
+        "createdBy": {
+          "application": {
+            "id": "5d7c20aa-5...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "application": {
+            "id": "5d7c20aa-5ff9-4c...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!hjR1eJjX...",
+          "driveType": "business",
+          "id": "01KDJMOTN...",
+          "path": "/drive/root:/temp"
+        },
+        "file": {
+          "mimeType": "image/jpeg",
+          "hashes": {
+            "quickXorHash": "f/7CJRvxJ/yNuitalpLXefr5cX4="
+          }
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2021-10-29T07:33:30Z",
+          "lastModifiedDateTime": "2021-10-29T07:34:19Z"
+        },
+        "image": {
+          "height": 3024,
+          "width": 4032
+        },
+        "photo": {
+          "takenDateTime": "2021-06-02T12:46:40.86Z"
+        }
+      },
+      {
+        "@microsoft.graph.downloadUrl": "https://consco.sharepoint.com/personal/consco/_layouts/15/download.aspx?UniqueId=cffeb7f3-b1bb-4614...&Translate=false&tempauth=eyJ0eXAiOiJKV1Qi...&ApiVersion=2.0",
+        "createdDateTime": "2021-10-26T08:48:45Z",
+        "eTag": "\"{CFFEB7F3-B1BB-4...},1\"",
+        "id": "01KDJMOTPTW77M7O...",
+        "lastModifiedDateTime": "2021-10-26T08:48:45Z",
+        "name": "maths-with-python.pdf",
+        "webUrl": "https://consco.sharepoint.com/personal/consco/Documents/temp/maths-with-python.pdf",
+        "cTag": "\"c:{CFFEB7F3-B1BB-4614...},1\"",
+        "size": 1758874,
+        "createdBy": {
+          "application": {
+            "id": "5d7c20aa-5ff9-4c...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "lastModifiedBy": {
+          "application": {
+            "id": "5d7c20aa-5ff9-4...",
+            "displayName": "clippy-Uploader"
+          },
+          "user": {
+            "email": "ryan.gregg@constco.com",
+            "id": "f22fca32-227...",
+            "displayName": "Ryan Gregg"
+          }
+        },
+        "parentReference": {
+          "driveId": "b!hjR1eJjX...",
+          "driveType": "business",
+          "id": "01KDJMOTNGDM...",
+          "path": "/drive/root:/temp"
+        },
+        "file": {
+          "mimeType": "application/pdf",
+          "hashes": {
+            "quickXorHash": ""
+          }
+        },
+        "fileSystemInfo": {
+          "createdDateTime": "2021-10-26T08:48:45Z",
+          "lastModifiedDateTime": "2021-10-26T08:48:45Z"
+        }
+      }
+    ]
+  },
+  "item-details-folder": {
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('f22fca12-2271-4...')/drive/items/$entity",
+    "createdDateTime": "2021-10-24T08:56:48Z",
+    "eTag": "\"{C5011BA6-6D06-4...},1\"",
+    "id": "01KDJMOTNGDMA4KB...",
+    "lastModifiedDateTime": "2021-10-24T08:56:48Z",
+    "name": "temp",
+    "webUrl": "https://constco.sharepoint.com/personal/consco/Documents/temp",
+    "cTag": "\"c:{C5011BA6-6D06-4...},0\"",
+    "size": 19528345,
+    "createdBy": {
+      "application": {
+        "id": "5d7c20aa-5ff9-4c...",
+        "displayName": "App-Name"
+      },
+      "user": {
+        "email": "ryan.gregg@constco.com",
+        "id": "f22fca12-22...",
+        "displayName": "Ryan Gregg"
+      }
+    },
+    "lastModifiedBy": {
+      "application": {
+        "id": "5d7c20aa-5ff...",
+        "displayName": "App-Name"
+      },
+      "user": {
+        "email": "dryan.gregg@constco.com",
+        "id": "f22fca12-22...",
+        "displayName": "Ryan Gregg"
+      }
+    },
+    "parentReference": {
+      "driveId": "b!hjR1eJjXB...",
+      "driveType": "business",
+      "id": "01KDJMOTN6Y2...",
+      "path": "/drive/root:"
+    },
+    "fileSystemInfo": {
+      "createdDateTime": "2021-10-24T08:56:48Z",
+      "lastModifiedDateTime": "2021-10-24T08:56:48Z"
+    },
+    "folder": {
+      "childCount": 5
+    }
+  },
+  "item-details-file": {
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('f22fca12-...')/drive/items/$entity",
+    "@microsoft.graph.downloadUrl": "https://consco.sharepoint.com/personal/consco/_layouts/15/download.aspx?UniqueId=b7a...&Translate=false&tempauth=eyJ0eXAiOiJ...&ApiVersion=2.0",
+    "createdDateTime": "2021-10-23T23:24:56Z",
+    "eTag": "\"{B7AAF6CC-1580-...},4\"",
+    "id": "01KDJMOTOM62V...",
+    "lastModifiedDateTime": "2021-10-23T23:25:48Z",
+    "name": "2021-02-08 18.53.41.mov",
+    "webUrl": "https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov",
+    "cTag": "\"c:{B7AAF6CC-158...},2\"",
+    "media": {
+      "aboutVisibility": "none",
+      "isNoiseSuppressionControlShown": true,
+      "noiseSuppressionEnabledByDefault": false,
+      "tableOfContentsVisibility": "none",
+      "viewpoint": {
+        "isTranscriptionAllowed": true
+      }
+    },
+    "size": 4926874,
+    "createdBy": {
+      "application": {
+        "id": "5d7c20aa-5...",
+        "displayName": "App-Name"
+      },
+      "user": {
+        "email": "ryan.gregg@constco.com",
+        "id": "f22fca12-2...",
+        "displayName": "Ryan Gregg"
+      }
+    },
+    "lastModifiedBy": {
+      "application": {
+        "id": "5d7c20aa-5f...",
+        "displayName": "App-Name"
+      },
+      "user": {
+        "email": "ryan.gregg@constco.com",
+        "id": "f22fca12-22...",
+        "displayName": "Ryan Gregg"
+      }
+    },
+    "parentReference": {
+      "driveId": "b!hjR1eJjXB0CNL...",
+      "driveType": "business",
+      "id": "01KDJMOTNGDMA...",
+      "path": "/drive/root:/temp"
+    },
+    "file": {
+      "mimeType": "video/quicktime",
+      "hashes": {
+        "quickXorHash": "wFwchJC3Iwr99ytGd+8vuSXCe0A="
+      }
+    },
+    "fileSystemInfo": {
+      "createdDateTime": "2021-10-23T23:24:56Z",
+      "lastModifiedDateTime": "2021-10-23T23:25:48Z"
+    },
+    "photo": {
+      "takenDateTime": "2021-02-08T05:53:41Z"
+    },
+    "video": {
+      "audioBitsPerSample": 16,
+      "audioChannels": 1,
+      "audioFormat": "AAC",
+      "audioSamplesPerSecond": 44100,
+      "bitrate": 6495944,
+      "duration": 6033,
+      "fourCC": "H264",
+      "frameRate": 29.834,
+      "height": 1280,
+      "width": 720
+    }
+  },
+  "create-folder": {
+    "createdBy": {
+      "user": {
+        "displayName": "Ryan Gregg",
+        "id": "309EC495-3E92-431D..."
+      }
+    },
+    "createdDateTime": "2016-09-20T14:34:00Z",
+    "eTag": "343F1FBD356B3...",
+    "id": "ACEA49D1-144...",
+    "lastModifiedBy": {
+      "user": {
+        "displayName": "Ryan Gregg",
+        "id": "309EC495-3E92-431D-9124-F02996...D"
+      }
+    },
+    "lastModifiedDateTime": "2016-09-20T14:34:00Z",
+    "name": "New Folder",
+    "parentReference": {
+      "driveId": "5FE38E3C-051C...",
+      "id": "E67A8F34-B00A29...",
+      "path": "/drive/root:/"
+    },
+    "size": 0,
+    "folder": {
+      "childCount": 0
+    }
+  },
+  "move-item": {
+    "id": "01234567...",
+    "name": "new-item-name.txt",
+    "parentReference": {
+      "driveId": "11231001...",
+      "path": "/drive/root:/Documents",
+      "id": "123120310..."
+    }
+  },
+  "copy-item-progress": {
+    "operation": "ItemCopy",
+    "percentageComplete": 27.8,
+    "status": "inProgress"
+  },
+  "copy-item-complete": {
+    "percentageComplete": 100.0,
+    "resourceId": "01MOWKYVJML57KN2...",
+    "status": "completed"
+  },
+  "upload-session": {
+    "uploadUrl": "https://sn3302.up.1drv.com/up/fe6987e7X4e1eF866337",
+    "expirationDateTime": "2015-01-29T09:21:55.523Z"
+  },
+  "upload-complete": {
+    "id": "91231001...",
+    "name": "largefile.vhd",
+    "size": 128,
+    "file": {}
+  }
+}

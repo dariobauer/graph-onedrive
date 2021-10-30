@@ -83,6 +83,7 @@ class OneDrive:
         # Initiate generation of authorization tokens
         self._get_token()
         self._create_headers()
+        # Set additional attributes from the server
         self._get_drive_details()
 
     def _get_token(self) -> None:
@@ -116,12 +117,12 @@ class OneDrive:
         if response.status_code != 200:
             try:
                 response_data = response.json()
-                error_message = response_data.get("error", {}).get("message")
-                error_message2 = response_data.get("error_description")
+                error_message = response_data.get("error", {}).get("message", "")
+                error_message += response_data.get("error_description", "")
             except:
                 error_message = ""
             raise Exception(
-                f"API Error : drive details not available ({error_message} {error_message2})"
+                f"API Error : drive details not available ({error_message})"
             )
 
         response_data = response.json()
@@ -250,6 +251,11 @@ class OneDrive:
             capacity (float) -- storage capacity in unit requested
             units (str) -- unit of usage
         """
+        # Validate unit
+        unit = unit.lower()
+        if unit not in ["b", "kb", "mb", "gb"]:
+            raise AttributeError(f"Input Error : unit '{unit}' is not supported")
+        # Refresh drive details
         if refresh:
             self._get_drive_details()
         # Read usage values
@@ -257,14 +263,14 @@ class OneDrive:
         capacity = self._quota_total
         # Convert to requested unit unit
         if unit == "gb":
-            used = round(used / (1024 * 1024 * 1024), 2)
-            capacity = round(capacity / (1024 * 1024 * 1024), 2)
+            used = round(used / (1024 * 1024 * 1024), 1)
+            capacity = round(capacity / (1024 * 1024 * 1024), 1)
         elif unit == "mb":
-            used = round(used / (1024 * 1024), 2)
-            capacity = round(capacity / (1024 * 1024), 2)
+            used = round(used / (1024 * 1024), 1)
+            capacity = round(capacity / (1024 * 1024), 1)
         elif unit == "kb":
-            used = round(used / (1024), 2)
-            capacity = round(capacity / (1024), 2)
+            used = round(used / (1024), 1)
+            capacity = round(capacity / (1024), 1)
         else:
             unit = "b"
         # Print usage
@@ -422,7 +428,7 @@ class OneDrive:
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
-            raise Exception(
+            raise AttributeError(
                 "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
             )
         # Create request url based on input parent folder
@@ -825,7 +831,7 @@ class OneDrive:
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
-            raise Exception(
+            raise AttributeError(
                 "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
             )
         # Ensure file_path is a Path type and remove escape slashes
