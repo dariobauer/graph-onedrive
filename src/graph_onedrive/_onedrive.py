@@ -173,14 +173,12 @@ class OneDrive:
         print(request_url)
         print("--------------------------------")
         print("Step 2: Authorize the app using your account.")
-        print("You will be redirected (potentially to an error page - this is normal)")
-        print(
-            "Step 3: Copy the response URL - click into the address bar and copy all."
-        )
+        print("You will be redirected (potentially to an error page - this is normal).")
+        print("Step 3: Copy the entire response URL address.")
         response = input("Step 4: paste the response here: ").strip()
 
         # Verify the state which ensures the response is for this request
-        return_state = re.search("&state=([^&]+)", response)
+        return_state = re.search("[?|&]state=([^&]+)", response)
         if return_state:
             if return_state.group(1) != state:
                 raise Exception(
@@ -193,7 +191,7 @@ class OneDrive:
             )
 
         # Extract the code from the response
-        authorization_code_re = re.search("code=([^&]+)", response)
+        authorization_code_re = re.search("[?|&]code=([^&]+)", response)
         if authorization_code_re is None:
             raise Exception("The response did not contain an authorization code.")
         authorization_code = authorization_code_re.group(1)
@@ -252,9 +250,13 @@ class OneDrive:
             units (str) -- unit of usage
         """
         # Validate unit
+        if not isinstance(unit, str):
+            raise TypeError(
+                f"Input Error : unit expected type 'str', got type {type(unit).__name__!r}"
+            )
         unit = unit.lower()
         if unit not in ["b", "kb", "mb", "gb"]:
-            raise AttributeError(f"Input Error : unit '{unit}' is not supported")
+            raise AttributeError(f"Input Error : {unit!r} is not a supported unit")
         # Refresh drive details
         if refresh:
             self._get_drive_details()
@@ -429,7 +431,7 @@ class OneDrive:
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
             raise AttributeError(
-                "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
+                f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
         # Create request url based on input parent folder
         if parent_folder_id:
@@ -723,8 +725,9 @@ class OneDrive:
             # Calculates the final size of the chunk that each co-routine will download
             typ_chunk_size = file_size // num_coroutines
             if verbose:
+                pretty_size = round(file_size / 1000000, 1)
                 print(
-                    f"File {file_name} ({round(file_size/1000000,1)}mb) will be downloaded in {num_coroutines} segments."
+                    f"File {file_name} ({pretty_size}mb) will be downloaded in {num_coroutines} segments."
                 )
             for i in range(num_coroutines):
                 # Get the file part Path, placed in the temp directory
@@ -832,7 +835,7 @@ class OneDrive:
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
             raise AttributeError(
-                "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
+                f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
         # Ensure file_path is a Path type and remove escape slashes
         if os.name == "nt":  # Windows

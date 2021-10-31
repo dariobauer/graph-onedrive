@@ -6,12 +6,19 @@ import pytest
 import respx
 from httpx import Response
 
+import graph_onedrive
+
+
+# Set the variables used to create the OneDrive instances in tests
+# Warning: certain tests require these to match the assertions in the tests
+CLIENT_ID = CLIENT_SECRET = "abc"
+REFRESH_TOKEN = "123"
+ACCESS_TOKEN = "123"
+TENANT = "test"
+REDIRECT = "http://localhost:8080"
 
 # Get the absolute file path of the tests directory by locating this file
 TESTS_DIR = path.dirname(path.abspath(__file__))
-
-# Set the variables used to create the OneDrive instances in tests
-REFRESH_TOKEN = ACCESS_TOKEN = "123"
 
 
 def mock_response_json(key):
@@ -85,7 +92,6 @@ def mock_graph_api():
         make_folder_json = mock_response_json("create-folder")
         make_folder_route.return_value = Response(201, json=make_folder_json)
 
-        # Yield response to allow for teardown
         yield respx_mock
 
 
@@ -108,5 +114,12 @@ def mock_auth_api():
         }
         token_route.return_value = Response(200, json=token_json)
 
-        # Yield response to allow for teardown
         yield respx_mock
+
+
+@pytest.fixture(scope="module")
+def onedrive(mock_auth_api, mock_graph_api):
+    onedrive = graph_onedrive.create(
+        CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
+    )
+    yield onedrive

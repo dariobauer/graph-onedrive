@@ -1,67 +1,54 @@
 """Tests the OneDrive class using pytest."""
 import pytest
 
-import graph_onedrive
-
-
-# Set the variables used to create the OneDrive instances in tests
-# Warning: many tests require these to match the mock routes in conftest.py
-CLIENT_ID = CLIENT_SECRET = "abc"
-REFRESH_TOKEN = "123"
-TENANT = "test"
-REDIRECT = "http://localhost:8080"
-
 
 class TestGetTokens:
     """Tests the _get_token method."""
 
     def test_get_token(self):
-        NotImplemented
+        ...
 
-    def test_get_token_exceptions(self):
-        NotImplemented
+    def test_get_token_failure(self):
+        ...
 
 
 class TestAuthorization:
     """Tests the _get_authorization method."""
 
     def test_get_authorization(self):
-        NotImplemented
+        ...
 
-    def test_get_authorization_exceptions(self):
-        NotImplemented
+    def test_get_authorization_failure(self):
+        ...
 
 
 class TestHeaders:
     """Tests the _create_headers method."""
 
     def test_create_headers(self):
-        NotImplemented
+        ...
 
-    def test_create_headers_exceptions(self):
-        NotImplemented
+    def test_create_headers_failure(self):
+        ...
 
 
 class TestDriveDetails:
     """Tests the _get_drive_details, get_usage methods."""
 
     # get_drive_details
-    def test_get_drive_details(self, mock_auth_api, mock_graph_api):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        assert test_drive._drive_id == "b!t18F8ybsHUq1z3..."
-        assert test_drive._drive_name is None
-        assert test_drive._drive_type == "business"
-        assert test_drive._owner_id == "f22fca32-227..."
-        assert test_drive._owner_email == None
-        assert test_drive._owner_name == "Ryan Gregg"
-        assert test_drive._quota_used == 64274237
-        assert test_drive._quota_remaining == 1099447353539
-        assert test_drive._quota_total == 1099511627776
+    def test_get_drive_details(self, onedrive):
+        assert onedrive._drive_id == "b!t18F8ybsHUq1z3..."
+        assert onedrive._drive_name is None
+        assert onedrive._drive_type == "business"
+        assert onedrive._owner_id == "f22fca32-227..."
+        assert onedrive._owner_email == None
+        assert onedrive._owner_name == "Ryan Gregg"
+        assert onedrive._quota_used == 64274237
+        assert onedrive._quota_remaining == 1099447353539
+        assert onedrive._quota_total == 1099511627776
 
-    def test_get_drive_details_exceptions(self):
-        NotImplemented
+    def test_get_drive_details_failure(self):
+        ...
 
     # get_usage
     @pytest.mark.parametrize(
@@ -74,58 +61,54 @@ class TestDriveDetails:
             (None, 0.1, 1024, "gb"),
         ],
     )
-    def test_get_usage(
-        self, mock_auth_api, mock_graph_api, unit, exp_used, exp_capacity, exp_unit
-    ):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
+    def test_get_usage(self, onedrive, unit, exp_used, exp_capacity, exp_unit):
         if unit == None:
-            used, capacity, unit = test_drive.get_usage()
+            used, capacity, unit = onedrive.get_usage()
         else:
-            used, capacity, unit = test_drive.get_usage(unit=unit)
+            used, capacity, unit = onedrive.get_usage(unit=unit)
         assert round(used, 1) == round(exp_used, 1)
         assert round(capacity, 1) == round(exp_capacity, 1)
         assert unit == exp_unit
 
-    def test_get_usage_verbose(self, mock_auth_api, mock_graph_api, capsys):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        test_drive.get_usage(verbose=True)
+    def test_get_usage_verbose(self, onedrive, capsys):
+        onedrive.get_usage(verbose=True)
         stdout, sterr = capsys.readouterr()
         assert stdout == "Using 0.1 gb (0.01%) of total 1024.0 gb.\n"
 
-    def test_get_usage_exceptions(self, mock_auth_api, mock_graph_api):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        with pytest.raises(AttributeError):
-            test_drive.get_usage(unit="tb")
-        with pytest.raises(AttributeError):
-            test_drive.get_usage(unit=None)
+    def test_get_usage_failure_attribute(self, onedrive):
+        with pytest.raises(AttributeError) as excinfo:
+            onedrive.get_usage(unit="TB")
+        (msg,) = excinfo.value.args
+        assert msg == "Input Error : 'tb' is not a supported unit"
+
+    @pytest.mark.parametrize(
+        "unit, exp_msg",
+        [
+            (1, "Input Error : unit expected type 'str', got type 'int'"),
+            (None, "Input Error : unit expected type 'str', got type 'NoneType'"),
+        ],
+    )
+    def test_get_usage_failure_type(self, onedrive, unit, exp_msg):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.get_usage(unit=unit)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
 
 
 class TestListingDirectories:
     """Tests the list_directory method."""
 
-    def test_list_directory_root(self, mock_auth_api, mock_graph_api):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        items = test_drive.list_directory()
+    def test_list_directory_root(self, onedrive):
+        items = onedrive.list_directory()
         assert items[0].get("id") == "01KDJMOTN..."
 
-    def test_list_directory_folder(self, mock_auth_api, mock_graph_api):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
+    def test_list_directory_folder(self, onedrive):
         item_id = "309EC495-3E92-431D-9124-F0299633171D"
-        items = test_drive.list_directory(item_id)
+        items = onedrive.list_directory(item_id)
         assert items[0].get("id") == "01KDJMOTN..."
 
-    def test_list_directory_exceptions(self):
-        NotImplemented
+    def test_list_directory_failure(self):
+        ...
 
 
 class TestItemDetails:
@@ -139,11 +122,8 @@ class TestItemDetails:
             ("2folder3428hb-ng73", "temp"),
         ],
     )
-    def test_detail_item(self, mock_auth_api, mock_graph_api, item_id, exp_name):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        item_details = test_drive.detail_item(item_id)
+    def test_detail_item(self, onedrive, item_id, exp_name):
+        item_details = onedrive.detail_item(item_id)
         assert item_details.get("name") == exp_name
 
     @pytest.mark.parametrize(
@@ -159,63 +139,49 @@ class TestItemDetails:
             ),
         ],
     )
-    def test_detail_item_verbose(
-        self, mock_auth_api, mock_graph_api, capsys, item_id, exp_stout
-    ):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        item_details = test_drive.detail_item(item_id, verbose=True)
+    def test_detail_item_verbose(self, onedrive, capsys, item_id, exp_stout):
+        item_details = onedrive.detail_item(item_id, verbose=True)
         stdout, sterr = capsys.readouterr()
         assert stdout == exp_stout
 
-    def test_detail_item_exceptions(self):
-        NotImplemented
+    def test_detail_item_failure(self):
+        ...
 
     # item_type
     @pytest.mark.parametrize(
         "item_id, exp_type",
         [("1file342i6r8h4-g7g", "file"), ("2folder3428hb-ng73", "folder")],
     )
-    def test_item_type(self, mock_auth_api, mock_graph_api, item_id, exp_type):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        item_type = test_drive.item_type(item_id)
+    def test_item_type(self, onedrive, item_id, exp_type):
+        item_type = onedrive.item_type(item_id)
         assert item_type == exp_type
 
-    def test_item_type_exceptions(self):
-        NotImplemented
+    def test_item_type_failure(self):
+        ...
 
     # is_folder
     @pytest.mark.parametrize(
         "item_id, exp_bool",
         [("1file342i6r8h4-g7g", False), ("2folder3428hb-ng73", True)],
     )
-    def test_is_folder(self, mock_auth_api, mock_graph_api, item_id, exp_bool):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        is_folder = test_drive.is_folder(item_id)
+    def test_is_folder(self, onedrive, item_id, exp_bool):
+        is_folder = onedrive.is_folder(item_id)
         assert is_folder == exp_bool
 
-    def test_is_folder_exceptions(self):
-        NotImplemented
+    def test_is_folder_failure(self):
+        ...
 
     # is_file
     @pytest.mark.parametrize(
         "item_id, exp_bool",
         [("1file342i6r8h4-g7g", True), ("2folder3428hb-ng73", False)],
     )
-    def test_is_file(self, mock_auth_api, mock_graph_api, item_id, exp_bool):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        is_file = test_drive.is_file(item_id)
+    def test_is_file(self, onedrive, item_id, exp_bool):
+        is_file = onedrive.is_file(item_id)
         assert is_file == exp_bool
 
-    def test_is_file_exceptions(self):
-        NotImplemented
+    def test_is_file_failure(self):
+        ...
 
 
 class TestMakeFolder:
@@ -232,61 +198,53 @@ class TestMakeFolder:
         ],
     )
     def test_make_folder(
-        mock_auth_api,
-        mock_graph_api,
-        folder_name,
-        parent_folder_id,
-        check_existing,
-        exp_str,
+        self, onedrive, folder_name, parent_folder_id, check_existing, exp_str
     ):
-        test_drive = graph_onedrive.create(
-            CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
-        )
-        item_id = test_drive.make_folder(folder_name, parent_folder_id, check_existing)
+        item_id = onedrive.make_folder(folder_name, parent_folder_id, check_existing)
         assert item_id == exp_str
 
-    def test_make_folder_exceptions(self):
-        NotImplemented
+    def test_make_folder_failure(self):
+        ...
 
 
 class TestMove:
     """Tests the move_item method."""
 
     def test_move_item(self):
-        NotImplemented
+        ...
 
-    def test_move_item_exceptions(self):
-        NotImplemented
+    def test_move_item_failure(self):
+        ...
 
 
 class TestCopy:
     """Tests the copy_item method."""
 
     def test_copy_item(self):
-        NotImplemented
+        ...
 
-    def test_copy_item_exceptions(self):
-        NotImplemented
+    def test_copy_item_failure(self):
+        ...
 
 
 class TestRename:
     """Tests the rename_item method."""
 
     def test_rename_item(self):
-        NotImplemented
+        ...
 
-    def test_rename_item_exceptions(self):
-        NotImplemented
+    def test_rename_item_failure(self):
+        ...
 
 
 class TestDelete:
     """Tests the delete_item method."""
 
     def test_delete_item(self):
-        NotImplemented
+        ...
 
-    def test_delete_item_exceptions(self):
-        NotImplemented
+    def test_delete_item_failure(self):
+        ...
 
 
 class TestDownload:
@@ -294,24 +252,24 @@ class TestDownload:
 
     # download_file
     def test_download_file(self):
-        NotImplemented
+        ...
 
-    def test_download_file_exceptions(self):
-        NotImplemented
+    def test_download_file_failure(self):
+        ...
 
     """# _download_async
     async def test_download_async(self):
-        NotImplemented
+        ...
 
-    async def test_download_async_exceptions(self):
-        NotImplemented
+    async def test_download_async_failure(self):
+        ...
 
     # _download_async_part
     async def test_download_async_part(self):
-        NotImplemented
+        ...
 
-    async def test_download_async_part_exceptions(self):
-        NotImplemented
+    async def test_download_async_part_failure(self):
+        ...
     """
 
 
@@ -320,14 +278,14 @@ class TestUpload:
 
     # upload_file
     def test_upload_file(self):
-        NotImplemented
+        ...
 
-    def test_upload_file_exceptions(self):
-        NotImplemented
+    def test_upload_file_failure(self):
+        ...
 
     # _upload_large_file
     def test_upload_large_file(self):
-        NotImplemented
+        ...
 
-    def test_upload_large_file_exceptions(self):
-        NotImplemented
+    def test_upload_large_file_failure(self):
+        ...
