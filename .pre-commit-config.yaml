@@ -3,7 +3,7 @@ ci:
   autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/asottile/setup-cfg-fmt
-    rev: v1.18.0
+    rev: v1.19.0
     hooks:
       - id: setup-cfg-fmt
   - repo: https://github.com/asottile/reorder_python_imports
@@ -17,8 +17,8 @@ repos:
     hooks:
       - id: pyupgrade
         args: ["--py37-plus"]
-  - repo: https://github.com/ambv/black
-    rev: 21.9b0
+  - repo: https://github.com/psf/black
+    rev: 21.10b0
     hooks:
     - id: black
       # Latest version of Python supported by the project
