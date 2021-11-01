@@ -83,6 +83,7 @@ class OneDrive:
         # Initiate generation of authorization tokens
         self._get_token()
         self._create_headers()
+        # Set additional attributes from the server
         self._get_drive_details()
 
     def _get_token(self) -> None:
@@ -116,12 +117,12 @@ class OneDrive:
         if response.status_code != 200:
             try:
                 response_data = response.json()
-                error_message = response_data.get("error", {}).get("message")
-                error_message2 = response_data.get("error_description")
+                error_message = response_data.get("error", {}).get("message", "")
+                error_message += response_data.get("error_description", "")
             except:
                 error_message = ""
             raise Exception(
-                f"API Error : drive details not available ({error_message} {error_message2})"
+                f"API Error : drive details not available ({error_message})"
             )
 
         response_data = response.json()
@@ -172,14 +173,12 @@ class OneDrive:
         print(request_url)
         print("--------------------------------")
         print("Step 2: Authorize the app using your account.")
-        print("You will be redirected (potentially to an error page - this is normal)")
-        print(
-            "Step 3: Copy the response URL - click into the address bar and copy all."
-        )
+        print("You will be redirected (potentially to an error page - this is normal).")
+        print("Step 3: Copy the entire response URL address.")
         response = input("Step 4: paste the response here: ").strip()
 
         # Verify the state which ensures the response is for this request
-        return_state = re.search("&state=([^&]+)", response)
+        return_state = re.search("[?|&]state=([^&]+)", response)
         if return_state:
             if return_state.group(1) != state:
                 raise Exception(
@@ -192,7 +191,7 @@ class OneDrive:
             )
 
         # Extract the code from the response
-        authorization_code_re = re.search("code=([^&]+)", response)
+        authorization_code_re = re.search("[?|&]code=([^&]+)", response)
         if authorization_code_re is None:
             raise Exception("The response did not contain an authorization code.")
         authorization_code = authorization_code_re.group(1)
@@ -250,6 +249,15 @@ class OneDrive:
             capacity (float) -- storage capacity in unit requested
             units (str) -- unit of usage
         """
+        # Validate unit
+        if not isinstance(unit, str):
+            raise TypeError(
+                f"Input Error : unit expected type 'str', got type {type(unit).__name__!r}"
+            )
+        unit = unit.lower()
+        if unit not in ["b", "kb", "mb", "gb"]:
+            raise AttributeError(f"Input Error : {unit!r} is not a supported unit")
+        # Refresh drive details
         if refresh:
             self._get_drive_details()
         # Read usage values
@@ -257,14 +265,14 @@ class OneDrive:
         capacity = self._quota_total
         # Convert to requested unit unit
         if unit == "gb":
-            used = round(used / (1024 * 1024 * 1024), 2)
-            capacity = round(capacity / (1024 * 1024 * 1024), 2)
+            used = round(used / (1024 * 1024 * 1024), 1)
+            capacity = round(capacity / (1024 * 1024 * 1024), 1)
         elif unit == "mb":
-            used = round(used / (1024 * 1024), 2)
-            capacity = round(capacity / (1024 * 1024), 2)
+            used = round(used / (1024 * 1024), 1)
+            capacity = round(capacity / (1024 * 1024), 1)
         elif unit == "kb":
-            used = round(used / (1024), 2)
-            capacity = round(capacity / (1024), 2)
+            used = round(used / (1024), 1)
+            capacity = round(capacity / (1024), 1)
         else:
             unit = "b"
         # Print usage
@@ -422,8 +430,8 @@ class OneDrive:
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
-            raise Exception(
-                "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
+            raise AttributeError(
+                f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
         # Create request url based on input parent folder
         if parent_folder_id:
@@ -649,8 +657,8 @@ class OneDrive:
         file_details = self.detail_item(item_id)
         # Check that it is not a folder
         if "folder" in file_details:
-            raise Exception(
-                "Item id provided is for a folder which this function does not permit."
+            raise AttributeError(
+                "item_id provided is for a folder, expected file item id"
             )
         file_name = file_details["name"]
         size = file_details["size"]
@@ -717,8 +725,9 @@ class OneDrive:
             # Calculates the final size of the chunk that each co-routine will download
             typ_chunk_size = file_size // num_coroutines
             if verbose:
+                pretty_size = round(file_size / 1000000, 1)
                 print(
-                    f"File {file_name} ({round(file_size/1000000,1)}mb) will be downloaded in {num_coroutines} segments."
+                    f"File {file_name} ({pretty_size}mb) will be downloaded in {num_coroutines} segments."
                 )
             for i in range(num_coroutines):
                 # Get the file part Path, placed in the temp directory
@@ -813,7 +822,7 @@ class OneDrive:
         """Uploads a file to a particular folder with a provided file name.
         Delegates the upload task to the upload_large_file function if required.
             Positional arguments:
-                file_path (str|Path) -- path of the file on the drive
+                file_path (str|Path) -- path of the origin file to upload
             Keyword arguments:
                 new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
                 parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
@@ -825,8 +834,8 @@ class OneDrive:
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
-            raise Exception(
-                "if_exists input value was not valid. Str type of values 'fail', 'replace', 'rename', are only accepted."
+            raise AttributeError(
+                f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
         # Ensure file_path is a Path type and remove escape slashes
         if os.name == "nt":  # Windows
@@ -895,7 +904,7 @@ class OneDrive:
     ) -> str:
         """INTERNAL: Uploads a file in chunks to a particular folder with a provided file name.
         Positional arguments:
-            file_path (str|Path) -- path of the file on the drive
+            file_path (str|Path) -- path of the origin file to upload
         Keyword arguments:
             new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
             parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
