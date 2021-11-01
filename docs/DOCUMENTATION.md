@@ -580,7 +580,7 @@ item_id = my_instance.upload_file(
 
 Positional arguments:
 
-* file_path (str|Path) -- path of the file on the drive
+* file_path (str|Path) -- path of the file which you want to upload from your local drive.
 
 Keyword arguments:
 
