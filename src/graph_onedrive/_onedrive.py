@@ -657,8 +657,8 @@ class OneDrive:
         file_details = self.detail_item(item_id)
         # Check that it is not a folder
         if "folder" in file_details:
-            raise Exception(
-                "Item id provided is for a folder which this function does not permit."
+            raise AttributeError(
+                "item_id provided is for a folder, expected file item id"
             )
         file_name = file_details["name"]
         size = file_details["size"]
@@ -822,7 +822,7 @@ class OneDrive:
         """Uploads a file to a particular folder with a provided file name.
         Delegates the upload task to the upload_large_file function if required.
             Positional arguments:
-                file_path (str|Path) -- path of the file on the drive
+                file_path (str|Path) -- path of the origin file to upload
             Keyword arguments:
                 new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
                 parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
@@ -904,7 +904,7 @@ class OneDrive:
     ) -> str:
         """INTERNAL: Uploads a file in chunks to a particular folder with a provided file name.
         Positional arguments:
-            file_path (str|Path) -- path of the file on the drive
+            file_path (str|Path) -- path of the origin file to upload
         Keyword arguments:
             new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
             parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
