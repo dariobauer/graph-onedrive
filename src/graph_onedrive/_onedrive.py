@@ -824,121 +824,122 @@ class OneDrive:
             Positional arguments:
                 file_path (str|Path) -- path of the origin file to upload
             Keyword arguments:
-                new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
+                new_file_name (str) -- new name of the file as it should appear on OneDrive, with extension (default = None)
                 parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
                 if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
                 verbose (bool) -- prints status message during the download process (default = False)
             Returns:
                 item_id (str) -- item id of the newly uploaded file
         """
+
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
             raise AttributeError(
-                f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
+                f"if_exists expected str 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
+
         # Ensure file_path is a Path type and remove escape slashes
         if os.name == "nt":  # Windows
             file_path = str(file_path).replace("/", "")
-        else:  # Other systems including posix (Mac, Linux)
+        else:  # Other systems including Mac, Linux
             file_path = str(file_path).replace("\\", "")
         file_path = Path(file_path)
+
         # Set file name
         if new_file_name:
             file_name = new_file_name
         else:
             file_name = file_path.name
-        # Checks the file size and delegates the task to the upload_large_file function if required
-        file_size = os.path.getsize(file_path)
-        basic_file_limit = 4 * 1024 * 1024
-        if file_size > basic_file_limit:
-            if verbose:
-                print(f"Large file, uploading in chunks")
-            response = self._upload_large_file(
-                file_path, file_name, parent_folder_id, conflict_behavior, verbose
-            )
-            return response
-        # Create request url based on input values
-        if parent_folder_id:
-            request_url = self._API_URL + "me/drive/items/" + parent_folder_id + ":/"
-        else:
-            request_url = self._API_URL + "me/drive/root:/"
-        request_url += f"{file_name}:/content?@microsoft.graph.conflictBehavior={conflict_behavior}"
-        # Open the file into memory
-        if verbose:
-            print("Loading file")
-        content = open(file_path, "rb")
-        # Make the Graph API request
-        if verbose:
-            print("Uploading file")
-        timeout = httpx.Timeout(10.0, write=180.0)
-        response = httpx.put(
-            request_url,
-            headers=self._headers,
-            content=content,
-            timeout=timeout,
+
+        # Upload the file using seperate function
+        item_id = self._upload_large_file(
+            file_path, file_name, parent_folder_id, conflict_behavior, verbose
         )
-        # Close file
-        content.close()
-        # Validate request response and parse
-        if response.status_code != 201 and response.status_code != 200:
-            try:
-                error = response.json()["error"]
-                error_message = error.get("message")
-            except:
-                error_message = ""
-            raise Exception(f"API Error : item not uploaded ({error_message})")
-        response_data = response.json()
-        item_id = response_data["id"]
         # Return the file item id
         return item_id
 
     @token_required
     def _upload_large_file(
         self,
-        file_path: Union[str, Path],
-        new_file_name: Optional[str] = None,
-        parent_folder_id: Optional[str] = None,
+        source_file_path: Union[str, Path],
+        destination_file_name: str,
+        parent_folder_id: str,
         conflict_behavior: str = "rename",
         verbose: bool = False,
     ) -> str:
         """INTERNAL: Uploads a file in chunks to a particular folder with a provided file name.
         Positional arguments:
-            file_path (str|Path) -- path of the origin file to upload
+            source_file_path (str|Path) -- path of the local source file to upload
+            destination_file_name (str) -- new name of the file as it should appear on OneDrive, with extension
+            parent_folder_id (str) -- item id of the folder to put the file within, if "" then root
         Keyword arguments:
-            new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
-            parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
             conflict_behavior (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
             verbose (bool) -- prints status message during the download process (default = False)
         Returns:
             item_id (str) -- item id of the newly uploaded file
         """
+
         # Check conflict behavior
         assert conflict_behavior in ["fail", "replace", "rename"]
-        # Ensure file_path is a Path type
-        file_path = Path(file_path)
-        # Set file name
-        if new_file_name:
-            file_name = new_file_name
+
+        # Check the path is valid and points to a file
+        if not os.path.isfile(source_file_path):
+            raise AttributeError(
+                f"source_file_path expected a path to a file, got {source_file_path}"
+            )
+
+        # Get file metadata
+        file_size = os.path.getsize(source_file_path)
+        file_modified = os.path.getmtime(source_file_path)
+        if os.name == "nt":
+            # Windows OS
+            file_created = os.path.getctime(source_file_path)
         else:
-            file_name = file_path.name
+            # Other OS
+            stat = os.stat(source_file_path)
+            try:
+                # Likely Mac OS
+                file_created = stat.st_birthtime
+            except AttributeError:
+                # Likely Linux OS, fall back to last modified.
+                file_created = stat.st_mtime
+        file_created_str = (
+            datetime.fromtimestamp(file_created).isoformat(timespec="seconds") + "Z"
+        )
+        file_modified_str = (
+            datetime.fromtimestamp(file_modified).isoformat(timespec="seconds") + "Z"
+        )
+
         # Create request url for the upload session
         if parent_folder_id:
             request_url = self._API_URL + "me/drive/items/" + parent_folder_id + ":/"
         else:
             request_url = self._API_URL + "me/drive/root:/"
-        request_url += file_name + ":/createUploadSession"
+        request_url += (
+            urllib.parse.quote(destination_file_name) + ":/createUploadSession"
+        )
+
         # Create request body for the upload session
         body = {
             "item": {
                 "@odata.type": "microsoft.graph.driveItemUploadableProperties",
                 "@microsoft.graph.conflictBehavior": conflict_behavior,
+                "name": destination_file_name,
+                "fileSize": file_size,
+                "fileSystemInfo": {
+                    "@odata.type": "microsoft.graph.fileSystemInfo",
+                    "createdDateTime": file_created_str,
+                    "lastModifiedDateTime": file_modified_str,
+                },
             }
         }
+
         # Make the Graph API request for the upload session
         if verbose:
-            print(f"Requesting upload session using url")
+            print(f"Requesting upload session")
         response = httpx.post(request_url, headers=self._headers)
+
         # Validate upload session request response and parse
         if response.status_code != 200:
             try:
@@ -950,21 +951,23 @@ class OneDrive:
                 f"API Error : upload session could not be created ({error_message})"
             )
         upload_url = response.json()["uploadUrl"]
-        # Determine the upload file size and chunks
-        file_size = os.path.getsize(file_path)
+
+        # Determine the upload file chunk size
         chunk_size: int = (
             1024 * 320 * 16
         )  # = 5MiB. Docs: Must be multiple of 320KiB, recommend 5-10MiB.
         no_of_uploads: int = -(-file_size // chunk_size)
+
         # Create an upload connection client
         timeout = httpx.Timeout(10.0, read=180.0, write=180.0)
         client = httpx.Client(timeout=timeout)
+
         # Run in a try block to capture user cancellation request
         try:
             # Open the file pointer
             if verbose:
                 print("Loading file")
-                data = open(file_path, "rb")
+                data = open(source_file_path, "rb")
             # Start the upload in a loop for as long as there is data left to upload
             n = 0
             while data.tell() < file_size:
@@ -1013,8 +1016,6 @@ class OneDrive:
                         headers=headers,
                         content=content,
                     )
-                    if verbose:
-                        print("Upload complete")
         except KeyboardInterrupt:
             # Upload cancelled, send delete request
             httpx.delete(upload_url)
@@ -1023,6 +1024,7 @@ class OneDrive:
         finally:
             data.close()
             client.close()
+
         # Validate request response and parse
         if response.status_code != 201 and response.status_code != 200:
             try:
@@ -1031,9 +1033,11 @@ class OneDrive:
             except:
                 error_message = ""
             raise Exception(f"API Error : item not uploaded ({error_message})")
+
         if verbose:
             print("Upload complete")
+
+        # Return the file item id
         response_data = response.json()
         item_id = response_data["id"]
-        # Return the file item id
         return item_id

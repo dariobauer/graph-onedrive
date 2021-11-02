@@ -392,10 +392,10 @@ def instance(
                 elif not onedrive.is_folder(str(parent_folder_id)):
                     print("The item id is not a folder.")
                     continue
-                response = onedrive.upload_file(
+                item_id = onedrive.upload_file(
                     file_path, new_file_name, parent_folder_id, verbose=True
                 )
-                print(response)
+                print(f"New file item id: {item_id}")
 
             elif command in ["od", "onedrive", "drive"]:
                 print("Drive id:    ", onedrive._drive_id)
