@@ -4,3 +4,31 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.coverage.run]
+plugins = ["covdefaults",]
+source = ["graph_onedrive"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests",]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+disallow_subclassing_any = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "testing.*",
+    "tests.*",
+    "docs.*"
+]
+disallow_untyped_defs = false

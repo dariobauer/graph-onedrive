@@ -5,9 +5,11 @@ import pytest
 class TestGetTokens:
     """Tests the _get_token method."""
 
+    @pytest.mark.skip(reason="not implemented")
     def test_get_token(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_get_token_failure(self):
         ...
 
@@ -15,9 +17,11 @@ class TestGetTokens:
 class TestAuthorization:
     """Tests the _get_authorization method."""
 
+    @pytest.mark.skip(reason="not implemented")
     def test_get_authorization(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_get_authorization_failure(self):
         ...
 
@@ -25,9 +29,11 @@ class TestAuthorization:
 class TestHeaders:
     """Tests the _create_headers method."""
 
+    @pytest.mark.skip(reason="not implemented")
     def test_create_headers(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_create_headers_failure(self):
         ...
 
@@ -47,6 +53,7 @@ class TestDriveDetails:
         assert onedrive._quota_remaining == 1099447353539
         assert onedrive._quota_total == 1099511627776
 
+    @pytest.mark.skip(reason="not implemented")
     def test_get_drive_details_failure(self):
         ...
 
@@ -107,6 +114,7 @@ class TestListingDirectories:
         items = onedrive.list_directory(item_id)
         assert items[0].get("id") == "01KDJMOTN..."
 
+    @pytest.mark.skip(reason="not implemented")
     def test_list_directory_failure(self):
         ...
 
@@ -144,6 +152,7 @@ class TestItemDetails:
         stdout, sterr = capsys.readouterr()
         assert stdout == exp_stout
 
+    @pytest.mark.skip(reason="not implemented")
     def test_detail_item_failure(self):
         ...
 
@@ -156,6 +165,7 @@ class TestItemDetails:
         item_type = onedrive.item_type(item_id)
         assert item_type == exp_type
 
+    @pytest.mark.skip(reason="not implemented")
     def test_item_type_failure(self):
         ...
 
@@ -168,6 +178,7 @@ class TestItemDetails:
         is_folder = onedrive.is_folder(item_id)
         assert is_folder == exp_bool
 
+    @pytest.mark.skip(reason="not implemented")
     def test_is_folder_failure(self):
         ...
 
@@ -180,6 +191,7 @@ class TestItemDetails:
         is_file = onedrive.is_file(item_id)
         assert is_file == exp_bool
 
+    @pytest.mark.skip(reason="not implemented")
     def test_is_file_failure(self):
         ...
 
@@ -203,6 +215,7 @@ class TestMakeFolder:
         item_id = onedrive.make_folder(folder_name, parent_folder_id, check_existing)
         assert item_id == exp_str
 
+    @pytest.mark.skip(reason="not implemented")
     def test_make_folder_failure(self):
         ...
 
@@ -210,9 +223,11 @@ class TestMakeFolder:
 class TestMove:
     """Tests the move_item method."""
 
+    @pytest.mark.skip(reason="not implemented")
     def test_move_item(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_move_item_failure(self):
         ...
 
@@ -220,9 +235,11 @@ class TestMove:
 class TestCopy:
     """Tests the copy_item method."""
 
+    @pytest.mark.skip(reason="not implemented")
     def test_copy_item(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_copy_item_failure(self):
         ...
 
@@ -230,9 +247,11 @@ class TestCopy:
 class TestRename:
     """Tests the rename_item method."""
 
+    @pytest.mark.skip(reason="not implemented")
     def test_rename_item(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_rename_item_failure(self):
         ...
 
@@ -240,9 +259,11 @@ class TestRename:
 class TestDelete:
     """Tests the delete_item method."""
 
+    @pytest.mark.skip(reason="not implemented")
     def test_delete_item(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_delete_item_failure(self):
         ...
 
@@ -251,23 +272,29 @@ class TestDownload:
     """Tests the download_file, _download_async, _download_async_part methods."""
 
     # download_file
+    @pytest.mark.skip(reason="not implemented")
     def test_download_file(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_download_file_failure(self):
         ...
 
     """# _download_async
+    @pytest.mark.skip(reason="not implemented")
     async def test_download_async(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     async def test_download_async_failure(self):
         ...
 
     # _download_async_part
+    @pytest.mark.skip(reason="not implemented")
     async def test_download_async_part(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     async def test_download_async_part_failure(self):
         ...
     """
@@ -277,15 +304,19 @@ class TestUpload:
     """Tests the upload_file, _upload_large_file methods."""
 
     # upload_file
+    @pytest.mark.skip(reason="not implemented")
     def test_upload_file(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_upload_file_failure(self):
         ...
 
     # _upload_large_file
+    @pytest.mark.skip(reason="not implemented")
     def test_upload_large_file(self):
         ...
 
+    @pytest.mark.skip(reason="not implemented")
     def test_upload_large_file_failure(self):
         ...
