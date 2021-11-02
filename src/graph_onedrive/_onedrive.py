@@ -934,14 +934,15 @@ class OneDrive:
                 },
             }
         }
-
+        breakpoint()
         # Make the Graph API request for the upload session
         if verbose:
             print(f"Requesting upload session")
-        response = httpx.post(request_url, headers=self._headers)
+        response = httpx.post(request_url, headers=self._headers, json=body)
 
         # Validate upload session request response and parse
         if response.status_code != 200:
+            print(response.text)
             try:
                 error = response.json()["error"]
                 error_message = error.get("message")
