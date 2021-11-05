@@ -4,6 +4,7 @@ Run terminal command 'graph-onedrive --help' or 'python -m graph-onedrive --help
 import argparse
 import json
 import os
+from datetime import datetime
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -274,6 +275,7 @@ def instance(
     od / onedrive  :  print the OneDrive details
     li / list      :  list the contents of a folder
     de / detail    :  print metadata of an item
+    sl / link      :  create a sharing link for an item
     md / mkdir     :  make a new folder
     mv / move      :  move an item
     cp / copy      :  copy an item
@@ -309,6 +311,46 @@ def instance(
             elif command in ["de", "detail"]:
                 item_id = input("Item id to detail: ").strip()
                 onedrive.detail_item(item_id, verbose=True)
+
+            elif command in ["sl", "link"]:
+                item_id = input("Item id to create a link for: ").strip()
+                link_type = ""
+                while link_type not in ("view", "edit", "embed"):
+                    link_type = input("Type of link (view/edit/embed): ").strip()
+                password = None
+                if (
+                    onedrive._drive_type == "personal"
+                    and input("Set password [y/N]: ").strip().lower() == "y"
+                ):
+                    password = input("Password: ").strip()
+                if input("Set expiry [y/N]: ").strip().lower() == "y":
+                    while True:
+                        date = input("Set expiry date in format YYYY-MM-DD: ").strip()
+                        try:
+                            expiration = datetime.strptime(date, "%Y-%m-%d")
+                        except ValueError:
+                            print("Not in correct format, try again or use ^c to exit.")
+                            continue
+                        if (
+                            input(
+                                f"{expiration.strftime('%e %B %Y')} - is this correct? [Y/n]: "
+                            )
+                            .strip()
+                            .lower()
+                            != "n"
+                        ):
+                            break
+                scope = "anonymous"
+                if onedrive._drive_type == "business":
+                    if (
+                        input("Limit to your organization [y/N]: ").strip().lower()
+                        == "y"
+                    ):
+                        scope = "organization"
+                response = onedrive.create_share_link(
+                    item_id, link_type, password, expiration, scope
+                )
+                print(response)
 
             elif command in ["md", "mkdir"]:
                 parent_folder_id: Optional[str] = input(

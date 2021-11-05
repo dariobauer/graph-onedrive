@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Added py.typed for mypy typing support
+* Added ability to create sharing links (Issue #16)
 
 
 ## Released
