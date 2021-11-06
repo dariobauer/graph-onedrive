@@ -51,7 +51,7 @@ def create_from_config_file(
     """
 
     # Read configuration from config file
-    print("Reading OneDrive configs...")
+    print("Reading OneDrive configs")
     config_path = Path(config_path)
     with open(config_path) as config_file:
         config = json.load(config_file)
@@ -82,7 +82,7 @@ def create_from_config_file(
     )
 
     # Get refresh token from instance and update config file
-    print("Saving refresh token...")
+    print("Saving refresh token")
     with open(config_path) as config_file:
         config = json.load(config_file)
     config[config_key]["refresh_token"] = onedrive_instance.refresh_token

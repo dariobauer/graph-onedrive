@@ -111,7 +111,7 @@ class OneDrive:
             body["code"] = authorization_code
 
         # Make the request
-        response = httpx.post(request_url, data=body)
+        response = httpx.post(request_url, json=body)
 
         # Check response was okay
         if response.status_code != 200:
@@ -255,7 +255,7 @@ class OneDrive:
                 f"Input Error : unit expected type 'str', got type {type(unit).__name__!r}"
             )
         unit = unit.lower()
-        if unit not in ["b", "kb", "mb", "gb"]:
+        if unit not in ("b", "kb", "mb", "gb"):
             raise AttributeError(f"Input Error : {unit!r} is not a supported unit")
         # Refresh drive details
         if refresh:
@@ -429,7 +429,7 @@ class OneDrive:
         """
         # Set conflict behavior
         conflict_behavior = if_exists
-        if conflict_behavior not in ["fail", "replace", "rename"]:
+        if conflict_behavior not in ("fail", "replace", "rename"):
             raise AttributeError(
                 f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
@@ -756,7 +756,7 @@ class OneDrive:
             await client.aclose()
             # Join the downloaded file parts
             if verbose:
-                print("Joining individual segments into single file...")
+                print("Joining individual segments into single file")
             with open(file_name, "wb") as fw:
                 for file_part in file_part_names:
                     with open(file_part, "rb") as fr:
@@ -833,7 +833,7 @@ class OneDrive:
         """
         # Set conflict behavior
         conflict_behavior = if_exists
-        if conflict_behavior not in ["fail", "replace", "rename"]:
+        if conflict_behavior not in ("fail", "replace", "rename"):
             raise AttributeError(
                 f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
@@ -914,7 +914,7 @@ class OneDrive:
             item_id (str) -- item id of the newly uploaded file
         """
         # Check conflict behavior
-        assert conflict_behavior in ["fail", "replace", "rename"]
+        assert conflict_behavior in ("fail", "replace", "rename")
         # Ensure file_path is a Path type
         file_path = Path(file_path)
         # Set file name

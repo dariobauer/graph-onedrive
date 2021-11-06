@@ -370,7 +370,7 @@ def instance(
                 if onedrive.is_folder(item_id):
                     print("Item id is a folder. Folders cannot be downloaded.")
                     continue
-                print("Downloading...")
+                print("Downloading")
                 response = onedrive.download_file(item_id, verbose=True)
                 print(
                     f"Item was downloaded in the current working directory as {response}"

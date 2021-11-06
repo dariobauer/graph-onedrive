@@ -43,10 +43,10 @@ class TestDriveDetails:
 
     # get_drive_details
     def test_get_drive_details(self, onedrive):
-        assert onedrive._drive_id == "b!t18F8ybsHUq1z3..."
+        assert onedrive._drive_id == "b!t18F8ybsHUq1z3"
         assert onedrive._drive_name is None
         assert onedrive._drive_type == "business"
-        assert onedrive._owner_id == "f22fca32-227..."
+        assert onedrive._owner_id == "f22fca32-227"
         assert onedrive._owner_email == None
         assert onedrive._owner_name == "Ryan Gregg"
         assert onedrive._quota_used == 64274237
@@ -107,12 +107,12 @@ class TestListingDirectories:
 
     def test_list_directory_root(self, onedrive):
         items = onedrive.list_directory()
-        assert items[0].get("id") == "01KDJMOTN..."
+        assert items[0].get("id") == "01KDJMOTN"
 
     def test_list_directory_folder(self, onedrive):
-        item_id = "309EC495-3E92-431D-9124-F0299633171D"
+        item_id = "01KDJMOTNGDMA4KB"
         items = onedrive.list_directory(item_id)
-        assert items[0].get("id") == "01KDJMOTN..."
+        assert items[0].get("id") == "01KDJMOTN"
 
     @pytest.mark.skip(reason="not implemented")
     def test_list_directory_failure(self):
@@ -126,8 +126,8 @@ class TestItemDetails:
     @pytest.mark.parametrize(
         "item_id, exp_name",
         [
-            ("1file342i6r8h4-g7g", "2021-02-08 18.53.41.mov"),
-            ("2folder3428hb-ng73", "temp"),
+            ("01KDJMOTOM62V", "2021-02-08 18.53.41.mov"),
+            ("01KDJMOTNGDMA4KB", "temp"),
         ],
     )
     def test_detail_item(self, onedrive, item_id, exp_name):
@@ -138,12 +138,12 @@ class TestItemDetails:
         "item_id, exp_stout",
         [
             (
-                "1file342i6r8h4-g7g",
-                "id: 01KDJMOTOM62V...\nname: 2021-02-08 18.53.41.mov\ntype: file\ncreated: 2021-10-23T23:24:56Z by: Ryan Gregg\nmodified: 2021-10-23T23:25:48Z by: Ryan Gregg\nsize: 4926874\nweb url: https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov\n",
+                "01KDJMOTOM62V",
+                "id: 01KDJMOTOM62V\nname: 2021-02-08 18.53.41.mov\ntype: file\ncreated: 2021-10-23T23:24:56Z by: Ryan Gregg\nmodified: 2021-10-23T23:25:48Z by: Ryan Gregg\nsize: 4926874\nweb url: https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov\n",
             ),
             (
-                "2folder3428hb-ng73",
-                "id: 01KDJMOTNGDMA4KB...\nname: temp\ntype: folder\ncreated: 2021-10-24T08:56:48Z by: Ryan Gregg\nmodified: 2021-10-24T08:56:48Z by: Ryan Gregg\nsize: 19528345\nweb url: https://constco.sharepoint.com/personal/consco/Documents/temp\n",
+                "01KDJMOTNGDMA4KB",
+                "id: 01KDJMOTNGDMA4KB\nname: temp\ntype: folder\ncreated: 2021-10-24T08:56:48Z by: Ryan Gregg\nmodified: 2021-10-24T08:56:48Z by: Ryan Gregg\nsize: 19528345\nweb url: https://constco.sharepoint.com/personal/consco/Documents/temp\n",
             ),
         ],
     )
@@ -159,7 +159,7 @@ class TestItemDetails:
     # item_type
     @pytest.mark.parametrize(
         "item_id, exp_type",
-        [("1file342i6r8h4-g7g", "file"), ("2folder3428hb-ng73", "folder")],
+        [("01KDJMOTOM62V", "file"), ("01KDJMOTNGDMA4KB", "folder")],
     )
     def test_item_type(self, onedrive, item_id, exp_type):
         item_type = onedrive.item_type(item_id)
@@ -172,7 +172,7 @@ class TestItemDetails:
     # is_folder
     @pytest.mark.parametrize(
         "item_id, exp_bool",
-        [("1file342i6r8h4-g7g", False), ("2folder3428hb-ng73", True)],
+        [("01KDJMOTOM62V", False), ("01KDJMOTNGDMA4KB", True)],
     )
     def test_is_folder(self, onedrive, item_id, exp_bool):
         is_folder = onedrive.is_folder(item_id)
@@ -185,7 +185,7 @@ class TestItemDetails:
     # is_file
     @pytest.mark.parametrize(
         "item_id, exp_bool",
-        [("1file342i6r8h4-g7g", True), ("2folder3428hb-ng73", False)],
+        [("01KDJMOTOM62V", True), ("01KDJMOTNGDMA4KB", False)],
     )
     def test_is_file(self, onedrive, item_id, exp_bool):
         is_file = onedrive.is_file(item_id)
@@ -196,16 +196,41 @@ class TestItemDetails:
         ...
 
 
+class TestSharingLink:
+    """Tests the create_share_link method."""
+
+    @pytest.mark.skip(reason="not implemented")
+    @pytest.mark.parametrize(
+        "item_id, link_type, password, expiration, scope, exp_link",
+        [
+            ("123", "view", None, None, "anonymous", "https://"),
+            ("123", "edit", None, None, "anonymous", "https://"),
+            ("123", "embed", None, None, "anonymous", "<iframe></iframe>"),
+        ],
+    )
+    def test_create_share_link(
+        self, onedrive, item_id, link_type, password, expiration, scope, exp_link
+    ):
+        link = onedrive.create_share_link(
+            item_id, link_type, password, expiration, scope
+        )
+        assert link == exp_link
+
+    @pytest.mark.skip(reason="not implemented")
+    def test_create_share_link_failure(self):
+        ...
+
+
 class TestMakeFolder:
     """Tests the make_folder method."""
 
     @pytest.mark.parametrize(
         "folder_name, parent_folder_id, check_existing, exp_str",
         [
-            ("tesy 1", "hssdf97ds", True, "ACEA49D1-144..."),
-            ("tesy 1", "hssdf97ds", False, "ACEA49D1-144..."),
-            ("tesy 1", None, True, "ACEA49D1-144..."),
-            ("tesy 1", None, False, "ACEA49D1-144...")
+            ("tesy 1", "01KDJMOTNGDMA4KB", True, "ACEA49D1-144"),
+            ("tesy 1", "01KDJMOTNGDMA4KB", False, "ACEA49D1-144"),
+            ("tesy 1", None, True, "ACEA49D1-144"),
+            ("tesy 1", None, False, "ACEA49D1-144")
             # To-do: allow for other folder names by using a side effect in the mock route
         ],
     )

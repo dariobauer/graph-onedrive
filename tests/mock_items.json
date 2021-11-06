@@ -1,0 +1,124 @@
+{
+  "items": [
+    {
+      "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('f22fca12-2271-4')/drive/items/$entity",
+      "createdDateTime": "2021-10-24T08:56:48Z",
+      "eTag": "\"{C5011BA6-6D06-4},1\"",
+      "id": "01KDJMOTNGDMA4KB",
+      "lastModifiedDateTime": "2021-10-24T08:56:48Z",
+      "name": "temp",
+      "webUrl": "https://constco.sharepoint.com/personal/consco/Documents/temp",
+      "cTag": "\"c:{C5011BA6-6D06-4},0\"",
+      "size": 19528345,
+      "createdBy": {
+        "application": {
+          "id": "5d7c20aa-5ff9-4c",
+          "displayName": "App-Name"
+        },
+        "user": {
+          "email": "ryan.gregg@constco.com",
+          "id": "f22fca12-22",
+          "displayName": "Ryan Gregg"
+        }
+      },
+      "lastModifiedBy": {
+        "application": {
+          "id": "5d7c20aa-5ff",
+          "displayName": "App-Name"
+        },
+        "user": {
+          "email": "dryan.gregg@constco.com",
+          "id": "f22fca12-22",
+          "displayName": "Ryan Gregg"
+        }
+      },
+      "parentReference": {
+        "driveId": "b!hjR1eJjXB",
+        "driveType": "business",
+        "id": "01KDJMOTN6Y2",
+        "path": "/drive/root:"
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2021-10-24T08:56:48Z",
+        "lastModifiedDateTime": "2021-10-24T08:56:48Z"
+      },
+      "folder": {
+        "childCount": 5
+      }
+    },
+    {
+      "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('f22fca12-')/drive/items/$entity",
+      "@microsoft.graph.downloadUrl": "https://consco.sharepoint.com/personal/consco/_layouts/15/download.aspx?UniqueId=b7a&Translate=false&tempauth=eyJ0eXAiOiJ&ApiVersion=2.0",
+      "createdDateTime": "2021-10-23T23:24:56Z",
+      "eTag": "\"{B7AAF6CC-1580-},4\"",
+      "id": "01KDJMOTOM62V",
+      "lastModifiedDateTime": "2021-10-23T23:25:48Z",
+      "name": "2021-02-08 18.53.41.mov",
+      "webUrl": "https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov",
+      "cTag": "\"c:{B7AAF6CC-158},2\"",
+      "media": {
+        "aboutVisibility": "none",
+        "isNoiseSuppressionControlShown": true,
+        "noiseSuppressionEnabledByDefault": false,
+        "tableOfContentsVisibility": "none",
+        "viewpoint": {
+          "isTranscriptionAllowed": true
+        }
+      },
+      "size": 4926874,
+      "createdBy": {
+        "application": {
+          "id": "5d7c20aa-5",
+          "displayName": "App-Name"
+        },
+        "user": {
+          "email": "ryan.gregg@constco.com",
+          "id": "f22fca12-2",
+          "displayName": "Ryan Gregg"
+        }
+      },
+      "lastModifiedBy": {
+        "application": {
+          "id": "5d7c20aa-5f",
+          "displayName": "App-Name"
+        },
+        "user": {
+          "email": "ryan.gregg@constco.com",
+          "id": "f22fca12-22",
+          "displayName": "Ryan Gregg"
+        }
+      },
+      "parentReference": {
+        "driveId": "b!hjR1eJjXB0CNL",
+        "driveType": "business",
+        "id": "01KDJMOTNGDMA",
+        "path": "/drive/root:/temp"
+      },
+      "file": {
+        "mimeType": "video/quicktime",
+        "hashes": {
+          "quickXorHash": "wFwchJC3Iwr99ytGd+8vuSXCe0A="
+        }
+      },
+      "fileSystemInfo": {
+        "createdDateTime": "2021-10-23T23:24:56Z",
+        "lastModifiedDateTime": "2021-10-23T23:25:48Z"
+      },
+      "photo": {
+        "takenDateTime": "2021-02-08T05:53:41Z"
+      },
+      "video": {
+        "audioBitsPerSample": 16,
+        "audioChannels": 1,
+        "audioFormat": "AAC",
+        "audioSamplesPerSecond": 44100,
+        "bitrate": 6495944,
+        "duration": 6033,
+        "fourCC": "H264",
+        "frameRate": 29.834,
+        "height": 1280,
+        "width": 720
+      }
+    }
+  ]
+}
