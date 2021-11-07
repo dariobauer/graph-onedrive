@@ -605,7 +605,7 @@ item_id = my_instance.upload_file(
 
 Positional arguments:
 
-* file_path (str|Path) -- path of the origin file to upload (this is the path to the file on your computer which you are wanting to upload)
+* file_path (str|Path) -- path of the local source file to upload (path to the file on your computer which you are wanting to upload)
 
 Keyword arguments:
 
