@@ -10,6 +10,7 @@ import urllib.parse
 import warnings
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from pathlib import Path
 from time import sleep
 from typing import Any
@@ -884,10 +885,16 @@ class OneDrive:
                 # Likely Linux OS, fall back to last modified.
                 file_created = stat.st_mtime
         file_created_str = (
-            datetime.fromtimestamp(file_created).isoformat(timespec="seconds") + "Z"
+            datetime.fromtimestamp(file_created)
+            .astimezone(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
         )
         file_modified_str = (
-            datetime.fromtimestamp(file_modified).isoformat(timespec="seconds") + "Z"
+            datetime.fromtimestamp(file_modified)
+            .astimezone(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
         )
 
         # Create request url for the upload session

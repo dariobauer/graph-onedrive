@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Added py.typed for mypy typing support
+* Improved upload to attempt to retain file creation and modified metadata (Issue [#13](https://github.com/dariobauer/graph-onedrive/issues/13))
 
 
 ## Released
@@ -13,7 +14,7 @@ Released 2021-10-29
 
 * Improved file download to asynchronously download using multiple connections
 * Added HTTPX and aiofiles packages as dependencies
-* Replaced Requests package with HTTPX (Issue #11)
+* Replaced Requests package with HTTPX (Issue [#11](https://github.com/dariobauer/graph-onedrive/issues/11))
 * Added verbose keyword arguments to download and upload functions
 * Improved error handling
 * item_type, is_file, is_folder methods added
@@ -27,9 +28,9 @@ Released 2021-10-29
 Released 2021-10-21
 
 * Major improvements to the cli, now uses argparse, docs updated
-* Removed access token validation (Issue #4)
-* Allowed access token response to continue when no refresh token provided (Issue #6)
-* Various dictionary value lookups improved to account for missing keys (Issue #7)
+* Removed access token validation (Issue [#4](https://github.com/dariobauer/graph-onedrive/issues/4))
+* Allowed access token response to continue when no refresh token provided (Issue [#6](https://github.com/dariobauer/graph-onedrive/issues/6))
+* Various dictionary value lookups improved to account for missing keys (Issue [#7](https://github.com/dariobauer/graph-onedrive/issues/7))
 
 ### Version 0.0.1a9
 
@@ -37,7 +38,7 @@ Released 2021-10-20
 
 * Improved code typing
 * Updated code formatting
-* Improved validation of authorization codes and access tokens (Issues #3 & #4)
+* Improved validation of authorization codes and access tokens (Issues [#3](https://github.com/dariobauer/graph-onedrive/issues/3) & [#4](https://github.com/dariobauer/graph-onedrive/issues/4))
 
 ### Version 0.0.1a8
 
