@@ -88,6 +88,14 @@ class OneDrive:
         # Set additional attributes from the server
         self._get_drive_details()
 
+    def __repr__(self) -> str:
+        try:
+            return (
+                f"<OneDrive {self._drive_type} {self._drive_name} {self._owner_name}>"
+            )
+        except AttributeError:
+            return f"<OneDrive uninitiated>"
+
     def _get_token(self) -> None:
         """INTERNAL: Get access and refresh tokens from the Graph API.
         Calls get_authorization function if an existing refresh token (from a previous session) is not provided.
@@ -258,7 +266,7 @@ class OneDrive:
             )
         unit = unit.lower()
         if unit not in ["b", "kb", "mb", "gb"]:
-            raise AttributeError(f"Input Error : {unit!r} is not a supported unit")
+            raise ValueError(f"Input Error : {unit!r} is not a supported unit")
         # Refresh drive details
         if refresh:
             self._get_drive_details()
@@ -376,9 +384,10 @@ class OneDrive:
                 file_system_info.get("lastModifiedDateTime"),
             )
             if "file" in response_data.keys():
-                hashes = response_data.get("file", {}).get("hashes", {})
-                print("file sha1 hash:", hashes.get("sha1Hash"))
-                print("file sha256 hash:", hashes.get("sha256Hash"))
+                hashes = response_data.get("file", {}).get("hashes")
+                if isinstance(hashes, dict):
+                    for key, value in hashes.items():
+                        print(f"file {key.replace('Hash', '')} hash:", value)
         # Return the item details
         return response_data
 
@@ -445,11 +454,11 @@ class OneDrive:
         if not isinstance(link_type, str):
             raise TypeError(f"link_type expected type 'str', got {type(link_type)}")
         elif link_type not in ("view", "edit", "embed"):
-            raise AttributeError(
+            raise ValueError(
                 f"link_type expected 'view', 'edit', or 'embed', got {link_type}"
             )
         elif link_type == "embed" and self._drive_type != "personal":
-            raise AttributeError(
+            raise ValueError(
                 f"link_type='embed' is not available for {self._drive_type} OneDrive accounts"
             )
 
@@ -457,7 +466,7 @@ class OneDrive:
         if password is not None and not isinstance(password, str):
             raise TypeError(f"password expected type 'str', got {type(password)}")
         elif password is not None and self._drive_type != "personal":
-            raise AttributeError(
+            raise ValueError(
                 f"password is not available for {self._drive_type} OneDrive accounts"
             )
 
@@ -475,14 +484,14 @@ class OneDrive:
         if not isinstance(scope, str):
             raise TypeError(f"scope expected type 'str', got {type(scope)}")
         elif scope not in ("anonymous", "organization"):
-            raise AttributeError(
+            raise ValueError(
                 f"scope expected 'anonymous' or 'organization', got {scope}"
             )
         elif scope == "organization" and self._drive_type not in (
             "business",
             "sharepoint",
         ):
-            raise AttributeError(
+            raise ValueError(
                 f"scope='organization' is not available for {self._drive_type} OneDrive accounts"
             )
 
@@ -549,7 +558,7 @@ class OneDrive:
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
-            raise AttributeError(
+            raise ValueError(
                 f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
         # Create request url based on input parent folder
@@ -776,9 +785,7 @@ class OneDrive:
         file_details = self.detail_item(item_id)
         # Check that it is not a folder
         if "folder" in file_details:
-            raise AttributeError(
-                "item_id provided is for a folder, expected file item id"
-            )
+            raise ValueError("item_id provided is for a folder, expected file item id")
         file_name = file_details["name"]
         size = file_details["size"]
         # If the file is empty, just create it and return
@@ -953,7 +960,7 @@ class OneDrive:
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ["fail", "replace", "rename"]:
-            raise AttributeError(
+            raise ValueError(
                 f"if_exists expected str 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
 
@@ -973,9 +980,7 @@ class OneDrive:
 
         # Check the path is valid and points to a file
         if not os.path.isfile(file_path):
-            raise AttributeError(
-                f"file_path expected a path to a file, got {file_path}"
-            )
+            raise ValueError(f"file_path expected a path to a file, got {file_path}")
 
         # Get file metadata
         file_size = os.path.getsize(file_path)
