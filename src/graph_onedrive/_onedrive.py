@@ -10,6 +10,7 @@ import urllib.parse
 import warnings
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from pathlib import Path
 from time import sleep
 from typing import Any
@@ -43,6 +44,7 @@ class OneDrive:
         item_type           -- get item type, folder or file
         is_folder           -- check if an item is a folder
         is_file             -- check if an item is a file
+        create_share_link   -- create a sharing link for a file or folder
         make_folder         -- creates a folder
         move_item           -- moves an item
         copy_item           -- copies an item
@@ -85,6 +87,14 @@ class OneDrive:
         self._create_headers()
         # Set additional attributes from the server
         self._get_drive_details()
+
+    def __repr__(self) -> str:
+        try:
+            return (
+                f"<OneDrive {self._drive_type} {self._drive_name} {self._owner_name}>"
+            )
+        except AttributeError:
+            return f"<OneDrive uninitiated>"
 
     def _get_token(self) -> None:
         """INTERNAL: Get access and refresh tokens from the Graph API.
@@ -261,8 +271,10 @@ class OneDrive:
                 f"Input Error : unit expected type 'str', got type {type(unit).__name__!r}"
             )
         unit = unit.lower()
+
         if unit not in ("b", "kb", "mb", "gb"):
-            raise AttributeError(f"Input Error : {unit!r} is not a supported unit")
+            raise ValueError(f"Input Error : {unit!r} is not a supported unit")
+
         # Refresh drive details
         if refresh:
             self._get_drive_details()
@@ -351,11 +363,11 @@ class OneDrive:
         response_data = response.json()
         # Print the item details
         if verbose:
-            print("id:", response_data.get("id"))
+            print("item id:", response_data.get("id"))
             print("name:", response_data.get("name"))
             if "folder" in response_data:
                 print("type:", "folder")
-            else:
+            elif "file" in response_data:
                 print("type:", "file")
             print(
                 "created:",
@@ -364,7 +376,7 @@ class OneDrive:
                 response_data.get("createdBy", {}).get("user", {}).get("displayName"),
             )
             print(
-                "modified:",
+                "last modified:",
                 response_data.get("lastModifiedDateTime"),
                 "by:",
                 response_data.get("lastModifiedBy", {})
@@ -373,6 +385,17 @@ class OneDrive:
             )
             print("size:", response_data.get("size"))
             print("web url:", response_data.get("webUrl"))
+            file_system_info = response_data.get("fileSystemInfo", {})
+            print("file system created:", file_system_info.get("createdDateTime"))
+            print(
+                "file system last modified:",
+                file_system_info.get("lastModifiedDateTime"),
+            )
+            if "file" in response_data.keys():
+                hashes = response_data.get("file", {}).get("hashes")
+                if isinstance(hashes, dict):
+                    for key, value in hashes.items():
+                        print(f"file {key.replace('Hash', '')} hash:", value)
         # Return the item details
         return response_data
 
@@ -416,6 +439,113 @@ class OneDrive:
             return False
 
     @token_required
+    def create_share_link(
+        self,
+        item_id: str,
+        link_type: str = "view",
+        password: Optional[str] = None,
+        expiration: Optional[datetime] = None,
+        scope: str = "anonymous",
+    ) -> str:
+        """Creates a basic sharing link for an item.
+        Positional arguments:
+            item_id (str) -- item id of the folder or file
+        Keyword arguments:
+            link_type (str) -- type of sharing link to create, either "view", "edit", or ("embed" for OneDrive personal only) (default = "view")
+            password (str) -- password for the sharing link (OneDrive personal only) (default = None)
+            expiration (datetime) -- expiration of the sharing link, computer local timezone assummed for 'native' datetime objects (default = None)
+            scope (str) -- "anonymous" for anyone with the link, or ("organization" to limit to the tenant for OneDrive Business) (default = "anonymous")
+        Returns:
+            link (str) -- typically a web link, html iframe if link_type="embed"
+        """
+        # Verify type
+        if not isinstance(link_type, str):
+            raise TypeError(f"link_type expected type 'str', got {type(link_type)}")
+        elif link_type not in ("view", "edit", "embed"):
+            raise ValueError(
+                f"link_type expected 'view', 'edit', or 'embed', got {link_type}"
+            )
+        elif link_type == "embed" and self._drive_type != "personal":
+            raise ValueError(
+                f"link_type='embed' is not available for {self._drive_type} OneDrive accounts"
+            )
+
+        # Verify password
+        if password is not None and not isinstance(password, str):
+            raise TypeError(f"password expected type 'str', got {type(password)}")
+        elif password is not None and self._drive_type != "personal":
+            raise ValueError(
+                f"password is not available for {self._drive_type} OneDrive accounts"
+            )
+
+        # Verify expiration
+        if expiration is not None and not isinstance(expiration, datetime):
+            raise TypeError(
+                f"expiration expected type 'datetime.datetime', got {type(expiration)}"
+            )
+        elif expiration is not None and datetime.now(
+            timezone.utc
+        ) > expiration.astimezone(timezone.utc):
+            raise ValueError("expiration can not be in the past")
+
+        # Verify scope
+        if not isinstance(scope, str):
+            raise TypeError(f"scope expected type 'str', got {type(scope)}")
+        elif scope not in ("anonymous", "organization"):
+            raise ValueError(
+                f"scope expected 'anonymous' or 'organization', got {scope}"
+            )
+        elif scope == "organization" and self._drive_type not in (
+            "business",
+            "sharepoint",
+        ):
+            raise ValueError(
+                f"scope='organization' is not available for {self._drive_type} OneDrive accounts"
+            )
+
+        # Create the request url
+        request_url = self._API_URL + "me/drive/items/" + item_id + "/createLink"
+
+        # Create the body
+        body = {"type": link_type, "scope": scope}
+
+        # Add link password to body if it exists
+        if password is not None and password != "":
+            body["password"] = password
+
+        # Add link expiration to body if it exists
+        if expiration is not None:
+            expiration_iso = (
+                expiration.astimezone(timezone.utc)
+                .isoformat(timespec="seconds")
+                .replace("+00:00", "Z")
+            )
+            body["expirationDateTime"] = expiration_iso
+
+        # Make the request
+        response = httpx.post(request_url, headers=self._headers, json=body)
+
+        # Verify and parse the response
+        if response.status_code != 201 and response.status_code != 200:
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(
+                f"API Error : share link could not be created ({error_message})"
+            )
+        response_data = response.json()
+
+        # Extract the html iframe or link and return it
+        if link_type == "embed":
+            html_iframe = response_data.get("link", {}).get("webHtml")
+            return html_iframe
+        else:
+            share_link = response_data.get("link", {}).get("webUrl")
+            return share_link
+
+    @token_required
     def make_folder(
         self,
         folder_name: str,
@@ -436,7 +566,7 @@ class OneDrive:
         # Set conflict behavior
         conflict_behavior = if_exists
         if conflict_behavior not in ("fail", "replace", "rename"):
-            raise AttributeError(
+            raise ValueError(
                 f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
             )
         # Create request url based on input parent folder
@@ -663,9 +793,7 @@ class OneDrive:
         file_details = self.detail_item(item_id)
         # Check that it is not a folder
         if "folder" in file_details:
-            raise AttributeError(
-                "item_id provided is for a folder, expected file item id"
-            )
+            raise ValueError("item_id provided is for a folder, expected file item id")
         file_name = file_details["name"]
         size = file_details["size"]
         # If the file is empty, just create it and return
@@ -826,127 +954,99 @@ class OneDrive:
         verbose: bool = False,
     ) -> str:
         """Uploads a file to a particular folder with a provided file name.
-        Delegates the upload task to the upload_large_file function if required.
-            Positional arguments:
-                file_path (str|Path) -- path of the origin file to upload
-            Keyword arguments:
-                new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
-                parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
-                if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
-                verbose (bool) -- prints status message during the download process (default = False)
-            Returns:
-                item_id (str) -- item id of the newly uploaded file
-        """
-        # Set conflict behavior
-        conflict_behavior = if_exists
-        if conflict_behavior not in ("fail", "replace", "rename"):
-            raise AttributeError(
-                f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
-            )
-        # Ensure file_path is a Path type and remove escape slashes
-        if os.name == "nt":  # Windows
-            file_path = str(file_path).replace("/", "")
-        else:  # Other systems including posix (Mac, Linux)
-            file_path = str(file_path).replace("\\", "")
-        file_path = Path(file_path)
-        # Set file name
-        if new_file_name:
-            file_name = new_file_name
-        else:
-            file_name = file_path.name
-        # Checks the file size and delegates the task to the upload_large_file function if required
-        file_size = os.path.getsize(file_path)
-        basic_file_limit = 4 * 1024 * 1024
-        if file_size > basic_file_limit:
-            if verbose:
-                print(f"Large file, uploading in chunks")
-            response = self._upload_large_file(
-                file_path, file_name, parent_folder_id, conflict_behavior, verbose
-            )
-            return response
-        # Create request url based on input values
-        if parent_folder_id:
-            request_url = self._API_URL + "me/drive/items/" + parent_folder_id + ":/"
-        else:
-            request_url = self._API_URL + "me/drive/root:/"
-        request_url += f"{file_name}:/content?@microsoft.graph.conflictBehavior={conflict_behavior}"
-        # Open the file into memory
-        if verbose:
-            print("Loading file")
-        content = open(file_path, "rb")
-        # Make the Graph API request
-        if verbose:
-            print("Uploading file")
-        timeout = httpx.Timeout(10.0, write=180.0)
-        response = httpx.put(
-            request_url,
-            headers=self._headers,
-            content=content,
-            timeout=timeout,
-        )
-        # Close file
-        content.close()
-        # Validate request response and parse
-        if response.status_code != 201 and response.status_code != 200:
-            try:
-                error = response.json()["error"]
-                error_message = error.get("message")
-            except:
-                error_message = ""
-            raise Exception(f"API Error : item not uploaded ({error_message})")
-        response_data = response.json()
-        item_id = response_data["id"]
-        # Return the file item id
-        return item_id
-
-    @token_required
-    def _upload_large_file(
-        self,
-        file_path: Union[str, Path],
-        new_file_name: Optional[str] = None,
-        parent_folder_id: Optional[str] = None,
-        conflict_behavior: str = "rename",
-        verbose: bool = False,
-    ) -> str:
-        """INTERNAL: Uploads a file in chunks to a particular folder with a provided file name.
         Positional arguments:
-            file_path (str|Path) -- path of the origin file to upload
+            file_path (str|Path) -- path of the local source file to upload
         Keyword arguments:
-            new_file_name (str) -- new name of the file as it should appear on OneDrive, without extension (default = None)
+            new_file_name (str) -- new name of the file as it should appear on OneDrive, with extension (default = None)
             parent_folder_id (str) -- item id of the folder to put the file within, if None then root (default = None)
-            conflict_behavior (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
+            if_exists (str) -- action to take if the new folder already exists [fail, replace, rename] (default = "rename")
             verbose (bool) -- prints status message during the download process (default = False)
         Returns:
             item_id (str) -- item id of the newly uploaded file
         """
-        # Check conflict behavior
-        assert conflict_behavior in ("fail", "replace", "rename")
-        # Ensure file_path is a Path type
+
+        # Set conflict behavior
+        conflict_behavior = if_exists
+        if conflict_behavior not in ("fail", "replace", "rename"):
+            raise ValueError(
+                f"if_exists expected 'fail', 'replace', or 'rename', got {if_exists!r}"
+            )
+
+        # Clean file path by removing escape slashes and converting to Path object
+        # To-do: avoid the pathlib as it is a resource hog
+        if os.name == "nt":  # Windows
+            file_path = str(file_path).replace("/", "")
+        else:  # Other systems including Mac, Linux
+            file_path = str(file_path).replace("\\", "")
         file_path = Path(file_path)
+
         # Set file name
         if new_file_name:
-            file_name = new_file_name
+            destination_file_name = new_file_name
         else:
-            file_name = file_path.name
+            destination_file_name = file_path.name
+
+        # Check the path is valid and points to a file
+        if not os.path.isfile(file_path):
+            raise ValueError(f"file_path expected a path to a file, got {file_path}")
+
+        # Get file metadata
+        file_size = os.path.getsize(file_path)
+        file_modified = os.path.getmtime(file_path)
+        if os.name == "nt":
+            # Windows OS
+            file_created = os.path.getctime(file_path)
+        else:
+            # Other OS
+            stat = os.stat(file_path)
+            try:
+                # Likely Mac OS
+                file_created = stat.st_birthtime
+            except AttributeError:
+                # Likely Linux OS, fall back to last modified.
+                file_created = stat.st_mtime
+        file_created_str = (
+            datetime.fromtimestamp(file_created)
+            .astimezone(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
+        )
+        file_modified_str = (
+            datetime.fromtimestamp(file_modified)
+            .astimezone(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
+        )
+
         # Create request url for the upload session
         if parent_folder_id:
             request_url = self._API_URL + "me/drive/items/" + parent_folder_id + ":/"
         else:
             request_url = self._API_URL + "me/drive/root:/"
-        request_url += file_name + ":/createUploadSession"
+        request_url += (
+            urllib.parse.quote(destination_file_name) + ":/createUploadSession"
+        )
+
         # Create request body for the upload session
         body = {
             "item": {
-                "@odata.type": "microsoft.graph.driveItemUploadableProperties",
                 "@microsoft.graph.conflictBehavior": conflict_behavior,
+                "name": destination_file_name,
+                "fileSystemInfo": {
+                    "createdDateTime": file_created_str,
+                    "lastModifiedDateTime": file_modified_str,
+                },
             }
         }
+
         # Make the Graph API request for the upload session
         if verbose:
-            print(f"Requesting upload session using url")
-        response = httpx.post(request_url, headers=self._headers)
+            print(f"Requesting upload session")
+        response = httpx.post(request_url, headers=self._headers, json=body)
+
         # Validate upload session request response and parse
         if response.status_code != 200:
+            print(response.text)
             try:
                 error = response.json()["error"]
                 error_message = error.get("message")
@@ -956,21 +1056,27 @@ class OneDrive:
                 f"API Error : upload session could not be created ({error_message})"
             )
         upload_url = response.json()["uploadUrl"]
-        # Determine the upload file size and chunks
-        file_size = os.path.getsize(file_path)
+
+        # Determine the upload file chunk size
         chunk_size: int = (
             1024 * 320 * 16
-        )  # = 5MiB. Docs: Must be multiple of 320KiB, recommend 5-10MiB.
+        )  # = 5MiB. Docs: Must be multiple of 320KiB, recommend 5-10MiB, max 60MiB
         no_of_uploads: int = -(-file_size // chunk_size)
+        if verbose and no_of_uploads > 1:
+            print(
+                f"File {destination_file_name} will be uploaded in {no_of_uploads} segments"
+            )
+
         # Create an upload connection client
         timeout = httpx.Timeout(10.0, read=180.0, write=180.0)
         client = httpx.Client(timeout=timeout)
+
         # Run in a try block to capture user cancellation request
         try:
             # Open the file pointer
             if verbose:
                 print("Loading file")
-                data = open(file_path, "rb")
+            data = open(file_path, "rb")
             # Start the upload in a loop for as long as there is data left to upload
             n = 0
             while data.tell() < file_size:
@@ -984,7 +1090,7 @@ class OneDrive:
                 else:
                     if verbose:
                         print(
-                            f"Uploading segment {n}/{no_of_uploads}  (~{int((n-1)/no_of_uploads*100)}% complete)"
+                            f"Uploading segment {n}/{no_of_uploads} (~{int((n-1)/no_of_uploads*100)}% complete)"
                         )
                 # Upload chunks
                 if (file_size - data.tell()) > chunk_size:
@@ -1019,8 +1125,6 @@ class OneDrive:
                         headers=headers,
                         content=content,
                     )
-                    if verbose:
-                        print("Upload complete")
         except KeyboardInterrupt:
             # Upload cancelled, send delete request
             httpx.delete(upload_url)
@@ -1029,6 +1133,7 @@ class OneDrive:
         finally:
             data.close()
             client.close()
+
         # Validate request response and parse
         if response.status_code != 201 and response.status_code != 200:
             try:
@@ -1037,9 +1142,11 @@ class OneDrive:
             except:
                 error_message = ""
             raise Exception(f"API Error : item not uploaded ({error_message})")
+
         if verbose:
             print("Upload complete")
+
+        # Return the file item id
         response_data = response.json()
         item_id = response_data["id"]
-        # Return the file item id
         return item_id

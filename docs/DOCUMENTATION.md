@@ -432,6 +432,31 @@ Returns:
 
 * file (bool) -- True if file, else false.
 
+#### create_share_link
+
+Creates a basic sharing link for an item.
+
+```python
+link = my_instance.create_share_link(
+    item_id, link_type="view", password=None, expiration=None, scope="anonymous"
+)
+```
+
+Positional arguments:
+
+* item_id (str) -- item id of the folder or file
+
+Keyword arguments:
+
+* link_type (str) -- type of sharing link to create, either "view", "edit", or ("embed" for OneDrive personal only) (default = "view")
+* password (str) -- password for the sharing link (OneDrive personal only) (default = None)
+* expiration (datetime) -- expiration of the sharing link, computer local timezone assummed for 'native' datetime objects (default = None)
+* scope (str) -- "anonymous" for anyone with the link, or ("organization" to limit to the tenant for OneDrive Business) Note businesses may choose to disable anonymous links which will result in an error (default = "anonymous")
+
+Returns:
+
+* link (str) -- typically a web link, html iframe if link_type="embed"
+
 #### make_folder
 
 Creates a new folder within the input folder/root of the connected OneDrive.
@@ -580,7 +605,7 @@ item_id = my_instance.upload_file(
 
 Positional arguments:
 
-* file_path (str|Path) -- path of the origin file to upload (this is the path to the file on your computer which you are wanting to upload)
+* file_path (str|Path) -- path of the local source file to upload (path to the file on your computer which you are wanting to upload)
 
 Keyword arguments:
 
