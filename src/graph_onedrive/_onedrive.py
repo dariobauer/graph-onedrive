@@ -44,6 +44,7 @@ class OneDrive:
         item_type           -- get item type, folder or file
         is_folder           -- check if an item is a folder
         is_file             -- check if an item is a file
+        create_share_link   -- create a sharing link for a file or folder
         make_folder         -- creates a folder
         move_item           -- moves an item
         copy_item           -- copies an item
@@ -419,6 +420,113 @@ class OneDrive:
             return True
         else:
             return False
+
+    @token_required
+    def create_share_link(
+        self,
+        item_id: str,
+        link_type: str = "view",
+        password: Optional[str] = None,
+        expiration: Optional[datetime] = None,
+        scope: str = "anonymous",
+    ) -> str:
+        """Creates a basic sharing link for an item.
+        Positional arguments:
+            item_id (str) -- item id of the folder or file
+        Keyword arguments:
+            link_type (str) -- type of sharing link to create, either "view", "edit", or ("embed" for OneDrive personal only) (default = "view")
+            password (str) -- password for the sharing link (OneDrive personal only) (default = None)
+            expiration (datetime) -- expiration of the sharing link, computer local timezone assummed for 'native' datetime objects (default = None)
+            scope (str) -- "anonymous" for anyone with the link, or ("organization" to limit to the tenant for OneDrive Business) (default = "anonymous")
+        Returns:
+            link (str) -- typically a web link, html iframe if link_type="embed"
+        """
+        # Verify type
+        if not isinstance(link_type, str):
+            raise TypeError(f"link_type expected type 'str', got {type(link_type)}")
+        elif link_type not in ("view", "edit", "embed"):
+            raise AttributeError(
+                f"link_type expected 'view', 'edit', or 'embed', got {link_type}"
+            )
+        elif link_type == "embed" and self._drive_type != "personal":
+            raise AttributeError(
+                f"link_type='embed' is not available for {self._drive_type} OneDrive accounts"
+            )
+
+        # Verify password
+        if password is not None and not isinstance(password, str):
+            raise TypeError(f"password expected type 'str', got {type(password)}")
+        elif password is not None and self._drive_type != "personal":
+            raise AttributeError(
+                f"password is not available for {self._drive_type} OneDrive accounts"
+            )
+
+        # Verify expiration
+        if expiration is not None and not isinstance(expiration, datetime):
+            raise TypeError(
+                f"expiration expected type 'datetime.datetime', got {type(expiration)}"
+            )
+        elif expiration is not None and datetime.now(
+            timezone.utc
+        ) > expiration.astimezone(timezone.utc):
+            raise ValueError("expiration can not be in the past")
+
+        # Verify scope
+        if not isinstance(scope, str):
+            raise TypeError(f"scope expected type 'str', got {type(scope)}")
+        elif scope not in ("anonymous", "organization"):
+            raise AttributeError(
+                f"scope expected 'anonymous' or 'organization', got {scope}"
+            )
+        elif scope == "organization" and self._drive_type not in (
+            "business",
+            "sharepoint",
+        ):
+            raise AttributeError(
+                f"scope='organization' is not available for {self._drive_type} OneDrive accounts"
+            )
+
+        # Create the request url
+        request_url = self._API_URL + "me/drive/items/" + item_id + "/createLink"
+
+        # Create the body
+        body = {"type": link_type, "scope": scope}
+
+        # Add link password to body if it exists
+        if password is not None and password != "":
+            body["password"] = password
+
+        # Add link expiration to body if it exists
+        if expiration is not None:
+            expiration_iso = (
+                expiration.astimezone(timezone.utc)
+                .isoformat(timespec="seconds")
+                .replace("+00:00", "Z")
+            )
+            body["expirationDateTime"] = expiration_iso
+
+        # Make the request
+        response = httpx.post(request_url, headers=self._headers, json=body)
+
+        # Verify and parse the response
+        if response.status_code != 201 and response.status_code != 200:
+            try:
+                error = response.json()["error"]
+                error_message = error.get("message")
+            except:
+                error_message = ""
+            raise Exception(
+                f"API Error : share link could not be created ({error_message})"
+            )
+        response_data = response.json()
+
+        # Extract the html iframe or link and return it
+        if link_type == "embed":
+            html_iframe = response_data.get("link", {}).get("webHtml")
+            return html_iframe
+        else:
+            share_link = response_data.get("link", {}).get("webUrl")
+            return share_link
 
     @token_required
     def make_folder(

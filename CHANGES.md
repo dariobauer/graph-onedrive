@@ -3,6 +3,7 @@
 ## Unreleased
 
 * Added py.typed for mypy typing support
+* Added ability to create sharing links (Issue [#16](https://github.com/dariobauer/graph-onedrive/issues/16))
 * Improved upload to attempt to retain file creation and modified metadata (Issue [#13](https://github.com/dariobauer/graph-onedrive/issues/13))
 
 
