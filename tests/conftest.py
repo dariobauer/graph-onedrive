@@ -40,12 +40,9 @@ def mock_graph_api():
     headers = {"Accept": "*/*", "Authorization": "Bearer " + ACCESS_TOKEN}
 
     # Create the mocked routes
+    # IMPORTANT: routes ordered by most specific top as respx it will use first match
+    # Note if you get an exception about 'grant_type' not in {}, it means a route is not working
     with respx.mock(base_url=api_url) as respx_mock:
-
-        # Drive details
-        drive_details_route = respx_mock.get(
-            path="me/drive/", headers=headers, name="get_drive_details"
-        ).mock(side_effect=side_effect_drive_details)
 
         # Make folder
         make_folder_route = respx_mock.post(
@@ -62,12 +59,12 @@ def mock_graph_api():
             name="list_directory",
         ).mock(side_effect=side_effect_list_dir)
 
-        # Detail item
-        detail_item_route = respx_mock.get(
-            path__regex=r"me/drive/items/[0-9a-zA-Z-]+$",
+        # Sharing Link
+        share_link_route = respx_mock.post(
+            path__regex=r"me/drive/items/[0-9a-zA-Z-]+/createLink$",
             headers=headers,
-            name="detail_item",
-        ).mock(side_effect=side_effect_detail_item)
+            name="create_share_link",
+        ).mock(side_effect=side_effect_sharing_link)
 
         # Move Item
         # Copy Item
@@ -76,7 +73,31 @@ def mock_graph_api():
         # Download File
         # Upload File
 
+        # Detail item
+        detail_item_route = respx_mock.get(
+            path__regex=r"me/drive/items/[0-9a-zA-Z-]+$",
+            headers=headers,
+            name="detail_item",
+        ).mock(side_effect=side_effect_detail_item)
+
+        # Drive details
+        drive_details_route = respx_mock.get(
+            path="me/drive/", headers=headers, name="get_drive_details"
+        ).mock(side_effect=side_effect_drive_details)
+
         yield respx_mock
+
+
+def side_effect_detail_item(request):
+    item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if item_id_re:
+        item_id = item_id_re.group(1)
+    matching_item_list = [item for item in MOCKED_ITEMS if item.get("id") == item_id]
+    if not matching_item_list:
+        error = {"error": {"message": "item not found"}}
+        return httpx.Response(400, json=error)
+    response_json = matching_item_list[0]
+    return httpx.Response(200, json=response_json)
 
 
 def side_effect_drive_details(request):
@@ -100,18 +121,6 @@ def side_effect_list_dir(request):
             return httpx.Response(400, json=error)
     # Prepare and return the response
     response_json = MOCKED_RESPONSE_DATA.get("list-directory")
-    return httpx.Response(200, json=response_json)
-
-
-def side_effect_detail_item(request):
-    item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
-    if item_id_re:
-        item_id = item_id_re.group(1)
-    matching_item_list = [item for item in MOCKED_ITEMS if item.get("id") == item_id]
-    if not matching_item_list:
-        error = {"error": {"message": "item not found"}}
-        return httpx.Response(400, json=error)
-    response_json = matching_item_list[0]
     return httpx.Response(200, json=response_json)
 
 
@@ -169,6 +178,30 @@ def side_effect_make_folder(request):
     return httpx.Response(201, json=response_json)
 
 
+def side_effect_sharing_link(request):
+    item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if item_id_re:
+        item_id = item_id_re.group(1)
+    # Load the body
+    try:
+        body = json.loads(request.content)
+        link_type = body["type"]
+        scope = body["scope"]
+    except:
+        error = {"error": {"message": "invalid request"}}
+        return httpx.Response(400, json=error)
+    password = body.get("password")
+    expiration = body.get("expirationDateTime")
+    matching_item_list = [item for item in MOCKED_ITEMS if item.get("id") == item_id]
+    if not matching_item_list:
+        error = {"error": {"message": "item not found"}}
+        return httpx.Response(400, json=error)
+    response_json = {"link": {"webUrl": "https://onedrive.com/fakelink"}}
+    if link_type == "embed":
+        response_json["link"]["webHtml"] = "<iframe>...</iframe>"
+    return httpx.Response(201, json=response_json)
+
+
 @pytest.fixture(scope="module")
 def mock_auth_api():
     """Mock the Identity Platform api for testing."""
@@ -195,19 +228,6 @@ def mock_auth_api():
         yield respx_mock
 
 
-def side_effect_access_using_refresh_token(request):
-    body = json.loads(request.content)
-    if body.get("refresh_token") != REFRESH_TOKEN:
-        error = {"error": {"message": "invalid request"}}
-        return httpx.Response(400, json=error)
-    response_json = {
-        "access_token": ACCESS_TOKEN,
-        "refresh_token": REFRESH_TOKEN,
-        "expires_in": 100,
-    }
-    return httpx.Response(200, json=response_json)
-
-
 def side_effect_access_using_authorization_code(request):
     body = json.loads(request.content)
     if (
@@ -223,6 +243,19 @@ def side_effect_access_using_authorization_code(request):
         "access_token": ACCESS_TOKEN,
         "refresh_token": REFRESH_TOKEN,
         "expires_in": 60,
+    }
+    return httpx.Response(200, json=response_json)
+
+
+def side_effect_access_using_refresh_token(request):
+    body = json.loads(request.content)
+    if body.get("refresh_token") != REFRESH_TOKEN:
+        error = {"error": {"message": "invalid request"}}
+        return httpx.Response(400, json=error)
+    response_json = {
+        "access_token": ACCESS_TOKEN,
+        "refresh_token": REFRESH_TOKEN,
+        "expires_in": 100,
     }
     return httpx.Response(200, json=response_json)
 

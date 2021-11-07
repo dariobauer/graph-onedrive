@@ -110,8 +110,8 @@ class TestDriveDetails:
         stdout, sterr = capsys.readouterr()
         assert stdout == "Using 0.1 gb (0.01%) of total 1024.0 gb.\n"
 
-    def test_get_usage_failure_attribute(self, onedrive):
-        with pytest.raises(AttributeError) as excinfo:
+    def test_get_usage_failure_value(self, onedrive):
+        with pytest.raises(ValueError) as excinfo:
             onedrive.get_usage(unit="TB")
         (msg,) = excinfo.value.args
         assert msg == "Input Error : 'tb' is not a supported unit"
@@ -167,11 +167,28 @@ class TestItemDetails:
         [
             (
                 "01KDJMOTOM62V",
-                "id: 01KDJMOTOM62V\nname: 2021-02-08 18.53.41.mov\ntype: file\ncreated: 2021-10-23T23:24:56Z by: Ryan Gregg\nmodified: 2021-10-23T23:25:48Z by: Ryan Gregg\nsize: 4926874\nweb url: https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov\n",
+                "item id: 01KDJMOTOM62V\n"
+                "name: 2021-02-08 18.53.41.mov\n"
+                "type: file\n"
+                "created: 2021-10-23T23:24:56Z by: Ryan Gregg\n"
+                "last modified: 2021-10-23T23:25:48Z by: Ryan Gregg\n"
+                "size: 4926874\n"
+                "web url: https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov\n"
+                "file system created: 2021-10-23T23:24:56Z\n"
+                "file system last modified: 2021-10-23T23:25:48Z\n"
+                "file quickXor hash: wFwchJC3Iwr99ytGd+8vuSXCe0A=\n",
             ),
             (
                 "01KDJMOTNGDMA4KB",
-                "id: 01KDJMOTNGDMA4KB\nname: temp\ntype: folder\ncreated: 2021-10-24T08:56:48Z by: Ryan Gregg\nmodified: 2021-10-24T08:56:48Z by: Ryan Gregg\nsize: 19528345\nweb url: https://constco.sharepoint.com/personal/consco/Documents/temp\n",
+                "item id: 01KDJMOTNGDMA4KB\n"
+                "name: temp\n"
+                "type: folder\n"
+                "created: 2021-10-24T08:56:48Z by: Ryan Gregg\n"
+                "last modified: 2021-10-24T08:56:48Z by: Ryan Gregg\n"
+                "size: 19528345\n"
+                "web url: https://constco.sharepoint.com/personal/consco/Documents/temp\n"
+                "file system created: 2021-10-24T08:56:48Z\n"
+                "file system last modified: 2021-10-24T08:56:48Z\n",
             ),
         ],
     )
@@ -227,13 +244,57 @@ class TestItemDetails:
 class TestSharingLink:
     """Tests the create_share_link method."""
 
-    @pytest.mark.skip(reason="not implemented")
     @pytest.mark.parametrize(
         "item_id, link_type, password, expiration, scope, exp_link",
         [
-            ("123", "view", None, None, "anonymous", "https://"),
-            ("123", "edit", None, None, "anonymous", "https://"),
-            ("123", "embed", None, None, "anonymous", "<iframe></iframe>"),
+            (
+                "01KDJMOTOM62V",
+                "view",
+                None,
+                None,
+                "anonymous",
+                "https://onedrive.com/fakelink",
+            ),
+            (
+                "01KDJMOTOM62V",
+                "edit",
+                None,
+                None,
+                "anonymous",
+                "https://onedrive.com/fakelink",
+            ),
+            (
+                "01KDJMOTOM62V",
+                "edit",
+                None,
+                None,
+                "organization",
+                "https://onedrive.com/fakelink",
+            ),
+            (
+                "01KDJMOTNGDMA4KB",
+                "view",
+                None,
+                None,
+                "anonymous",
+                "https://onedrive.com/fakelink",
+            ),
+            (
+                "01KDJMOTNGDMA4KB",
+                "edit",
+                None,
+                None,
+                "anonymous",
+                "https://onedrive.com/fakelink",
+            ),
+            (
+                "01KDJMOTNGDMA4KB",
+                "edit",
+                None,
+                None,
+                "organization",
+                "https://onedrive.com/fakelink",
+            ),
         ],
     )
     def test_create_share_link(
@@ -244,9 +305,84 @@ class TestSharingLink:
         )
         assert link == exp_link
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_create_share_link_failure(self):
-        ...
+    @pytest.mark.parametrize(
+        "item_id, link_type, password, expiration, scope, exp_msg",
+        [
+            (
+                "999",
+                "view",
+                None,
+                None,
+                "anonymous",
+                "API Error : share link could not be created (item not found)",
+            ),
+        ],
+    )
+    def test_create_share_link_failure_generic(
+        self, onedrive, item_id, link_type, password, expiration, scope, exp_msg
+    ):
+        with pytest.raises(Exception) as excinfo:
+            onedrive.create_share_link(item_id, link_type, password, expiration, scope)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+    @pytest.mark.parametrize(
+        "item_id, link_type, password, expiration, scope, exp_msg",
+        [
+            (
+                "999",
+                {"view"},
+                None,
+                None,
+                "anonymous",
+                "link_type expected type 'str', got 'set'",
+            ),
+        ],
+    )
+    def test_create_share_link_failure_type(
+        self, onedrive, item_id, link_type, password, expiration, scope, exp_msg
+    ):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.create_share_link(item_id, link_type, password, expiration, scope)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+    @pytest.mark.parametrize(
+        "item_id, link_type, password, expiration, scope, exp_msg",
+        [
+            (
+                "999",
+                "view ",
+                None,
+                None,
+                "anonymous",
+                "link_type expected 'view', 'edit', or 'embed', got 'view '",
+            ),
+            (
+                "999",
+                "embed",
+                None,
+                None,
+                "anonymous",
+                "link_type='embed' is not available for business OneDrive accounts",
+            ),
+            (
+                "999",
+                "view",
+                "password",
+                None,
+                "anonymous",
+                "password is not available for business OneDrive accounts",
+            ),
+        ],
+    )
+    def test_create_share_link_failure_value(
+        self, onedrive, item_id, link_type, password, expiration, scope, exp_msg
+    ):
+        with pytest.raises(ValueError) as excinfo:
+            onedrive.create_share_link(item_id, link_type, password, expiration, scope)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
 
 
 class TestMakeFolder:

@@ -460,10 +460,12 @@ class OneDrive:
         """
         # Verify type
         if not isinstance(link_type, str):
-            raise TypeError(f"link_type expected type 'str', got {type(link_type)}")
+            raise TypeError(
+                f"link_type expected type 'str', got {type(link_type).__name__!r}"
+            )
         elif link_type not in ("view", "edit", "embed"):
             raise ValueError(
-                f"link_type expected 'view', 'edit', or 'embed', got {link_type}"
+                f"link_type expected 'view', 'edit', or 'embed', got '{link_type}'"
             )
         elif link_type == "embed" and self._drive_type != "personal":
             raise ValueError(
@@ -472,7 +474,9 @@ class OneDrive:
 
         # Verify password
         if password is not None and not isinstance(password, str):
-            raise TypeError(f"password expected type 'str', got {type(password)}")
+            raise TypeError(
+                f"password expected type 'str', got {type(password)}.__name__!r"
+            )
         elif password is not None and self._drive_type != "personal":
             raise ValueError(
                 f"password is not available for {self._drive_type} OneDrive accounts"
@@ -481,7 +485,7 @@ class OneDrive:
         # Verify expiration
         if expiration is not None and not isinstance(expiration, datetime):
             raise TypeError(
-                f"expiration expected type 'datetime.datetime', got {type(expiration)}"
+                f"expiration expected type 'datetime.datetime', got {type(expiration).__name__!r}"
             )
         elif expiration is not None and datetime.now(
             timezone.utc
@@ -490,7 +494,7 @@ class OneDrive:
 
         # Verify scope
         if not isinstance(scope, str):
-            raise TypeError(f"scope expected type 'str', got {type(scope)}")
+            raise TypeError(f"scope expected type 'str', got {type(scope).__name__!r}")
         elif scope not in ("anonymous", "organization"):
             raise ValueError(
                 f"scope expected 'anonymous' or 'organization', got {scope}"
