@@ -201,6 +201,12 @@ class OneDrive:
 
     def _create_headers(self) -> None:
         """INTERNAL: Create headers for the http request to the Graph API."""
+        if not isinstance(self._access_token, str):
+            raise TypeError(
+                f"expected self._access_token to be type 'str', got type {type(self._access_token).__name__!r}"
+            )
+        elif self._access_token == "":
+            raise ValueError("expected self._access_token to be set, got empty string")
         self._headers = {
             "Accept": "*/*",
             "Authorization": "Bearer " + self._access_token,

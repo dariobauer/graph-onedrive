@@ -1,13 +1,27 @@
 """Tests the OneDrive class using pytest."""
 import pytest
 
+from .conftest import ACCESS_TOKEN
+from .conftest import CLIENT_ID
+from .conftest import REDIRECT
+from .conftest import REFRESH_TOKEN
+from .conftest import SCOPE
+from .conftest import TENANT
+
 
 class TestGetTokens:
     """Tests the _get_token method."""
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_get_token(self):
-        ...
+    def test_get_tokens_using_auth_code(self, temp_onedrive):
+        temp_onedrive.refresh_token == ""
+        temp_onedrive._get_token()
+        assert temp_onedrive.refresh_token == REFRESH_TOKEN
+        assert temp_onedrive._access_token == ACCESS_TOKEN
+
+    def test_get_tokens_using_refresh_token(self, temp_onedrive):
+        temp_onedrive._get_token()
+        assert temp_onedrive.refresh_token == REFRESH_TOKEN
+        assert temp_onedrive._access_token == ACCESS_TOKEN
 
     @pytest.mark.skip(reason="not implemented")
     def test_get_token_failure(self):
@@ -29,13 +43,27 @@ class TestAuthorization:
 class TestHeaders:
     """Tests the _create_headers method."""
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_create_headers(self):
-        ...
+    def test_create_headers(self, temp_onedrive):
+        temp_onedrive._headers = {}
+        temp_onedrive._create_headers()
+        exp_headers = {"Accept": "*/*", "Authorization": "Bearer " + ACCESS_TOKEN}
+        assert temp_onedrive._headers == exp_headers
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_create_headers_failure(self):
-        ...
+    def test_create_headers_failure_type(self, temp_onedrive):
+        temp_onedrive._headers = {}
+        temp_onedrive._access_token = 123
+        with pytest.raises(TypeError) as excinfo:
+            temp_onedrive._create_headers()
+        (msg,) = excinfo.value.args
+        assert msg == "expected self._access_token to be type 'str', got type 'int'"
+
+    def test_create_headers_failure_value(self, temp_onedrive):
+        temp_onedrive._headers = {}
+        temp_onedrive._access_token = ""
+        with pytest.raises(ValueError) as excinfo:
+            temp_onedrive._create_headers()
+        (msg,) = excinfo.value.args
+        assert msg == "expected self._access_token to be set, got empty string"
 
 
 class TestDriveDetails:

@@ -229,6 +229,17 @@ def side_effect_access_using_authorization_code(request):
 
 @pytest.fixture(scope="module")
 def onedrive(mock_graph_api, mock_auth_api):
+    """Creates a OneDrive instance, scope for whole module so is shared for efficiency.
+    Use temp_onedrive instead if intending to edit the instance attributes."""
+    onedrive = graph_onedrive.create(
+        CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
+    )
+    yield onedrive
+
+
+@pytest.fixture(scope="function")
+def temp_onedrive(mock_graph_api, mock_auth_api):
+    """Creates a OneDrive instance, scope limited to the function, so can be negatively altered."""
     onedrive = graph_onedrive.create(
         CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
     )
