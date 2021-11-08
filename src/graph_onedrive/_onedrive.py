@@ -135,11 +135,11 @@ class OneDrive:
             body["grant_type"] = "authorization_code"
             body["code"] = authorization_code
         # Make the request
-        response = httpx.post(request_url, json=body)
+        response = httpx.post(request_url, data=body)
         # Check response was okay
         if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
+            if "application/json" in response.headers["content-type"]:
+                error_message = response.json().get("error_description")
             else:
                 error_message = "no error message returned"
             raise GraphAPIError(f"drive details not available ({error_message})")
@@ -1167,10 +1167,11 @@ class OneDrive:
                         content=content,
                     )
         except KeyboardInterrupt:
-            # Upload cancelled, send delete request
+            # Upload cancelled, send delete request, re-raise exception
             httpx.delete(upload_url)
             if verbose:
                 print("Upload cancelled by user.")
+            raise
         finally:
             data.close()
             client.close()
