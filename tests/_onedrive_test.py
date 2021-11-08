@@ -7,6 +7,7 @@ from .conftest import REDIRECT
 from .conftest import REFRESH_TOKEN
 from .conftest import SCOPE
 from .conftest import TENANT
+from graph_onedrive._onedrive import GraphAPIError
 
 
 class TestGetTokens:
@@ -48,14 +49,6 @@ class TestHeaders:
         temp_onedrive._create_headers()
         exp_headers = {"Accept": "*/*", "Authorization": "Bearer " + ACCESS_TOKEN}
         assert temp_onedrive._headers == exp_headers
-
-    def test_create_headers_failure_type(self, temp_onedrive):
-        temp_onedrive._headers = {}
-        temp_onedrive._access_token = 123
-        with pytest.raises(TypeError) as excinfo:
-            temp_onedrive._create_headers()
-        (msg,) = excinfo.value.args
-        assert msg == "expected self._access_token to be type 'str', got type 'int'"
 
     def test_create_headers_failure_value(self, temp_onedrive):
         temp_onedrive._headers = {}
@@ -114,13 +107,13 @@ class TestDriveDetails:
         with pytest.raises(ValueError) as excinfo:
             onedrive.get_usage(unit="TB")
         (msg,) = excinfo.value.args
-        assert msg == "Input Error : 'tb' is not a supported unit"
+        assert msg == "'tb' is not a supported unit"
 
     @pytest.mark.parametrize(
         "unit, exp_msg",
         [
-            (1, "Input Error : unit expected type 'str', got type 'int'"),
-            (None, "Input Error : unit expected type 'str', got type 'NoneType'"),
+            (1, "unit expected 'str', got 'int'"),
+            (None, "unit expected 'str', got 'NoneType'"),
         ],
     )
     def test_get_usage_failure_type(self, onedrive, unit, exp_msg):
@@ -314,14 +307,14 @@ class TestSharingLink:
                 None,
                 None,
                 "anonymous",
-                "API Error : share link could not be created (item not found)",
+                "share link could not be created (item not found)",
             ),
         ],
     )
-    def test_create_share_link_failure_generic(
+    def test_create_share_link_failure_graph(
         self, onedrive, item_id, link_type, password, expiration, scope, exp_msg
     ):
-        with pytest.raises(Exception) as excinfo:
+        with pytest.raises(GraphAPIError) as excinfo:
             onedrive.create_share_link(item_id, link_type, password, expiration, scope)
         (msg,) = excinfo.value.args
         assert msg == exp_msg
@@ -335,7 +328,7 @@ class TestSharingLink:
                 None,
                 None,
                 "anonymous",
-                "link_type expected type 'str', got 'set'",
+                "link_type expected 'str', got 'set'",
             ),
         ],
     )
