@@ -3,3 +3,4 @@ coverage[toml]
 pytest
 pytest-asyncio
 respx
+tox
