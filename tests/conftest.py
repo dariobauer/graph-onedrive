@@ -2,6 +2,9 @@
 import json
 import os
 import re
+import urllib.parse
+from typing import List
+from typing import Tuple
 
 import httpx
 import pytest
@@ -211,47 +214,36 @@ def mock_auth_api():
 
     with respx.mock(base_url=auth_base_url) as respx_mock:
 
-        # Authorization Code - not currently used as instance created with refresh token
-        """authorization_route = respx_mock.post(
+        # Authorization Code and Refresh Token
+        token_route = respx_mock.post(
             path__regex=r"([0-9a-zA-Z-]+)/oauth2/v2.0/token$",
-            json__grant_type="authorization_code",
-            name="access_using_authorization_code",
-        ).mock(side_effect=side_effect_access_using_authorization_code)"""
-
-        # Refresh Token
-        refresh_route = respx_mock.post(
-            path__regex=r"([0-9a-zA-Z-]+)/oauth2/v2.0/token$",
-            json__grant_type="refresh_token",
-            name="access_using_refresh_token",
-        ).mock(side_effect=side_effect_access_using_refresh_token)
+            name="access_token",
+        ).mock(side_effect=side_effect_access_token)
 
         yield respx_mock
 
 
-def side_effect_access_using_authorization_code(request):
-    body = json.loads(request.content)
-    if (
-        body.get("client_id") != CLIENT_ID
-        or body.get("client_secret") != CLIENT_SECRET
-        or body.get("scope") != SCOPE
-        or body.get("redirect_uri") != REDIRECT
-        or body.get("code") is None  # To-do: check the code
+def side_effect_access_token(request):
+    # Parse and decode the request content, typed to help mypy
+    body_encoded: List[Tuple[bytes, bytes]] = urllib.parse.parse_qsl(request.content)
+    body = {key.decode(): value.decode() for (key, value) in body_encoded}
+    # Check the content is as expected
+    grant_type = body["grant_type"]
+    error = {"error": {"message": "invalid request"}}
+    if grant_type not in ("authorization_code", "refresh_token"):
+        return httpx.Response(400, json=error)
+    elif (
+        body["client_id"] != CLIENT_ID
+        or body["client_secret"] != CLIENT_SECRET
+        or body["scope"] != SCOPE
+        or body["redirect_uri"] != REDIRECT
     ):
-        error = {"error": {"message": "invalid request"}}
         return httpx.Response(400, json=error)
-    response_json = {
-        "access_token": ACCESS_TOKEN,
-        "refresh_token": REFRESH_TOKEN,
-        "expires_in": 60,
-    }
-    return httpx.Response(200, json=response_json)
-
-
-def side_effect_access_using_refresh_token(request):
-    body = json.loads(request.content)
-    if body.get("refresh_token") != REFRESH_TOKEN:
-        error = {"error": {"message": "invalid request"}}
+    elif grant_type == "refresh_token" and body.get("refresh_token") is None:
         return httpx.Response(400, json=error)
+    elif grant_type == "authorization_code" and body.get("code") is None:
+        return httpx.Response(400, json=error)
+    # Return the tokens
     response_json = {
         "access_token": ACCESS_TOKEN,
         "refresh_token": REFRESH_TOKEN,

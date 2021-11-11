@@ -27,6 +27,8 @@ from graph_onedrive._decorators import token_required
 
 
 class GraphAPIError(Exception):
+    """Exception raised when Graph API returns an error status."""
+
     pass
 
 
@@ -117,25 +119,31 @@ class OneDrive:
         """INTERNAL: Get access and refresh tokens from the Graph API.
         Calls get_authorization function if an existing refresh token (from a previous session) is not provided.
         """
-        # Generate request body
         request_url = self._auth_url + "token"
-        body = {
+        # Generate request body as an url encoded query
+        query = {
             "client_id": self._client_id,
-            "client_secret": self._client_secret,
             "scope": self._scope,
             "redirect_uri": self._redirect,
+            "client_secret": self._client_secret,
         }
+
         # Set grant type
         # If no refresh token provided, get new authorization code
         if self.refresh_token != "":
-            body["grant_type"] = "refresh_token"
-            body["refresh_token"] = self.refresh_token
+            query["grant_type"] = "refresh_token"
+            query["refresh_token"] = self.refresh_token
         else:
-            authorization_code = self._get_authorization()
-            body["grant_type"] = "authorization_code"
-            body["code"] = authorization_code
+            query["grant_type"] = "authorization_code"
+            query["code"] = self._get_authorization()
+
+        # Set the header and encode the query
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        query_encoded = urllib.parse.urlencode(query, encoding="utf-8")
+
         # Make the request
-        response = httpx.post(request_url, data=body)
+        response = httpx.post(request_url, headers=headers, content=query_encoded)
+
         # Check response was okay
         if response.status_code != 200:
             if "application/json" in response.headers["content-type"]:
@@ -143,8 +151,10 @@ class OneDrive:
             else:
                 error_message = "no error message returned"
             raise GraphAPIError(f"drive details not available ({error_message})")
+
         # Decode the response
         response_data = response.json()
+
         # Set the access and refresh tokens to the instance attributes
         try:
             self._access_token = response_data["access_token"]
@@ -176,7 +186,7 @@ class OneDrive:
         request_url = self._auth_url + "authorize"
         request_url += "?client_id=" + self._client_id
         request_url += "&response_type=code"
-        request_url += "&redirect_uri=" + urllib.parse.quote_plus(self._redirect)
+        request_url += "&redirect_uri=" + urllib.parse.quote(self._redirect, safe="")
         request_url += "&response_mode=query"
         request_url += "&scope=" + urllib.parse.quote(self._scope)
         request_url += "&state=" + state
