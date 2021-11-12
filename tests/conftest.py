@@ -15,9 +15,11 @@ import graph_onedrive
 
 # Set the variables used to create the OneDrive instances in tests
 # Warning: certain tests require these to match the assertions in the tests
-CLIENT_ID = CLIENT_SECRET = "abc"
-REFRESH_TOKEN = "123"
-ACCESS_TOKEN = "123"
+CLIENT_ID = "1a2B3"
+CLIENT_SECRET = "4c5D6"
+AUTH_CODE = "7e8F9"
+REFRESH_TOKEN = "10g11H"
+ACCESS_TOKEN = "12i13J"
 TENANT = "test"
 SCOPE = "offline_access files.readwrite"
 REDIRECT = "http://localhost:8080"
@@ -70,6 +72,12 @@ def mock_graph_api():
         ).mock(side_effect=side_effect_sharing_link)
 
         # Move Item
+        move_item_route = respx_mock.patch(
+            path__regex=r"me/drive/items/[0-9a-zA-Z-]+$",
+            headers=headers,
+            name="move_item",
+        ).mock(side_effect=side_effect_move_item)
+
         # Copy Item
         # Rename Item
         # Delete Item
@@ -95,7 +103,11 @@ def side_effect_detail_item(request):
     item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
     if item_id_re:
         item_id = item_id_re.group(1)
-    matching_item_list = [item for item in MOCKED_ITEMS if item.get("id") == item_id]
+        matching_item_list = [
+            item for item in MOCKED_ITEMS if item.get("id") == item_id
+        ]
+    else:
+        matching_item_list = []
     if not matching_item_list:
         error = {"error": {"message": "item not found"}}
         return httpx.Response(400, json=error)
@@ -205,6 +217,33 @@ def side_effect_sharing_link(request):
     return httpx.Response(201, json=response_json)
 
 
+def side_effect_move_item(request):
+    # If a parent folder is specfied, check it exists
+    item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if item_id_re:
+        item_id = item_id_re.group(1)
+        matching_item_list = [
+            item for item in MOCKED_ITEMS if item.get("id") == item_id
+        ]
+    else:
+        matching_item_list = []
+    if not matching_item_list:
+        error = {"error": {"message": "item not found"}}
+        return httpx.Response(400, json=error)
+    # Load the body
+    try:
+        body = json.loads(request.content)
+        new_folder_id = body["parentReference"]["id"]
+        new_name = body.get("name")
+    except:
+        error = {"error": {"message": "invalid request"}}
+        return httpx.Response(400, json=error)
+
+    # Prepare and return the response
+    response_json = MOCKED_RESPONSE_DATA.get("move-item")
+    return httpx.Response(200, json=response_json)
+
+
 @pytest.fixture(scope="module")
 def mock_auth_api():
     """Mock the Identity Platform api for testing."""
@@ -229,7 +268,7 @@ def side_effect_access_token(request):
     body = {key.decode(): value.decode() for (key, value) in body_encoded}
     # Check the content is as expected
     grant_type = body["grant_type"]
-    error = {"error": {"message": "invalid request"}}
+    error = {"error_description": "invalid request"}
     if grant_type not in ("authorization_code", "refresh_token"):
         return httpx.Response(400, json=error)
     elif (
@@ -239,10 +278,15 @@ def side_effect_access_token(request):
         or body["redirect_uri"] != REDIRECT
     ):
         return httpx.Response(400, json=error)
-    elif grant_type == "refresh_token" and body.get("refresh_token") is None:
-        return httpx.Response(400, json=error)
-    elif grant_type == "authorization_code" and body.get("code") is None:
-        return httpx.Response(400, json=error)
+    elif grant_type == "refresh_token":
+        if (
+            body.get("refresh_token") is None
+            or body.get("refresh_token") != REFRESH_TOKEN
+        ):
+            return httpx.Response(400, json=error)
+    elif grant_type == "authorization_code":
+        if body.get("code") is None or body.get("code") != AUTH_CODE:
+            return httpx.Response(400, json=error)
     # Return the tokens
     response_json = {
         "access_token": ACCESS_TOKEN,

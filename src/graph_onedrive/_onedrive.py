@@ -150,7 +150,7 @@ class OneDrive:
                 error_message = response.json().get("error_description")
             else:
                 error_message = "no error message returned"
-            raise GraphAPIError(f"drive details not available ({error_message})")
+            raise GraphAPIError(f"could not get access token ({error_message})")
 
         # Decode the response
         response_data = response.json()

@@ -429,12 +429,12 @@
     }
   },
   "move-item": {
-    "id": "01234567",
+    "id": "01KDJMOTOM62V",
     "name": "new-item-name.txt",
     "parentReference": {
       "driveId": "11231001",
       "path": "/drive/root:/Documents",
-      "id": "123120310"
+      "id": "01KDJMOTNGDMA4KB"
     }
   },
   "copy-item-progress": {

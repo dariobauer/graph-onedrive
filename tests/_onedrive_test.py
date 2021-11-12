@@ -2,19 +2,111 @@
 import pytest
 
 from .conftest import ACCESS_TOKEN
+from .conftest import AUTH_CODE
 from .conftest import CLIENT_ID
+from .conftest import CLIENT_SECRET
 from .conftest import REDIRECT
 from .conftest import REFRESH_TOKEN
 from .conftest import SCOPE
 from .conftest import TENANT
 from graph_onedrive._onedrive import GraphAPIError
+from graph_onedrive._onedrive import OneDrive
+
+
+class TestDunders:
+    """Tests the instance double under methods."""
+
+    # __init__
+    @pytest.mark.parametrize(
+        "refresh_token",
+        [REFRESH_TOKEN, None],
+    )
+    def test_init(self, mock_graph_api, mock_auth_api, monkeypatch, refresh_token):
+        # monkeypatch the Authorization step when no refresh token provided
+        input_url = REDIRECT + "?code=" + AUTH_CODE
+        monkeypatch.setattr("builtins.input", lambda _: input_url)
+        # make the request
+        assert OneDrive(CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, refresh_token)
+
+    @pytest.mark.parametrize(
+        "client_id, client_secret, tenant, redirect, refresh_token, exp_msg",
+        [
+            (
+                123,
+                CLIENT_SECRET,
+                TENANT,
+                REDIRECT,
+                REFRESH_TOKEN,
+                "client_id expected 'str', got 'int'",
+            ),
+            (
+                CLIENT_ID,
+                4.5,
+                TENANT,
+                REDIRECT,
+                REFRESH_TOKEN,
+                "client_secret expected 'str', got 'float'",
+            ),
+            (
+                CLIENT_ID,
+                CLIENT_SECRET,
+                {},
+                REDIRECT,
+                REFRESH_TOKEN,
+                "tenant expected 'str', got 'dict'",
+            ),
+            (
+                CLIENT_ID,
+                CLIENT_SECRET,
+                TENANT,
+                b"https://",
+                REFRESH_TOKEN,
+                "redirect_url expected 'str', got 'bytes'",
+            ),
+            (
+                CLIENT_ID,
+                CLIENT_SECRET,
+                TENANT,
+                REDIRECT,
+                99,
+                "refresh_token expected 'str', got 'int'",
+            ),
+        ],
+    )
+    def test_init_failure_type(
+        self,
+        mock_graph_api,
+        mock_auth_api,
+        client_id,
+        client_secret,
+        tenant,
+        redirect,
+        refresh_token,
+        exp_msg,
+    ):
+        with pytest.raises(TypeError) as excinfo:
+            OneDrive(client_id, client_secret, tenant, redirect, refresh_token)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+    # __repr__
+    def test_repr(self, onedrive):
+        assert (
+            repr(onedrive)
+            == f"<OneDrive {onedrive._drive_type} {onedrive._drive_name} {onedrive._owner_name}>"
+        )
 
 
 class TestGetTokens:
     """Tests the _get_token method."""
 
-    def test_get_tokens_using_auth_code(self, temp_onedrive):
-        temp_onedrive.refresh_token == ""
+    def test_get_tokens_using_auth_code(self, temp_onedrive, monkeypatch):
+        # monkeypatch the response url typically input by user
+        input_url = REDIRECT + "?code=" + AUTH_CODE
+        monkeypatch.setattr("builtins.input", lambda _: input_url)
+        # set the refresh token as empty
+        temp_onedrive.refresh_token = ""
+        # make the request
         temp_onedrive._get_token()
         assert temp_onedrive.refresh_token == REFRESH_TOKEN
         assert temp_onedrive._access_token == ACCESS_TOKEN
@@ -24,21 +116,61 @@ class TestGetTokens:
         assert temp_onedrive.refresh_token == REFRESH_TOKEN
         assert temp_onedrive._access_token == ACCESS_TOKEN
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_get_token_failure(self):
-        ...
+    def test_get_token_failure(self, temp_onedrive):
+        temp_onedrive.refresh_token = "badtoken"
+        with pytest.raises(GraphAPIError) as excinfo:
+            temp_onedrive._get_token()
+        (msg,) = excinfo.value.args
+        assert msg == "could not get access token (invalid request)"
 
 
 class TestAuthorization:
     """Tests the _get_authorization method."""
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_get_authorization(self):
-        ...
+    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
+    def test_get_authorization(self, temp_onedrive, monkeypatch):
+        # monkeypatch the response url typically input by user
+        input_url = REDIRECT + "?code=" + AUTH_CODE
+        monkeypatch.setattr("builtins.input", lambda _: input_url)
+        # make the request
+        auth_code = temp_onedrive._get_authorization()
+        assert auth_code == AUTH_CODE
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_get_authorization_failure(self):
-        ...
+    @pytest.mark.parametrize(
+        "input_url, exp_msg",
+        [
+            (REDIRECT + "?code=&", "response did not contain an authorization code"),
+            (
+                REDIRECT + "?code=123&state=blah",
+                "response 'state' not for this request, occurs when reusing an old authorization url",
+            ),
+        ],
+    )
+    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
+    def test_get_authorization_failure(
+        self, temp_onedrive, monkeypatch, input_url, exp_msg
+    ):
+        # monkeypatch the response url typically input by user
+        monkeypatch.setattr("builtins.input", lambda _: input_url)
+        # make the request
+        with pytest.raises(GraphAPIError) as excinfo:
+            temp_onedrive._get_authorization()
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+    def test_get_authorization_warn(self, temp_onedrive, monkeypatch):
+        # monkeypatch the response url typically input by user
+        input_url = REDIRECT + "?code=" + AUTH_CODE
+        monkeypatch.setattr("builtins.input", lambda _: input_url)
+        # make the request
+        with pytest.warns(None) as record:
+            auth_code = temp_onedrive._get_authorization()
+        assert len(record) == 1
+        assert (
+            str(record[0].message)
+            == "GraphAPIWarn: response 'state' was not in returned url, response not confirmed"
+        )
+        assert auth_code == AUTH_CODE
 
 
 class TestHeaders:
@@ -405,9 +537,19 @@ class TestMakeFolder:
 class TestMove:
     """Tests the move_item method."""
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_move_item(self):
-        ...
+    @pytest.mark.parametrize(
+        "item_id, new_folder_id, new_name",
+        [
+            ("01KDJMOTOM62V", "01KDJMOTNGDMA4KB", "new-item-name.txt"),
+            ("01KDJMOTOM62V", "01KDJMOTNGDMA4KB", None),
+        ],
+    )
+    def test_move_item(self, onedrive, item_id, new_folder_id, new_name):
+        returned_item_id, folder_id = onedrive.move_item(
+            item_id, new_folder_id, new_name
+        )
+        assert returned_item_id == item_id
+        assert folder_id == new_folder_id
 
     @pytest.mark.skip(reason="not implemented")
     def test_move_item_failure(self):
