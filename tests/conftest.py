@@ -111,7 +111,7 @@ def mock_graph_api():
 
         # Drive details
         drive_details_route = respx_mock.get(
-            path="me/drive/", headers=headers, name="get_drive_details"
+            path="me/drive/", headers=headers, name="drive_details"
         ).mock(side_effect=side_effect_drive_details)
 
         yield respx_mock
@@ -276,7 +276,13 @@ def side_effect_copy_item(request):
         body = json.loads(request.content)
         new_folder_id = body["parentReference"]["id"]
         new_name = body.get("name")
-    except:
+    except Exception:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    if not [
+        item
+        for item in MOCKED_ITEMS
+        if item.get("id") == new_folder_id and "folder" in item
+    ]:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Return the monitor url
     headers = {
@@ -327,7 +333,7 @@ def side_effect_access_token(request):
     body = {key.decode(): value.decode() for (key, value) in body_encoded}
     # Check the content is as expected
     grant_type = body["grant_type"]
-    error = {"error_description": "invalid request"}
+    error = {"error_description": "Invalid request"}
     if grant_type not in ("authorization_code", "refresh_token"):
         return httpx.Response(400, json=error)
     elif (

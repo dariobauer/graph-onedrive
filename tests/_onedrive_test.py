@@ -1,6 +1,6 @@
 """Tests the OneDrive class using pytest."""
+import httpx
 import pytest
-import respx
 
 from .conftest import ACCESS_TOKEN
 from .conftest import AUTH_CODE
@@ -119,12 +119,55 @@ class TestGetTokens:
         assert temp_onedrive.refresh_token == REFRESH_TOKEN
         assert temp_onedrive._access_token == ACCESS_TOKEN
 
-    def test_get_token_failure(self, temp_onedrive):
+    def test_get_token_failure_bad_request_token(self, temp_onedrive):
         temp_onedrive.refresh_token = "badtoken"
         with pytest.raises(GraphAPIError) as excinfo:
             temp_onedrive._get_token()
         (msg,) = excinfo.value.args
-        assert msg == "could not get access token (invalid request)"
+        assert msg == "could not get access token (Invalid request)"
+
+    def test_get_token_failure_bad_return_access_token(
+        self, temp_onedrive, mock_auth_api
+    ):
+        mock_auth_api.routes["access_token"].snapshot()
+        mock_auth_api.routes["access_token"].side_effect = None
+        mock_auth_api.routes["access_token"].return_value = httpx.Response(
+            200, json={"access_token": None, "refresh_token": REFRESH_TOKEN}
+        )
+        with pytest.raises(GraphAPIError) as excinfo:
+            temp_onedrive._get_token()
+        (msg,) = excinfo.value.args
+        assert msg == "response did not return an access token"
+        mock_auth_api.routes["access_token"].rollback()
+
+    def test_get_token_failure_bad_return_refresh_token(
+        self, temp_onedrive, mock_auth_api
+    ):
+        mock_auth_api.routes["access_token"].snapshot()
+        mock_auth_api.routes["access_token"].side_effect = None
+        mock_auth_api.routes["access_token"].return_value = httpx.Response(
+            200, json={"access_token": ACCESS_TOKEN, "refresh_token": None}
+        )
+        with pytest.warns(None) as record:
+            temp_onedrive._get_token()
+        assert len(record) == 1
+        assert (
+            str(record[0].message)
+            == "GraphAPIWarn: response did not return a refresh token, existing config not updated"
+        )
+        # old refresh token should still be set
+        assert temp_onedrive.refresh_token == REFRESH_TOKEN
+        mock_auth_api.routes["access_token"].rollback()
+
+    def test_get_token_failure_unknown(self, temp_onedrive, mock_auth_api):
+        mock_auth_api.routes["access_token"].snapshot()
+        mock_auth_api.routes["access_token"].side_effect = None
+        mock_auth_api.routes["access_token"].return_value = httpx.Response(400)
+        with pytest.raises(GraphAPIError) as excinfo:
+            temp_onedrive._get_token()
+        (msg,) = excinfo.value.args
+        assert msg == "could not get access token (no error message returned)"
+        mock_auth_api.routes["access_token"].rollback()
 
 
 class TestAuthorization:
@@ -142,6 +185,10 @@ class TestAuthorization:
     @pytest.mark.parametrize(
         "input_url, exp_msg",
         [
+            (
+                REDIRECT + "?code=&123&state=nomatch",
+                "response 'state' not for this request, occurs when reusing an old authorization url",
+            ),
             (REDIRECT + "?code=&", "response did not contain an authorization code"),
             (
                 REDIRECT + "?code=123&state=blah",
@@ -199,6 +246,7 @@ class TestDriveDetails:
 
     # get_drive_details
     def test_get_drive_details(self, onedrive):
+        onedrive._get_drive_details()
         assert (
             onedrive._drive_id
             == "b!-RIj2DuyvEyV1T4NlOaMHk8XkS_I8MdFlUCq1BlcjgmhRfAj3-Z8RY2VpuvV_tpd"
@@ -212,9 +260,29 @@ class TestDriveDetails:
         assert onedrive._quota_remaining == 1099217263127
         assert onedrive._quota_total == 1099511627776
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_get_drive_details_failure(self):
-        ...
+    @pytest.mark.parametrize(
+        "json_returned, exp_msg",
+        [
+            (
+                {"error": {"code": "invalidRequest", "message": "Invalid request"}},
+                "could not get drive details (Invalid request)",
+            ),
+            (None, "could not get drive details (no error message returned)"),
+        ],
+    )
+    def test_get_drive_details_failure(
+        self, temp_onedrive, mock_graph_api, json_returned, exp_msg
+    ):
+        mock_graph_api.routes["drive_details"].snapshot()
+        mock_graph_api.routes["drive_details"].side_effect = None
+        mock_graph_api.routes["drive_details"].return_value = httpx.Response(
+            400, json=json_returned
+        )
+        with pytest.raises(GraphAPIError) as excinfo:
+            temp_onedrive._get_drive_details()
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+        mock_graph_api.routes["drive_details"].rollback()
 
     # get_usage
     @pytest.mark.parametrize(
@@ -229,7 +297,7 @@ class TestDriveDetails:
     )
     def test_get_usage(self, onedrive, unit, exp_used, exp_capacity, exp_unit):
         if unit == None:
-            used, capacity, unit = onedrive.get_usage()
+            used, capacity, unit = onedrive.get_usage(refresh=True)
         else:
             used, capacity, unit = onedrive.get_usage(unit=unit)
         assert round(used, 1) == round(exp_used, 1)
@@ -274,8 +342,14 @@ class TestListingDirectories:
         assert items[0].get("id") == "01BYE5RZZWSN2ASHUEBJH2XJJ25WSEBUJ3"
 
     @pytest.mark.skip(reason="not implemented")
-    def test_list_directory_failure(self):
+    def test_list_directory_failure(self, ondrive):
         ...
+
+    def test_list_directory_failure_type(self, onedrive):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.list_directory(123)
+        (msg,) = excinfo.value.args
+        assert msg == "folder_id expected 'str', got 'int'"
 
 
 class TestItemDetails:
@@ -583,9 +657,39 @@ class TestMove:
         assert returned_item_id == item_id
         assert folder_id == new_folder_id
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_move_item_failure(self):
-        ...
+    @pytest.mark.parametrize(
+        "item_id, new_folder_id",
+        [
+            ("123", "01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P"),
+            ("01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG", "456"),
+        ],
+    )
+    def test_move_item_failure(self, onedrive, item_id, new_folder_id):
+        with pytest.raises(GraphAPIError) as excinfo:
+            onedrive.move_item(item_id, new_folder_id)
+        (msg,) = excinfo.value.args
+        assert msg == "item not moved (Invalid request)"
+
+    @pytest.mark.parametrize(
+        "item_id, new_folder_id, new_name, exp_msg",
+        [
+            (123, "new_folder_id", None, "item_id expected 'str', got 'int'"),
+            ("item_id", None, None, "new_folder_id expected 'str', got 'NoneType'"),
+            (
+                "item_id",
+                "new_folder_id",
+                b"name",
+                "new_name expected 'str', got 'bytes'",
+            ),
+        ],
+    )
+    def test_move_item_failure_type(
+        self, onedrive, item_id, new_folder_id, new_name, exp_msg
+    ):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.move_item(item_id, new_folder_id, new_name)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
 
 
 class TestCopy:
@@ -615,7 +719,7 @@ class TestCopy:
             (
                 True,
                 "01MOWKYVJML57KN2ANMBA3JZJS2MBGC7KM",
-                "Copy request sent.\nWaiting 2s before checking progress\nPercentage complete = 96.7%\nWaiting 1s before checking progress\nCopy confirmed complete.\n",
+                "Copy request sent.\nWaiting 1s before checking progress\nPercentage complete = 96.7%\nWaiting 1s before checking progress\nCopy confirmed complete.\n",
             ),
             (False, None, "Copy request sent.\n"),
         ],
@@ -634,9 +738,39 @@ class TestCopy:
         # You may need to rerun all the tests if there is an issue to reset the call count
         assert stdout == exp_stdout
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_copy_item_failure(self):
-        ...
+    @pytest.mark.parametrize(
+        "item_id, new_folder_id",
+        [
+            ("123", "01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P"),
+            ("01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG", "456"),
+        ],
+    )
+    def test_copy_item_failure(self, onedrive, item_id, new_folder_id):
+        with pytest.raises(GraphAPIError) as excinfo:
+            onedrive.copy_item(item_id, new_folder_id)
+        (msg,) = excinfo.value.args
+        assert msg == "item not copied (Invalid request)"
+
+    @pytest.mark.parametrize(
+        "item_id, new_folder_id, new_name, exp_msg",
+        [
+            (123, "new_folder_id", None, "item_id expected 'str', got 'int'"),
+            ("item_id", None, None, "new_folder_id expected 'str', got 'NoneType'"),
+            (
+                "item_id",
+                "new_folder_id",
+                b"name",
+                "new_name expected 'str', got 'bytes'",
+            ),
+        ],
+    )
+    def test_copy_item_failure_type(
+        self, onedrive, item_id, new_folder_id, new_name, exp_msg
+    ):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.copy_item(item_id, new_folder_id, new_name)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
 
 
 class TestRename:

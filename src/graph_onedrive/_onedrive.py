@@ -146,7 +146,7 @@ class OneDrive:
 
         # Check response was okay
         if response.status_code != 200:
-            if "application/json" in response.headers["content-type"]:
+            if response.headers.get("content-type") == "application/json":
                 error_message = response.json().get("error_description")
             else:
                 error_message = "no error message returned"
@@ -156,19 +156,20 @@ class OneDrive:
         response_data = response.json()
 
         # Set the access and refresh tokens to the instance attributes
-        try:
-            self._access_token = response_data["access_token"]
-        except KeyError:
+        if not response_data.get("access_token"):
             raise GraphAPIError("response did not return an access token")
-        try:
+        self._access_token = response_data["access_token"]
+
+        if response_data.get("refresh_token"):
             self.refresh_token = response_data["refresh_token"]
-        except KeyError:
+        else:
             warnings.warn(
                 "GraphAPIWarn: response did not return a refresh token, existing config not updated",
                 stacklevel=2,
             )
+
         # Set an expiry time, removing 60 seconds assumed for processing
-        expires = response_data["expires_in"] - 60
+        expires = response_data.get("expires_in", 660) - 60
         expires = datetime.now() + timedelta(seconds=expires)
         self._access_expires = datetime.timestamp(expires)
 
@@ -236,7 +237,7 @@ class OneDrive:
         request_url = self._API_URL + "me/drive/"
         response = httpx.get(request_url, headers=self._headers)
         if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
+            if response.headers.get("content-type") == "application/json":
                 error_message = response.json().get("error", {}).get("message")
             else:
                 error_message = "no error message returned"
@@ -647,7 +648,7 @@ class OneDrive:
                 error_message = response.json().get("error", {}).get("message")
             else:
                 error_message = "no error message returned"
-            raise GraphAPIError(f"API Error : item not moved ({error_message})")
+            raise GraphAPIError(f"item not moved ({error_message})")
         response_data = response.json()
         item_id = response_data["id"]
         parent_folder_id = response_data["parentReference"]["id"]
@@ -706,7 +707,7 @@ class OneDrive:
             print("Copy request sent.")
         if confirm_complete:
             monitor_url = response.headers.get("Location")
-            wait_duration = 2
+            wait_duration = 1
             previous_complete = 0
             while True:
                 if verbose:
