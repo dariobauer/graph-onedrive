@@ -48,7 +48,7 @@ deps = -r{toxinidir}/requirements-dev.txt
 commands =
     coverage erase
     coverage run -m pytest {posargs:tests}
-    coverage report --fail-under 30
+    coverage report --fail-under 40
 
 [testenv:style-and-typing]
 skip_install = true

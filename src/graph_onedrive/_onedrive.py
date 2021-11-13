@@ -296,7 +296,7 @@ class OneDrive:
         # Print usage
         if verbose:
             print(
-                f"Using {used} {unit} ({round(used*100/capacity, 2)}%) of total {capacity} {unit}."
+                f"Using {used} {unit} ({used*100/capacity:.2f}%) of total {capacity} {unit}."
             )
         # Return usage and capacity in requested units
         return used, capacity, unit
@@ -771,7 +771,7 @@ class OneDrive:
             raise GraphAPIError(f"item not renamed ({error_message})")
         response_data = response.json()
         item_name = response_data["name"]
-        # Return the item id and parent folder id
+        # Return the item name
         return item_name
 
     @token_required
@@ -787,6 +787,11 @@ class OneDrive:
         # Validate item_id
         if not isinstance(item_id, str):
             raise TypeError(f"item_id expected 'str', got {type(item_id).__name__!r}")
+        # Validate pre_confirm
+        if not isinstance(pre_confirm, bool):
+            raise TypeError(
+                f"pre_confirm expected 'bool', got {type(item_id).__name__!r}"
+            )
         # Get the user to confirm that they want to delete
         if not pre_confirm:
             confirm = (

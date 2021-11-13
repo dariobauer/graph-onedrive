@@ -68,12 +68,12 @@ def mock_graph_api():
             name="create_share_link",
         ).mock(side_effect=side_effect_sharing_link)
 
-        # Move Item
-        move_item_route = respx_mock.patch(
+        # Patch Item - Move, Rename
+        patch_item_route = respx_mock.patch(
             path__regex=r"me/drive/items/[0-9a-zA-Z-]+$",
             headers=headers,
-            name="move_item",
-        ).mock(side_effect=side_effect_move_item)
+            name="patch_item",
+        ).mock(side_effect=side_effect_patch_item)
 
         # Copy Item
         copy_item_route = respx_mock.post(
@@ -84,16 +84,22 @@ def mock_graph_api():
         # note monitor route is in non base url context manager
 
         # Copy Item Monitor
-        # Does not use base_url so host has to be specified
+        # host specified as not using base_url
         copy_item_monitor_route = respx_mock.get(
             host__regex=r"[0-9a-zA-Z-]+.sharepoint.com",
             path__regex=r"/_api/v2.0/monitor/[0-9a-zA-Z-]+$",
             name="copy_item_monitor",
         ).mock(side_effect=side_effect_copy_item_monitor)
 
-        # Rename Item
         # Delete Item
+        delete_item_route = respx_mock.delete(
+            path__regex=r"me/drive/items/[0-9a-zA-Z-]+$",
+            headers=headers,
+            name="delete_item",
+        ).mock(side_effect=side_effect_delete_item)
+
         # Download File
+
         # Upload File
 
         # Detail item
@@ -222,27 +228,35 @@ def side_effect_sharing_link(request):
     return httpx.Response(201, json=response_json)
 
 
-def side_effect_move_item(request):
+def side_effect_patch_item(request):
     # If a parent folder is specfied, check it exists
     item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
     if item_id_re:
-        item_id = item_id_re.group(1)
         matching_item_list = [
-            item for item in MOCKED_ITEMS if item.get("id") == item_id
+            item for item in MOCKED_ITEMS if item.get("id") == item_id_re.group(1)
         ]
-    else:
-        matching_item_list = []
-    if not matching_item_list:
-        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+        if not matching_item_list:
+            return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Load the body
     try:
         body = json.loads(request.content)
-        new_folder_id = body["parentReference"]["id"]
-        new_name = body.get("name")
     except:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Prepare and return the response
-    return httpx.Response(200, json=MOCKED_RESPONSE_DATA["move-item"])
+    response_json = MOCKED_RESPONSE_DATA["patch-item"]
+    new_folder_id = body.get("parentReference", {}).get("id")
+    if new_folder_id:
+        if not [
+            item
+            for item in MOCKED_ITEMS
+            if item.get("id") == new_folder_id and "folder" in item
+        ]:
+            return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+        response_json["parentReference"]["id"] = new_folder_id
+    new_name = body.get("name")
+    if new_name:
+        response_json["name"] = new_name
+    return httpx.Response(200, json=response_json)
 
 
 def side_effect_copy_item(request):
@@ -277,6 +291,16 @@ def side_effect_copy_item_monitor(request, route):
         return httpx.Response(202, json=MOCKED_RESPONSE_DATA["copy-item-progress"])
     else:
         return httpx.Response(202, json=MOCKED_RESPONSE_DATA["copy-item-complete"])
+
+
+def side_effect_delete_item(request):
+    # Check item exists
+    item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if not item_id_re or not [
+        item for item in MOCKED_ITEMS if item.get("id") == item_id_re.group(1)
+    ]:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    return httpx.Response(204)
 
 
 @pytest.fixture(scope="module")

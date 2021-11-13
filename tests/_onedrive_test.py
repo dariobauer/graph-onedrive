@@ -642,9 +642,11 @@ class TestCopy:
 class TestRename:
     """Tests the rename_item method."""
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_rename_item(self):
-        ...
+    def test_rename_item(self, onedrive):
+        item_id = "01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG"
+        new_name = "new-item-name.txt"
+        returned_name = onedrive.rename_item(item_id, new_name)
+        assert returned_name == new_name
 
     @pytest.mark.skip(reason="not implemented")
     def test_rename_item_failure(self):
@@ -654,13 +656,43 @@ class TestRename:
 class TestDelete:
     """Tests the delete_item method."""
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_delete_item(self):
-        ...
+    def test_delete_item(self, onedrive):
+        response = onedrive.delete_item(
+            "01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG", pre_confirm=True
+        )
+        assert isinstance(response, bool)
+        assert response == True
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_delete_item_failure(self):
-        ...
+    @pytest.mark.parametrize(
+        "input_str, exp_bool",
+        [("delete", True), ("DeLeTe ", True), ("D elete", False)],
+    )
+    def test_delete_item_manual_confirm(
+        self, onedrive, monkeypatch, input_str, exp_bool
+    ):
+        monkeypatch.setattr("builtins.input", lambda _: input_str)
+        response = onedrive.delete_item("01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG")
+        assert isinstance(response, bool)
+        assert response == exp_bool
+
+    def test_delete_item_failure(self, onedrive):
+        with pytest.raises(GraphAPIError) as excinfo:
+            onedrive.delete_item("999", pre_confirm=True)
+        (msg,) = excinfo.value.args
+        assert msg == "item not deleted (Invalid request)"
+
+    @pytest.mark.parametrize(
+        "item_id, pre_confirm, exp_msg",
+        [
+            (999, False, "item_id expected 'str', got 'int'"),
+            ("999", "true", "pre_confirm expected 'bool', got 'str'"),
+        ],
+    )
+    def test_delete_item_failure_type(self, onedrive, item_id, pre_confirm, exp_msg):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.delete_item(item_id, pre_confirm)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
 
 
 class TestDownload:

@@ -1900,7 +1900,7 @@
       "childCount": 0
     }
   },
-  "move-item": {
+  "patch-item": {
     "id": "01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG",
     "name": "new-item-name.txt",
     "parentReference": {
