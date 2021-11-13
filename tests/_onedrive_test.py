@@ -1,5 +1,6 @@
 """Tests the OneDrive class using pytest."""
 import pytest
+import respx
 
 from .conftest import ACCESS_TOKEN
 from .conftest import AUTH_CODE
@@ -21,6 +22,7 @@ class TestDunders:
         "refresh_token",
         [REFRESH_TOKEN, None],
     )
+    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
     def test_init(self, mock_graph_api, mock_auth_api, monkeypatch, refresh_token):
         # monkeypatch the Authorization step when no refresh token provided
         input_url = REDIRECT + "?code=" + AUTH_CODE
@@ -100,6 +102,7 @@ class TestDunders:
 class TestGetTokens:
     """Tests the _get_token method."""
 
+    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
     def test_get_tokens_using_auth_code(self, temp_onedrive, monkeypatch):
         # monkeypatch the response url typically input by user
         input_url = REDIRECT + "?code=" + AUTH_CODE
@@ -196,14 +199,17 @@ class TestDriveDetails:
 
     # get_drive_details
     def test_get_drive_details(self, onedrive):
-        assert onedrive._drive_id == "b!t18F8ybsHUq1z3"
-        assert onedrive._drive_name is None
+        assert (
+            onedrive._drive_id
+            == "b!-RIj2DuyvEyV1T4NlOaMHk8XkS_I8MdFlUCq1BlcjgmhRfAj3-Z8RY2VpuvV_tpd"
+        )
+        assert onedrive._drive_name == "OneDrive"
         assert onedrive._drive_type == "business"
-        assert onedrive._owner_id == "f22fca32-227"
-        assert onedrive._owner_email == None
-        assert onedrive._owner_name == "Ryan Gregg"
-        assert onedrive._quota_used == 64274237
-        assert onedrive._quota_remaining == 1099447353539
+        assert onedrive._owner_id == "48d31887-5fad-4d73-a9f5-3c356e68a038"
+        assert onedrive._owner_email == "MeganB@M365x214355.onmicrosoft.com"
+        assert onedrive._owner_name == "Megan Bowen"
+        assert onedrive._quota_used == 106330475
+        assert onedrive._quota_remaining == 1099217263127
         assert onedrive._quota_total == 1099511627776
 
     @pytest.mark.skip(reason="not implemented")
@@ -214,9 +220,9 @@ class TestDriveDetails:
     @pytest.mark.parametrize(
         "unit, exp_used, exp_capacity, exp_unit",
         [
-            ("b", 64274237, 1099511627776, "b"),
-            ("kb", 62767.8, 1073741824, "kb"),
-            ("MB", 61.3, 1048576, "mb"),
+            ("b", 106330475, 1099511627776, "b"),
+            ("kb", 103838.4, 1073741824, "kb"),
+            ("MB", 101.4, 1048576, "mb"),
             ("gb", 0.1, 1024, "gb"),
             (None, 0.1, 1024, "gb"),
         ],
@@ -260,12 +266,12 @@ class TestListingDirectories:
 
     def test_list_directory_root(self, onedrive):
         items = onedrive.list_directory()
-        assert items[0].get("id") == "01KDJMOTN"
+        assert items[0].get("id") == "01BYE5RZ6QN3ZWBTUFOFD3GSPGOHDJD36K"
 
     def test_list_directory_folder(self, onedrive):
-        item_id = "01KDJMOTNGDMA4KB"
+        item_id = "01BYE5RZYFPM65IDVARFELFLNTXR4ZKABD"
         items = onedrive.list_directory(item_id)
-        assert items[0].get("id") == "01KDJMOTN"
+        assert items[0].get("id") == "01BYE5RZZWSN2ASHUEBJH2XJJ25WSEBUJ3"
 
     @pytest.mark.skip(reason="not implemented")
     def test_list_directory_failure(self):
@@ -279,8 +285,8 @@ class TestItemDetails:
     @pytest.mark.parametrize(
         "item_id, exp_name",
         [
-            ("01KDJMOTOM62V", "2021-02-08 18.53.41.mov"),
-            ("01KDJMOTNGDMA4KB", "temp"),
+            ("01BYE5RZ2XXKUBPDYT7JGLPHYXALBIXKEL", "Contoso Patent Template.docx"),
+            ("01BYE5RZ6TAJHXA5GMWZB2HDLD7SNEXFFU", "CR-227 Project"),
         ],
     )
     def test_detail_item(self, onedrive, item_id, exp_name):
@@ -291,29 +297,30 @@ class TestItemDetails:
         "item_id, exp_stout",
         [
             (
-                "01KDJMOTOM62V",
-                "item id: 01KDJMOTOM62V\n"
-                "name: 2021-02-08 18.53.41.mov\n"
+                "01BYE5RZ2XXKUBPDYT7JGLPHYXALBIXKEL",
+                "item id: 01BYE5RZ2XXKUBPDYT7JGLPHYXALBIXKEL\n"
+                "name: Contoso Patent Template.docx\n"
                 "type: file\n"
-                "created: 2021-10-23T23:24:56Z by: Ryan Gregg\n"
-                "last modified: 2021-10-23T23:25:48Z by: Ryan Gregg\n"
-                "size: 4926874\n"
-                "web url: https://consco.sharepoint.com/personal/consco/Documents/temp/2021-02-08%2018.53.41.mov\n"
-                "file system created: 2021-10-23T23:24:56Z\n"
-                "file system last modified: 2021-10-23T23:25:48Z\n"
-                "file quickXor hash: wFwchJC3Iwr99ytGd+8vuSXCe0A=\n",
+                "created: 2017-08-07T16:03:47Z by: Megan Bowen\n"
+                "last modified: 2017-08-10T17:06:12Z by: Megan Bowen\n"
+                "size: 85596\n"
+                "web url: https://m365x214355-my.sharepoint.com/personal/meganb_m365x214355_onmicrosoft_com/_layouts/15/Doc.aspx?sourcedoc=%7B17A8BA57-138F-4CFA-B79F-1702C28BA88B%7D&file=Contoso%20Patent%20Template.docx&action=default&mobileredirect=true\n"
+                "file system created: 2017-08-07T16:03:47Z\n"
+                "file system last modified: 2017-08-10T17:06:12Z\n"
+                "file quickXor hash: jWK86kNVvULlV/oFKuGvDKybt+I=\n",
             ),
             (
-                "01KDJMOTNGDMA4KB",
-                "item id: 01KDJMOTNGDMA4KB\n"
-                "name: temp\n"
+                "01BYE5RZ6TAJHXA5GMWZB2HDLD7SNEXFFU",
+                "item id: 01BYE5RZ6TAJHXA5GMWZB2HDLD7SNEXFFU\n"
+                "name: CR-227 Project\n"
                 "type: folder\n"
-                "created: 2021-10-24T08:56:48Z by: Ryan Gregg\n"
-                "last modified: 2021-10-24T08:56:48Z by: Ryan Gregg\n"
-                "size: 19528345\n"
-                "web url: https://constco.sharepoint.com/personal/consco/Documents/temp\n"
-                "file system created: 2021-10-24T08:56:48Z\n"
-                "file system last modified: 2021-10-24T08:56:48Z\n",
+                "created: 2017-08-07T16:17:40Z by: Megan Bowen\n"
+                "last modified: 2017-08-07T16:17:40Z by: Megan Bowen\n"
+                "size: 6934759\n"
+                "web url: https://m365x214355-my.sharepoint.com/personal/meganb_m365x214355_onmicrosoft_com/Documents/CR-227%20Project\n"
+                "file system created: 2017-08-07T16:17:40Z\n"
+                "file system last modified: 2017-08-07T16:17:40Z\n"
+                "child count: 5\n",
             ),
         ],
     )
@@ -329,7 +336,10 @@ class TestItemDetails:
     # item_type
     @pytest.mark.parametrize(
         "item_id, exp_type",
-        [("01KDJMOTOM62V", "file"), ("01KDJMOTNGDMA4KB", "folder")],
+        [
+            ("01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J", "file"),
+            ("01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P", "folder"),
+        ],
     )
     def test_item_type(self, onedrive, item_id, exp_type):
         item_type = onedrive.item_type(item_id)
@@ -342,7 +352,10 @@ class TestItemDetails:
     # is_folder
     @pytest.mark.parametrize(
         "item_id, exp_bool",
-        [("01KDJMOTOM62V", False), ("01KDJMOTNGDMA4KB", True)],
+        [
+            ("01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J", False),
+            ("01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P", True),
+        ],
     )
     def test_is_folder(self, onedrive, item_id, exp_bool):
         is_folder = onedrive.is_folder(item_id)
@@ -355,7 +368,10 @@ class TestItemDetails:
     # is_file
     @pytest.mark.parametrize(
         "item_id, exp_bool",
-        [("01KDJMOTOM62V", True), ("01KDJMOTNGDMA4KB", False)],
+        [
+            ("01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J", True),
+            ("01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P", False),
+        ],
     )
     def test_is_file(self, onedrive, item_id, exp_bool):
         is_file = onedrive.is_file(item_id)
@@ -373,7 +389,7 @@ class TestSharingLink:
         "item_id, link_type, password, expiration, scope, exp_link",
         [
             (
-                "01KDJMOTOM62V",
+                "01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J",
                 "view",
                 None,
                 None,
@@ -381,7 +397,7 @@ class TestSharingLink:
                 "https://onedrive.com/fakelink",
             ),
             (
-                "01KDJMOTOM62V",
+                "01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J",
                 "edit",
                 None,
                 None,
@@ -389,7 +405,7 @@ class TestSharingLink:
                 "https://onedrive.com/fakelink",
             ),
             (
-                "01KDJMOTOM62V",
+                "01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J",
                 "edit",
                 None,
                 None,
@@ -397,7 +413,7 @@ class TestSharingLink:
                 "https://onedrive.com/fakelink",
             ),
             (
-                "01KDJMOTNGDMA4KB",
+                "01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J",
                 "view",
                 None,
                 None,
@@ -405,7 +421,7 @@ class TestSharingLink:
                 "https://onedrive.com/fakelink",
             ),
             (
-                "01KDJMOTNGDMA4KB",
+                "01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J",
                 "edit",
                 None,
                 None,
@@ -413,7 +429,15 @@ class TestSharingLink:
                 "https://onedrive.com/fakelink",
             ),
             (
-                "01KDJMOTNGDMA4KB",
+                "01BYE5RZ6KU4MREZDFEVGKWRBC7OK4ET3J",
+                "edit",
+                None,
+                None,
+                "organization",
+                "https://onedrive.com/fakelink",
+            ),
+            (
+                "01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P",
                 "edit",
                 None,
                 None,
@@ -439,7 +463,7 @@ class TestSharingLink:
                 None,
                 None,
                 "anonymous",
-                "share link could not be created (item not found)",
+                "share link could not be created (Invalid request)",
             ),
         ],
     )
@@ -516,8 +540,8 @@ class TestMakeFolder:
     @pytest.mark.parametrize(
         "folder_name, parent_folder_id, check_existing, exp_str",
         [
-            ("tesy 1", "01KDJMOTNGDMA4KB", True, "ACEA49D1-144"),
-            ("tesy 1", "01KDJMOTNGDMA4KB", False, "ACEA49D1-144"),
+            ("tesy 1", "01BYE5RZ4CPC5XBOTZCFD2CT7SZFNICEYC", True, "ACEA49D1-144"),
+            ("tesy 1", "01BYE5RZ4CPC5XBOTZCFD2CT7SZFNICEYC", False, "ACEA49D1-144"),
             ("tesy 1", None, True, "ACEA49D1-144"),
             ("tesy 1", None, False, "ACEA49D1-144")
             # To-do: allow for other folder names by using a side effect in the mock route
@@ -540,8 +564,16 @@ class TestMove:
     @pytest.mark.parametrize(
         "item_id, new_folder_id, new_name",
         [
-            ("01KDJMOTOM62V", "01KDJMOTNGDMA4KB", "new-item-name.txt"),
-            ("01KDJMOTOM62V", "01KDJMOTNGDMA4KB", None),
+            (
+                "01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG",
+                "01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P",
+                "new-item-name.txt",
+            ),
+            (
+                "01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG",
+                "01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P",
+                None,
+            ),
         ],
     )
     def test_move_item(self, onedrive, item_id, new_folder_id, new_name):
@@ -559,9 +591,48 @@ class TestMove:
 class TestCopy:
     """Tests the copy_item method."""
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_copy_item(self):
-        ...
+    @pytest.mark.parametrize(
+        "new_name, confirm_complete, exp_return",
+        [
+            ("new-item-name.txt", True, "01MOWKYVJML57KN2ANMBA3JZJS2MBGC7KM"),
+            ("new-item-name.txt", False, None),
+            (None, True, "01MOWKYVJML57KN2ANMBA3JZJS2MBGC7KM"),
+        ],
+    )
+    def test_copy_item(self, onedrive, new_name, confirm_complete, exp_return):
+        item_id = "01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG"
+        new_folder_id = "01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P"
+        returned_item_id = onedrive.copy_item(
+            item_id, new_folder_id, new_name, confirm_complete
+        )
+        assert returned_item_id != item_id
+        assert returned_item_id != new_folder_id
+        assert returned_item_id == exp_return
+
+    @pytest.mark.parametrize(
+        "confirm_complete, exp_return, exp_stdout",
+        [
+            (
+                True,
+                "01MOWKYVJML57KN2ANMBA3JZJS2MBGC7KM",
+                "Copy request sent.\nWaiting 2s before checking progress\nPercentage complete = 96.7%\nWaiting 1s before checking progress\nCopy confirmed complete.\n",
+            ),
+            (False, None, "Copy request sent.\n"),
+        ],
+    )
+    def test_copy_item_verbose(
+        self, onedrive, capsys, confirm_complete, exp_return, exp_stdout
+    ):
+        item_id = "01BYE5RZ53CPZEMSJFTZDJ6AEFVZP3C3BG"
+        new_folder_id = "01BYE5RZ5YOS4CWLFWORAJ4U63SCA3JT5P"
+        returned_item_id = onedrive.copy_item(
+            item_id, new_folder_id, "new-item-name.txt", confirm_complete, True
+        )
+        assert returned_item_id == exp_return
+        stdout, sterr = capsys.readouterr()
+        # Note that the stout alternates between partically complete and complete bassed on call count
+        # You may need to rerun all the tests if there is an issue to reset the call count
+        assert stdout == exp_stdout
 
     @pytest.mark.skip(reason="not implemented")
     def test_copy_item_failure(self):

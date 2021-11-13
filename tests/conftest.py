@@ -3,6 +3,7 @@ import json
 import os
 import re
 import urllib.parse
+import warnings
 from typing import List
 from typing import Tuple
 
@@ -30,10 +31,7 @@ TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 # Read mocked response content
 with open(os.path.join(TESTS_DIR, "mock_responses.json")) as file:
     MOCKED_RESPONSE_DATA = json.load(file)
-
-# Read mocked item content
-with open(os.path.join(TESTS_DIR, "mock_items.json")) as file:
-    MOCKED_ITEMS = json.load(file)["items"]
+MOCKED_ITEMS = MOCKED_RESPONSE_DATA["list-root"]["value"]
 
 
 @pytest.fixture(scope="module")
@@ -46,8 +44,7 @@ def mock_graph_api():
 
     # Create the mocked routes
     # IMPORTANT: routes ordered by most specific top as respx it will use first match
-    # Note if you get an exception about 'grant_type' not in {}, it means a route is not working
-    with respx.mock(base_url=api_url) as respx_mock:
+    with respx.mock(base_url=api_url, assert_all_called=False) as respx_mock:
 
         # Make folder
         make_folder_route = respx_mock.post(
@@ -79,6 +76,21 @@ def mock_graph_api():
         ).mock(side_effect=side_effect_move_item)
 
         # Copy Item
+        copy_item_route = respx_mock.post(
+            path__regex=r"me/drive/items/[0-9a-zA-Z-]+/copy$",
+            headers=headers,
+            name="copy_item",
+        ).mock(side_effect=side_effect_copy_item)
+        # note monitor route is in non base url context manager
+
+        # Copy Item Monitor
+        # Does not use base_url so host has to be specified
+        copy_item_monitor_route = respx_mock.get(
+            host__regex=r"[0-9a-zA-Z-]+.sharepoint.com",
+            path__regex=r"/_api/v2.0/monitor/[0-9a-zA-Z-]+$",
+            name="copy_item_monitor",
+        ).mock(side_effect=side_effect_copy_item_monitor)
+
         # Rename Item
         # Delete Item
         # Download File
@@ -100,43 +112,41 @@ def mock_graph_api():
 
 
 def side_effect_detail_item(request):
-    item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
-    if item_id_re:
-        item_id = item_id_re.group(1)
-        matching_item_list = [
-            item for item in MOCKED_ITEMS if item.get("id") == item_id
-        ]
-    else:
-        matching_item_list = []
+    item_id_match = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if not item_id_match:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Check if the item id provided corresponds to an item in the mocked items list (root only)
+    matching_item_list = [
+        item for item in MOCKED_ITEMS if item.get("id") == item_id_match.group(1)
+    ]
     if not matching_item_list:
-        error = {"error": {"message": "item not found"}}
-        return httpx.Response(400, json=error)
-    response_json = matching_item_list[0]
-    return httpx.Response(200, json=response_json)
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    return httpx.Response(200, json=matching_item_list[0])
 
 
 def side_effect_drive_details(request):
-    response_json = MOCKED_RESPONSE_DATA.get("drive-details")
-    return httpx.Response(200, json=response_json)
+    return httpx.Response(200, json=MOCKED_RESPONSE_DATA["drive-details"])
 
 
 def side_effect_list_dir(request):
-    # If a parent folder is specfied, check it exists
-    if "root" not in request.url.path:
-        folder_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
-        if folder_id_re:
-            folder_id = folder_id_re.group(1)
-        matching_item_list = [
-            item
-            for item in MOCKED_ITEMS
-            if (item.get("id") == folder_id and "folder" in item)
-        ]
-        if not matching_item_list:
-            error = {"error": {"message": "folder does not exist"}}
-            return httpx.Response(400, json=error)
+    # return early if root
+    if "root" in request.url.path:
+        return httpx.Response(200, json=MOCKED_RESPONSE_DATA["list-root"])
+    # Extract the item id
+    item_id_match = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if not item_id_match:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Check if the item id provided corresponds to an item in the mocked items list (root only)
+    matching_item_list = [
+        item for item in MOCKED_ITEMS if (item.get("id") == item_id_match.group(1))
+    ]
+    if not matching_item_list:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    elif "folder" not in matching_item_list[0]:
+        # If item is not a folder then return an empty list of children
+        return httpx.Response(200, json=MOCKED_RESPONSE_DATA["list-directory-empty"])
     # Prepare and return the response
-    response_json = MOCKED_RESPONSE_DATA.get("list-directory")
-    return httpx.Response(200, json=response_json)
+    return httpx.Response(200, json=MOCKED_RESPONSE_DATA["list-directory"])
 
 
 def side_effect_make_folder(request):
@@ -152,13 +162,11 @@ def side_effect_make_folder(request):
         body = json.loads(request.content)
         new_folder_name = body["name"]
     except:
-        error = {"error": {"message": "invalid request"}}
-        return httpx.Response(400, json=error)
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Check the conflict behaviour
     conflict_behaviour = body.get("@microsoft.graph.conflictBehavior", "rename")
     if conflict_behaviour not in ("fail", "replace", "rename"):
-        error = {"error": {"message": "invalid conflict behaviour"}}
-        return httpx.Response(400, json=error)
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Load mocked items from file and loop through them
     mocked_items = MOCKED_ITEMS
     parent_id_valid = False
@@ -173,8 +181,9 @@ def side_effect_make_folder(request):
                 parent_id is None and item["parentReference"]["path"] == "/drive/root:"
             ):
                 if conflict_behaviour == "fail":
-                    error = {"error": {"message": "item conflicts"}}
-                    return httpx.Response(400, json=error)
+                    return httpx.Response(
+                        400, json=MOCKED_RESPONSE_DATA["invalid-request"]
+                    )
                 else:
                     new_folder_name += "-1"
         # Check parent exists
@@ -182,13 +191,11 @@ def side_effect_make_folder(request):
             if "folder" in item:
                 parent_id_valid = True
             else:
-                error = {"error": {"message": "parent item id is not a folder"}}
-                return httpx.Response(400, json=error)
+                return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     if "root" not in request.url.path and not parent_id_valid:
-        error = {"error": {"message": "parent item does not exist"}}
-        return httpx.Response(400, json=error)
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Prepare and return the response
-    response_json = MOCKED_RESPONSE_DATA.get("create-folder")
+    response_json = MOCKED_RESPONSE_DATA["create-folder"]
     response_json["name"] = new_folder_name
     return httpx.Response(201, json=response_json)
 
@@ -203,14 +210,12 @@ def side_effect_sharing_link(request):
         link_type = body["type"]
         scope = body["scope"]
     except:
-        error = {"error": {"message": "invalid request"}}
-        return httpx.Response(400, json=error)
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     password = body.get("password")
     expiration = body.get("expirationDateTime")
     matching_item_list = [item for item in MOCKED_ITEMS if item.get("id") == item_id]
     if not matching_item_list:
-        error = {"error": {"message": "item not found"}}
-        return httpx.Response(400, json=error)
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     response_json = {"link": {"webUrl": "https://onedrive.com/fakelink"}}
     if link_type == "embed":
         response_json["link"]["webHtml"] = "<iframe>...</iframe>"
@@ -228,20 +233,50 @@ def side_effect_move_item(request):
     else:
         matching_item_list = []
     if not matching_item_list:
-        error = {"error": {"message": "item not found"}}
-        return httpx.Response(400, json=error)
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Load the body
     try:
         body = json.loads(request.content)
         new_folder_id = body["parentReference"]["id"]
         new_name = body.get("name")
     except:
-        error = {"error": {"message": "invalid request"}}
-        return httpx.Response(400, json=error)
-
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Prepare and return the response
-    response_json = MOCKED_RESPONSE_DATA.get("move-item")
-    return httpx.Response(200, json=response_json)
+    return httpx.Response(200, json=MOCKED_RESPONSE_DATA["move-item"])
+
+
+def side_effect_copy_item(request):
+    # If a parent folder is specfied, check it exists
+    item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if item_id_re:
+        item_id = item_id_re.group(1)
+        matching_item_list = [
+            item for item in MOCKED_ITEMS if item.get("id") == item_id
+        ]
+    else:
+        matching_item_list = []
+    if not matching_item_list:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Load the body
+    try:
+        body = json.loads(request.content)
+        new_folder_id = body["parentReference"]["id"]
+        new_name = body.get("name")
+    except:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Return the monitor url
+    headers = {
+        "Location": "https://m365x214355-my.sharepoint.com/_api/v2.0/monitor/4A3407B5-88FC-4504-8B21-0AABD3412717"
+    }
+    return httpx.Response(202, headers=headers)
+
+
+def side_effect_copy_item_monitor(request, route):
+    # If this is the first call return progress otherwise return the finished response
+    if (route.call_count + 1) % 2 == 0:
+        return httpx.Response(202, json=MOCKED_RESPONSE_DATA["copy-item-progress"])
+    else:
+        return httpx.Response(202, json=MOCKED_RESPONSE_DATA["copy-item-complete"])
 
 
 @pytest.fixture(scope="module")

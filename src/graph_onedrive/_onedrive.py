@@ -395,10 +395,12 @@ class OneDrive:
                 file_system_info.get("lastModifiedDateTime"),
             )
             if "file" in response_data.keys():
-                hashes = response_data.get("file", {}).get("hashes")
+                hashes = response_data["file"].get("hashes")
                 if isinstance(hashes, dict):
                     for key, value in hashes.items():
                         print(f"file {key.replace('Hash', '')} hash:", value)
+            if "folder" in response_data.keys():
+                print("child count:", response_data["folder"].get("childCount"))
         # Return the item details
         return response_data
 
@@ -704,11 +706,11 @@ class OneDrive:
             print("Copy request sent.")
         if confirm_complete:
             monitor_url = response.headers.get("Location")
-            wait_duration = 3
+            wait_duration = 2
             previous_complete = 0
             while True:
                 if verbose:
-                    print(f"Waiting {wait_duration}s before checking progress")
+                    print(f"Waiting {wait_duration:.0f}s before checking progress")
                 sleep(wait_duration)
                 response = httpx.get(monitor_url, follow_redirects=True)
                 response_data = response.json()
@@ -718,15 +720,20 @@ class OneDrive:
                     break
                 percentage_complete = response_data["percentageComplete"]
                 if verbose:
-                    print("Percentage Complete = {percentage_complete}%")
-                wait_duration = (
-                    100.0 / (percentage_complete - previous_complete) * wait_duration
-                    - wait_duration
-                )
-                if wait_duration > 30:
-                    wait_duration = 30
-                elif wait_duration < 2:
-                    wait_duration = 2
+                    print(f"Percentage complete = {percentage_complete}%")
+                try:
+                    wait_duration = (
+                        100.0
+                        / (percentage_complete - previous_complete)
+                        * wait_duration
+                        - wait_duration
+                    )
+                except ZeroDivisionError:
+                    wait_duration = 10
+                if wait_duration > 10:
+                    wait_duration = 10
+                elif wait_duration < 1:
+                    wait_duration = 1
                 previous_complete = percentage_complete
             new_item_id = response_data["resourceId"]
             # Return the item id
