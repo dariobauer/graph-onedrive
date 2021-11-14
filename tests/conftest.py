@@ -48,7 +48,7 @@ def mock_graph_api():
 
         # Make folder
         make_folder_route = respx_mock.post(
-            path__regex=r"me/drive/(root|items/[0-9a-zA-Z-]+)/children$",
+            path__regex=r"me/drive/(?:root|items/[0-9a-zA-Z-]+)/children$",
             headers=headers,
             json__folder={},
             name="make_folder",
@@ -56,7 +56,7 @@ def mock_graph_api():
 
         # List directory
         list_directory_route = respx_mock.get(
-            path__regex=r"me/drive/(root|items/[0-9a-zA-Z-]+)/children$",
+            path__regex=r"me/drive/(?:root|items/[0-9a-zA-Z-]+)/children$",
             headers=headers,
             name="list_directory",
         ).mock(side_effect=side_effect_list_dir)
@@ -100,7 +100,29 @@ def mock_graph_api():
 
         # Download File
 
+        # Upload File Session
+        # Note this doesn't match non-standard characters as encoding is decoded by respx
+        upload_session_route = respx_mock.post(
+            path__regex=r"me/drive/(?:root|items/[0-9a-zA-Z-]+):/[0-9a-zA-Z-_.%+ ]+:/createUploadSession$",
+            headers=headers,
+            name="upload_session",
+        ).mock(side_effect=side_effect_upload_session)
+
+        # Upload File Delete Session
+        # host specified as not using base_url
+        upload_session_delete_route = respx_mock.delete(
+            host__regex=r"[0-9a-zA-Z-]+.up.1drv.com",
+            path__regex=r"/up/[0-9a-zA-Z]+$",
+            name="delete_upload_session",
+        ).mock(return_value=httpx.Response(204))
+
         # Upload File
+        # host specified as not using base_url
+        upload_item_route = respx_mock.put(
+            host__regex=r"[0-9a-zA-Z-]+.up.1drv.com",
+            path__regex=r"/up/[0-9a-zA-Z]+$",
+            name="upload_item",
+        ).mock(side_effect=side_effect_upload_item)
 
         # Detail item
         detail_item_route = respx_mock.get(
@@ -309,6 +331,69 @@ def side_effect_delete_item(request):
     return httpx.Response(204)
 
 
+def side_effect_upload_session(request):
+    # If a parent folder is specfied, check it exists
+    parent_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
+    if parent_id_re:
+        item_id = parent_id_re.group(1)
+        matching_item_list = [
+            item
+            for item in MOCKED_ITEMS
+            if item.get("id") == item_id and "folder" in item
+        ]
+        if not matching_item_list:
+            return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Check the file name
+    file_name_raw = re.search(
+        ":/([0-9a-zA-Z-_.%+]+):/createUploadSession", str(request.url.raw_path)
+    )
+    if not file_name_raw:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Load and give the body a few simple checks
+    if request.content:
+        try:
+            body = json.loads(request.content)["item"]
+        except Exception:
+            return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+        conflict_behaviour = body.get("@microsoft.graph.conflictBehavior", "rename")
+        if conflict_behaviour not in ("rename", "replace", "fail"):
+            return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+        if file_name_raw.group(1) != urllib.parse.quote(body.get("name")):
+            return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Returns an upload url
+    return httpx.Response(200, json=MOCKED_RESPONSE_DATA["upload-session"])
+
+
+def side_effect_upload_item(request):
+    # Load headers
+    try:
+        content_range = request.headers["Content-Range"]
+        byte_re = re.search("^bytes ([0-9]+)-([0-9]+)/([0-9]+)$", content_range)
+        if byte_re:
+            content_range_start = int(byte_re.group(1))
+            content_range_end = int(byte_re.group(2))
+            file_size = int(byte_re.group(3))
+    except Exception:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    if request.headers.get("Authorization"):
+        return httpx.Response(401, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    if (
+        content_range_start >= content_range_end
+        or content_range_start >= file_size
+        or content_range_end >= file_size
+    ):
+        return httpx.Response(416, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Check if this is the last chunk
+    if content_range_end != (file_size - 1):
+        response_json = {
+            "expirationDateTime": "2015-01-29T09:21:55.523Z",
+            "nextExpectedRanges": [f"{content_range_end+1}-"],
+        }
+        return httpx.Response(202, json=response_json)
+    # Upload finished
+    return httpx.Response(201, json=MOCKED_RESPONSE_DATA["upload-complete"])
+
+
 @pytest.fixture(scope="module")
 def mock_auth_api():
     """Mock the Identity Platform api for testing."""
@@ -320,7 +405,7 @@ def mock_auth_api():
 
         # Authorization Code and Refresh Token
         token_route = respx_mock.post(
-            path__regex=r"([0-9a-zA-Z-]+)/oauth2/v2.0/token$",
+            path__regex=r"[0-9a-zA-Z-]+/oauth2/v2.0/token$",
             name="access_token",
         ).mock(side_effect=side_effect_access_token)
 

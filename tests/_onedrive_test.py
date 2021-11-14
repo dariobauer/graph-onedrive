@@ -1,4 +1,8 @@
 """Tests the OneDrive class using pytest."""
+import os
+import re
+from pathlib import Path
+
 import httpx
 import pytest
 
@@ -10,6 +14,7 @@ from .conftest import REDIRECT
 from .conftest import REFRESH_TOKEN
 from .conftest import SCOPE
 from .conftest import TENANT
+from .conftest import TESTS_DIR
 from graph_onedrive._onedrive import GraphAPIError
 from graph_onedrive._onedrive import OneDrive
 
@@ -865,19 +870,116 @@ class TestUpload:
     """Tests the upload_file, _upload_large_file methods."""
 
     # upload_file
-    @pytest.mark.skip(reason="not implemented")
-    def test_upload_file(self):
-        ...
+    @pytest.mark.parametrize(
+        "new_file_name, parent_folder_id, if_exists, size",
+        [
+            (None, None, "rename", 1024),
+            (None, None, "fail", 1000),
+            (None, None, "replace", 25446),
+            ("hello hello_there-01", None, "rename", 87486),
+            ("large_archive.zip", None, "rename", 5791757),
+            ("my_movie.mov", "01BYE5RZ5MYLM2SMX75ZBIPQZIHT6OAYPB", "rename", 485),
+        ],
+    )
+    def test_upload_file(
+        self, onedrive, tmp_path, new_file_name, parent_folder_id, if_exists, size
+    ):
+        # Make a temporary file, at least one case should be larger than the upload chunk size (5MiB)
+        temp_dir = Path(tmp_path, "temp_upload")
+        temp_dir.mkdir()
+        file_path = Path(temp_dir, "temp_file.txt")
+        file_path.write_bytes(os.urandom(size))
+        # Make the request
+        item_id = onedrive.upload_file(
+            file_path, new_file_name, parent_folder_id, if_exists
+        )
+        assert item_id == "91231001"
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_upload_file_failure(self):
-        ...
+    def test_upload_file_verbose(self, onedrive, tmp_path, capsys):
+        # Make a temporary file, at least one case should be larger than the upload chunk size (5MiB)
+        temp_dir = Path(tmp_path, "temp_upload")
+        temp_dir.mkdir()
+        file_path = Path(temp_dir, "temp_file.txt")
+        file_path.write_bytes(os.urandom(5791757))
+        onedrive.upload_file(file_path, verbose=True)
+        stdout, sterr = capsys.readouterr()
+        assert (
+            stdout == "Requesting upload session\n"
+            "File temp_file.txt will be uploaded in 2 segments\n"
+            "Loading file\n"
+            "Uploading segment 1/2\n"
+            "Uploading segment 2/2 (~50% complete)\n"
+            "Upload complete\n"
+        )
 
-    # _upload_large_file
-    @pytest.mark.skip(reason="not implemented")
-    def test_upload_large_file(self):
-        ...
+    def test_upload_file_failure(self, onedrive, tmp_path):
+        # Make a temporary file, at least one case should be larger than the upload chunk size (5MiB)
+        temp_dir = Path(tmp_path, "temp_upload")
+        temp_dir.mkdir()
+        file_path = Path(temp_dir, "temp_file.txt")
+        file_path.write_bytes(os.urandom(100))
+        with pytest.raises(GraphAPIError) as excinfo:
+            onedrive.upload_file(file_path, parent_folder_id="not-valid-id")
+        (msg,) = excinfo.value.args
+        assert msg == "upload session could not be created (Invalid request)"
 
-    @pytest.mark.skip(reason="not implemented")
-    def test_upload_large_file_failure(self):
-        ...
+    @pytest.mark.parametrize(
+        "file_path, new_file_name, parent_folder_id, exp_msg",
+        [
+            (123, "str", "str", "file_path expected 'str' or 'Path', got 'int'"),
+            ("str", 4.0, "str", "new_file_name expected 'str', got 'float'"),
+            ("str", "str", 123, "parent_folder_id expected 'str', got 'int'"),
+        ],
+    )
+    def test_upload_file_failure_type(
+        self, onedrive, file_path, new_file_name, parent_folder_id, exp_msg
+    ):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.upload_file(file_path, new_file_name, parent_folder_id)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+    def test_upload_file_failure_value(self, onedrive):
+        with pytest.raises(ValueError) as excinfo:
+            onedrive.upload_file("file_path", if_exists="delete")
+        (msg,) = excinfo.value.args
+        assert msg == "if_exists expected 'fail', 'replace', or 'rename', got 'delete'"
+
+    def test_upload_file_failure_bad_path(self, onedrive):
+        with pytest.raises(ValueError) as excinfo:
+            onedrive.upload_file("non-existing")
+        (msg,) = excinfo.value.args
+        assert (
+            msg == "file_path expected a path to an existing file, got 'non-existing'"
+        )
+
+    # _get_local_file_metadata
+    def test_get_local_file_metadata(self, onedrive):
+        file_path = os.path.join(TESTS_DIR, "__init__.py")
+        (
+            file_size,
+            file_created_str,
+            file_modified_str,
+        ) = onedrive._get_local_file_metadata(file_path)
+        assert file_size == 0
+        timestamp_format = "^(?:20|19)[0-9]{2}-(?:0[0-9]|1[12])-(?:[0-2][0-9]|3[01])T(?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2}Z$"
+        assert re.search(timestamp_format, file_created_str)
+        assert re.search(timestamp_format, file_modified_str)
+        # These timestamp asserts are buggy on some platforms, take care if updating
+        assert file_created_str == "2021-11-07T06:46:23Z"
+        assert file_modified_str == "2021-11-07T06:46:23Z"
+
+    def test_get_local_file_metadata_failure_type(self, onedrive):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive._get_local_file_metadata(123)
+        (msg,) = excinfo.value.args
+        assert msg == "file_path expected 'str' or 'Path', got 'int'"
+
+    def test_get_local_file_metadata_failure_bad_path(self, onedrive):
+        with pytest.raises(ValueError) as excinfo:
+            onedrive._get_local_file_metadata("non-existing-file")
+        (msg,) = excinfo.value.args
+        assert (
+            msg
+            == "file_path expected a path to an existing file, got 'non-existing-file'"
+        )

@@ -1054,33 +1054,12 @@ class OneDrive:
             destination_file_name = file_path.name
         # Check the path is valid and points to a file
         if not os.path.isfile(file_path):
-            raise ValueError(f"file_path expected a path to a file, got {file_path}")
+            raise ValueError(
+                f"file_path expected a path to an existing file, got '{file_path!s}'"
+            )
         # Get file metadata
-        file_size = os.path.getsize(file_path)
-        file_modified = os.path.getmtime(file_path)
-        if os.name == "nt":
-            # Windows OS
-            file_created = os.path.getctime(file_path)
-        else:
-            # Other OS
-            stat = os.stat(file_path)
-            try:
-                # Likely Mac OS
-                file_created = stat.st_birthtime
-            except AttributeError:
-                # Likely Linux OS, fall back to last modified.
-                file_created = stat.st_mtime
-        file_created_str = (
-            datetime.fromtimestamp(file_created)
-            .astimezone(timezone.utc)
-            .isoformat(timespec="seconds")
-            .replace("+00:00", "Z")
-        )
-        file_modified_str = (
-            datetime.fromtimestamp(file_modified)
-            .astimezone(timezone.utc)
-            .isoformat(timespec="seconds")
-            .replace("+00:00", "Z")
+        file_size, file_created, file_modified = self._get_local_file_metadata(
+            file_path
         )
         # Create request url for the upload session
         if parent_folder_id:
@@ -1096,8 +1075,8 @@ class OneDrive:
                 "@microsoft.graph.conflictBehavior": conflict_behavior,
                 "name": destination_file_name,
                 "fileSystemInfo": {
-                    "createdDateTime": file_created_str,
-                    "lastModifiedDateTime": file_modified_str,
+                    "createdDateTime": file_created,
+                    "lastModifiedDateTime": file_modified,
                 },
             }
         }
@@ -1211,3 +1190,56 @@ class OneDrive:
         response_data = response.json()
         item_id = response_data["id"]
         return item_id
+
+    def _get_local_file_metadata(
+        self, file_path: Union[str, Path]
+    ) -> Tuple[int, str, str]:
+        """Retreives local file metadata (size, dates).
+        Note results differ based on platform, with creation date not available on Linux.
+        Positional arguments:
+            file_path (str|Path) -- path of the local source file to upload
+        Returns:
+            file_size (str) -- file size in bytes (B)
+            creation_date (str) -- UTC ISO format file creation timestamp
+            modified_date (str) -- UTC ISO format file last modified timestamp
+        """
+        # Validate file_path type and that the file exists
+        if not isinstance(file_path, str) and not isinstance(file_path, Path):
+            raise TypeError(
+                f"file_path expected 'str' or 'Path', got {type(file_path).__name__!r}"
+            )
+        if not os.path.isfile(file_path):
+            raise ValueError(
+                f"file_path expected a path to an existing file, got '{file_path!s}'"
+            )
+        # Get the file size
+        file_size = os.path.getsize(file_path)
+        # Get the file modified time
+        file_modified = os.path.getmtime(file_path)
+        # Get the file creation time (platform specific)
+        if os.name == "nt":
+            # Windows OS
+            file_created = os.path.getctime(file_path)
+        else:
+            # Other OS
+            stat = os.stat(file_path)
+            try:
+                # Likely Mac OS
+                file_created = stat.st_birthtime
+            except AttributeError:
+                # Likely Linux OS, fall back to last modified.
+                file_created = stat.st_mtime
+        # Convert the seconds to UTC ISO timestamps
+        file_created_str = (
+            datetime.fromtimestamp(file_created)
+            .astimezone(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
+        )
+        file_modified_str = (
+            datetime.fromtimestamp(file_modified)
+            .astimezone(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
+        )
+        return file_size, file_created_str, file_modified_str
