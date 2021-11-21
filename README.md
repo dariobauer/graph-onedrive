@@ -1,4 +1,4 @@
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/dariobauer/graph-onedrive/main.svg)](https://results.pre-commit.ci/latest/github/dariobauer/graph-onedrive/main) [![PyPI version](https://badge.fury.io/py/graph-onedrive.svg)](https://pypi.org/project/graph-onedrive/)
+[![Tests](https://github.com/dariobauer/graph-onedrive/actions/workflows/tests.yml/badge.svg)](https://github.com/dariobauer/graph-onedrive/actions/workflows/tests.yml) [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/dariobauer/graph-onedrive/main.svg)](https://results.pre-commit.ci/latest/github/dariobauer/graph-onedrive/main) ![PyPI version](https://img.shields.io/pypi/v/graph-onedrive)(https://pypi.org/project/graph-onedrive/) ![Supported Python versions](https://img.shields.io/pypi/pyversions/graph-onedrive)
 
 # Graph-OneDrive
 
