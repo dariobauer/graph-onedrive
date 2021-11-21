@@ -412,6 +412,12 @@ class TestItemDetails:
     def test_detail_item_failure(self):
         ...
 
+    # detail_item_path
+    def test_detail_item_path(self, onedrive):
+        item_path = "Contoso Electronics/Contoso Electronics Sales Presentation.pptx"
+        item_details = onedrive.detail_item_path(item_path)
+        assert item_details.get("name") == "Contoso Electronics Sales Presentation.pptx"
+
     # item_type
     @pytest.mark.parametrize(
         "item_id, exp_type",

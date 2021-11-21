@@ -309,8 +309,11 @@ def instance(
                 onedrive.list_directory(folder_id, verbose=True)
 
             elif command in ["de", "detail"]:
-                item_id = input("Item id to detail: ").strip()
-                onedrive.detail_item(item_id, verbose=True)
+                item_id = input("Item id or root path starting with /: ").strip()
+                if item_id[0] == "/":
+                    onedrive.detail_item_path(item_id, verbose=True)
+                else:
+                    onedrive.detail_item(item_id, verbose=True)
 
             elif command in ["sl", "link"]:
                 item_id = input("Item id to create a link for: ").strip()

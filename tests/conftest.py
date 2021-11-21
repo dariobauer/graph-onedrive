@@ -31,7 +31,9 @@ TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 # Read mocked response content
 with open(os.path.join(TESTS_DIR, "mock_responses.json")) as file:
     MOCKED_RESPONSE_DATA = json.load(file)
-MOCKED_ITEMS = MOCKED_RESPONSE_DATA["list-root"]["value"]
+MOCKED_ITEMS_ROOT = MOCKED_RESPONSE_DATA["list-root"]["value"]
+MOCKED_ITEMS_DIR = MOCKED_RESPONSE_DATA["list-directory"]["value"]
+MOCKED_ITEMS_ALL = MOCKED_ITEMS_ROOT + MOCKED_ITEMS_DIR
 
 
 @pytest.fixture(scope="module")
@@ -131,6 +133,13 @@ def mock_graph_api():
             name="detail_item",
         ).mock(side_effect=side_effect_detail_item)
 
+        # Detail item from path
+        detail_item_path_route = respx_mock.get(
+            path__regex=r"me/drive/root:/[0-9a-zA-Z/-_.%+ ]+",
+            headers=headers,
+            name="detail_item_path",
+        ).mock(side_effect=side_effect_detail_item_path)
+
         # Drive details
         drive_details_route = respx_mock.get(
             path="me/drive/", headers=headers, name="drive_details"
@@ -145,11 +154,27 @@ def side_effect_detail_item(request):
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Check if the item id provided corresponds to an item in the mocked items list (root only)
     matching_item_list = [
-        item for item in MOCKED_ITEMS if item.get("id") == item_id_match.group(1)
+        item for item in MOCKED_ITEMS_ROOT if item.get("id") == item_id_match.group(1)
     ]
     if not matching_item_list:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     return httpx.Response(200, json=matching_item_list[0])
+
+
+def side_effect_detail_item_path(request):
+    path_match = re.search("root:/([0-9a-zA-Z/-_.%+ ]+)", request.url.path)
+    if not path_match:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    # Check items for a matching path
+    path_request = "/drive/root:/" + path_match.group(1)
+    for item in MOCKED_ITEMS_ALL:
+        item_path = item.get("parentReference", {}).get("path") + "/" + item.get("name")
+        if item_path == path_request:
+            matching_item = item
+            break
+    else:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    return httpx.Response(200, json=matching_item)
 
 
 def side_effect_drive_details(request):
@@ -166,7 +191,7 @@ def side_effect_list_dir(request):
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Check if the item id provided corresponds to an item in the mocked items list (root only)
     matching_item_list = [
-        item for item in MOCKED_ITEMS if (item.get("id") == item_id_match.group(1))
+        item for item in MOCKED_ITEMS_ROOT if (item.get("id") == item_id_match.group(1))
     ]
     if not matching_item_list:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
@@ -196,9 +221,8 @@ def side_effect_make_folder(request):
     if conflict_behaviour not in ("fail", "replace", "rename"):
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Load mocked items from file and loop through them
-    mocked_items = MOCKED_ITEMS
     parent_id_valid = False
-    for item in mocked_items:
+    for item in MOCKED_ITEMS_ALL:
         # Check new folder does not conflict
         if (
             "folder" in item
@@ -241,7 +265,9 @@ def side_effect_sharing_link(request):
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     password = body.get("password")
     expiration = body.get("expirationDateTime")
-    matching_item_list = [item for item in MOCKED_ITEMS if item.get("id") == item_id]
+    matching_item_list = [
+        item for item in MOCKED_ITEMS_ROOT if item.get("id") == item_id
+    ]
     if not matching_item_list:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     response_json = {"link": {"webUrl": "https://onedrive.com/fakelink"}}
@@ -255,7 +281,7 @@ def side_effect_patch_item(request):
     item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
     if item_id_re:
         matching_item_list = [
-            item for item in MOCKED_ITEMS if item.get("id") == item_id_re.group(1)
+            item for item in MOCKED_ITEMS_ROOT if item.get("id") == item_id_re.group(1)
         ]
         if not matching_item_list:
             return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
@@ -270,7 +296,7 @@ def side_effect_patch_item(request):
     if new_folder_id:
         if not [
             item
-            for item in MOCKED_ITEMS
+            for item in MOCKED_ITEMS_ROOT
             if item.get("id") == new_folder_id and "folder" in item
         ]:
             return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
@@ -287,7 +313,7 @@ def side_effect_copy_item(request):
     if item_id_re:
         item_id = item_id_re.group(1)
         matching_item_list = [
-            item for item in MOCKED_ITEMS if item.get("id") == item_id
+            item for item in MOCKED_ITEMS_ROOT if item.get("id") == item_id
         ]
     else:
         matching_item_list = []
@@ -302,7 +328,7 @@ def side_effect_copy_item(request):
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     if not [
         item
-        for item in MOCKED_ITEMS
+        for item in MOCKED_ITEMS_ROOT
         if item.get("id") == new_folder_id and "folder" in item
     ]:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
@@ -325,7 +351,7 @@ def side_effect_delete_item(request):
     # Check item exists
     item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
     if not item_id_re or not [
-        item for item in MOCKED_ITEMS if item.get("id") == item_id_re.group(1)
+        item for item in MOCKED_ITEMS_ROOT if item.get("id") == item_id_re.group(1)
     ]:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     return httpx.Response(204)
@@ -338,7 +364,7 @@ def side_effect_upload_session(request):
         item_id = parent_id_re.group(1)
         matching_item_list = [
             item
-            for item in MOCKED_ITEMS
+            for item in MOCKED_ITEMS_ROOT
             if item.get("id") == item_id and "folder" in item
         ]
         if not matching_item_list:
