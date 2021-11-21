@@ -323,22 +323,30 @@ class OneDrive:
         else:
             request_url = self._API_URL + "me/drive/root/children"
         # Make the Graph API request
-        response = httpx.get(request_url, headers=self._headers)
-        # Validate request response and parse
-        if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
+        items_list = []
+        while True:
+            response = httpx.get(request_url, headers=self._headers)
+            # Validate request response and parse
+            if response.status_code != 200:
+                if response.headers["content-type"] == "application/json":
+                    error_message = response.json().get("error", {}).get("message")
+                else:
+                    error_message = "no error message returned"
+                raise GraphAPIError(f"directory could not be listed ({error_message})")
+            response_data = response.json()
+            # Add the items to the item list
+            items_list += response_data.get("value", {})
+            # Break if these is no next link, else set the request link
+            if response_data.get("@odata.nextLink") is None:
+                break
             else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"directory could not be listed ({error_message})")
-        items = response.json()
-        items = items.get("value", {})
+                request_url = response_data["@odata.nextLink"]
         # Print the items in the directory along with their item ids
         if verbose:
-            for entries in range(len(items)):
-                print(items[entries]["id"], items[entries]["name"])
+            for item in items_list:
+                print(item["id"], item["name"])
         # Return the items dictionary
-        return items
+        return items_list
 
     @token_required
     def detail_item(self, item_id: str, verbose: bool = False) -> Dict[str, Any]:
@@ -367,43 +375,83 @@ class OneDrive:
         response_data = response.json()
         # Print the item details
         if verbose:
-            print("item id:", response_data.get("id"))
-            print("name:", response_data.get("name"))
-            if "folder" in response_data:
-                print("type:", "folder")
-            elif "file" in response_data:
-                print("type:", "file")
-            print(
-                "created:",
-                response_data.get("createdDateTime"),
-                "by:",
-                response_data.get("createdBy", {}).get("user", {}).get("displayName"),
-            )
-            print(
-                "last modified:",
-                response_data.get("lastModifiedDateTime"),
-                "by:",
-                response_data.get("lastModifiedBy", {})
-                .get("user", {})
-                .get("displayName"),
-            )
-            print("size:", response_data.get("size"))
-            print("web url:", response_data.get("webUrl"))
-            file_system_info = response_data.get("fileSystemInfo", {})
-            print("file system created:", file_system_info.get("createdDateTime"))
-            print(
-                "file system last modified:",
-                file_system_info.get("lastModifiedDateTime"),
-            )
-            if "file" in response_data.keys():
-                hashes = response_data["file"].get("hashes")
-                if isinstance(hashes, dict):
-                    for key, value in hashes.items():
-                        print(f"file {key.replace('Hash', '')} hash:", value)
-            if "folder" in response_data.keys():
-                print("child count:", response_data["folder"].get("childCount"))
+            self._print_item_details(response_data)
         # Return the item details
         return response_data
+
+    @token_required
+    def detail_item_path(self, item_path: str, verbose: bool = False) -> Dict[str, Any]:
+        """Retrieves the metadata for an item from a web path.
+        Positional arguments:
+            item_path (str) -- web path of the drive folder or file
+        Keyword arguments:
+            verbose (bool) -- print the main parts of the item metadata (default = False)
+        Returns:
+            item_details (dict) -- metadata of the requested item
+        """
+        # Validate item id
+        if not isinstance(item_path, str):
+            raise TypeError(
+                f"item_path expected 'str', got {type(item_path).__name__!r}"
+            )
+        # Create request url based on input item id
+        if item_path[0] != "/":
+            item_path = "/" + item_path
+        request_url = self._API_URL + "me/drive/root:" + item_path
+        # Make the Graph API request
+        response = httpx.get(request_url, headers=self._headers)
+        # Validate request response and parse
+        if response.status_code != 200:
+            if response.headers["content-type"] == "application/json":
+                error_message = response.json().get("error", {}).get("message")
+            else:
+                error_message = "no error message returned"
+            raise GraphAPIError(f"item could not be detailed ({error_message})")
+        response_data = response.json()
+        # Print the item details
+        if verbose:
+            self._print_item_details(response_data)
+        # Return the item details
+        return response_data
+
+    def _print_item_details(self, item_details: Dict[str, Any]) -> None:
+        """INTERNAL: Prints the details of an item.
+        Positional arguments:
+            item_details (dict) -- item details in a dictionary format, typically from detail_item method
+        """
+        print("item id:", item_details.get("id"))
+        print("name:", item_details.get("name"))
+        if "folder" in item_details:
+            print("type:", "folder")
+        elif "file" in item_details:
+            print("type:", "file")
+        print(
+            "created:",
+            item_details.get("createdDateTime"),
+            "by:",
+            item_details.get("createdBy", {}).get("user", {}).get("displayName"),
+        )
+        print(
+            "last modified:",
+            item_details.get("lastModifiedDateTime"),
+            "by:",
+            item_details.get("lastModifiedBy", {}).get("user", {}).get("displayName"),
+        )
+        print("size:", item_details.get("size"))
+        print("web url:", item_details.get("webUrl"))
+        file_system_info = item_details.get("fileSystemInfo", {})
+        print("file system created:", file_system_info.get("createdDateTime"))
+        print(
+            "file system last modified:",
+            file_system_info.get("lastModifiedDateTime"),
+        )
+        if "file" in item_details.keys():
+            hashes = item_details["file"].get("hashes")
+            if isinstance(hashes, dict):
+                for key, value in hashes.items():
+                    print(f"file {key.replace('Hash', '')} hash:", value)
+        if "folder" in item_details.keys():
+            print("child count:", item_details["folder"].get("childCount"))
 
     def item_type(self, item_id: str) -> str:
         """Returns the item type in str format.

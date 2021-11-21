@@ -8,6 +8,8 @@
 * Imporved developer experience by adding tests, testing automation (tox, GitHub Actions), requirements files, pre-commit improvements
 * Input type checks added and error messaging improved
 * Fixed bug in sharing links part of the CLI
+* Listing a directory now gets all items, even if there are over 200
+* New method detail_item_path details an item by providing a drive path instead of id
 
 
 ## Released

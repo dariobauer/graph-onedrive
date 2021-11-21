@@ -366,7 +366,7 @@ Returns:
 
 #### detail_item
 
-Retrieves the metadata for an item.
+Retrieves the metadata for an item by id.
 
 ```python
 item_details = my_instance.detail_item(item_id, verbose=False)
@@ -375,6 +375,26 @@ item_details = my_instance.detail_item(item_id, verbose=False)
 Positional arguments:
 
 * item_id (str) -- item id of the folder or file
+
+Keyword arguments:
+
+* verbose (bool) -- print the main parts of the item metadata (default = False)
+
+Returns:
+
+* items (dict) -- metadata of the requested item
+
+#### detail_item_path
+
+Retrieves the metadata for an item by path.
+
+```python
+item_details = my_instance.detail_item_path(item_path, verbose=False)
+```
+
+Positional arguments:
+
+* item_path (str) -- drive root path to the folder or file (e.g. "/pictures/Holiday 01.jpg")
 
 Keyword arguments:
 
