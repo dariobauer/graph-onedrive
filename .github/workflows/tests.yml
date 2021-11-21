@@ -6,12 +6,12 @@ name: Tests
 on:
   pull_request:
     branches:
-    - $default-branch
+    - main
     paths-ignore:
     - 'docs/**'
   push:
     branches:
-    - $default-branch
+    - main
 
 jobs:
   test:
