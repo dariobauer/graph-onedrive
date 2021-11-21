@@ -323,6 +323,7 @@ def instance(
                     and input("Set password [y/N]: ").strip().lower() == "y"
                 ):
                     password = input("Password: ").strip()
+                expiration = None
                 if input("Set expiry [y/N]: ").strip().lower() == "y":
                     while True:
                         date = input("Set expiry date in format YYYY-MM-DD: ").strip()
@@ -343,8 +344,8 @@ def instance(
                 scope = "anonymous"
                 if onedrive._drive_type == "business":
                     if (
-                        input("Limit to your organization [y/N]: ").strip().lower()
-                        == "y"
+                        input("Limit to your organization [Y/n]: ").strip().lower()
+                        != "n"
                     ):
                         scope = "organization"
                 response = onedrive.create_share_link(
@@ -412,7 +413,7 @@ def instance(
                 if onedrive.is_folder(item_id):
                     print("Item id is a folder. Folders cannot be downloaded.")
                     continue
-                print("Downloading...")
+                print("Downloading")
                 response = onedrive.download_file(item_id, verbose=True)
                 print(
                     f"Item was downloaded in the current working directory as {response}"

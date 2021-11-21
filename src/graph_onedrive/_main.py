@@ -27,6 +27,23 @@ def create(
     Returns:
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
+    # Check types
+    if not isinstance(client_id, str):
+        raise TypeError(f"client_id expected 'str', got {type(client_id).__name__!r}")
+    if not isinstance(client_secret, str):
+        raise TypeError(
+            f"client_secret expected 'str', got {type(client_secret).__name__!r}"
+        )
+    if not isinstance(tenant, str):
+        raise TypeError(f"tenant expected 'str', got {type(tenant).__name__!r}")
+    if not isinstance(redirect_url, str):
+        raise TypeError(
+            f"redirect_url expected 'str', got {type(redirect_url).__name__!r}"
+        )
+    if refresh_token and not isinstance(refresh_token, str):
+        raise TypeError(
+            f"refresh_token expected 'str', got {type(refresh_token).__name__!r}"
+        )
 
     # Return the OneDrive object instance
     return OneDrive(
@@ -49,20 +66,27 @@ def create_from_config_file(
     Returns:
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
+    # Check types
+    if not isinstance(config_path, str) and not isinstance(config_path, Path):
+        raise TypeError(
+            f"config_path expected 'str' or 'Path', got {type(config_path).__name__!r}"
+        )
+    if not isinstance(config_key, str):
+        raise TypeError(f"config_key expected 'str', got {type(config_key).__name__!r}")
 
     # Read configuration from config file
-    print("Reading OneDrive configs...")
+    print("Reading OneDrive configs")
     config_path = Path(config_path)
     with open(config_path) as config_file:
         config = json.load(config_file)
     if config_key not in config:
-        raise Exception(f"Config Error : Config dict key '{config_key}' incorrect")
+        raise KeyError(f"Config Error : Config dict key '{config_key}' incorrect")
     try:
         tenant_id = config[config_key]["tenant_id"]
         client_id = config[config_key]["client_id"]
         client_secret = config[config_key]["client_secret_value"]
     except KeyError:
-        raise Exception("Config Error : Config not in acceptable format")
+        raise KeyError("Config Error : Config not in acceptable format")
     try:
         redirect_url = config[config_key]["redirect_url"]
     except KeyError:
@@ -82,7 +106,7 @@ def create_from_config_file(
     )
 
     # Get refresh token from instance and update config file
-    print("Saving refresh token...")
+    print("Saving refresh token")
     with open(config_path) as config_file:
         config = json.load(config_file)
     config[config_key]["refresh_token"] = onedrive_instance.refresh_token
@@ -105,6 +129,18 @@ def save_to_config_file(
     Keyword arguments:
         config_key (str) -- key of the json item storing the configuration (default = "onedrive")
     """
+    # Check types
+    if not isinstance(onedrive_instance, OneDrive):
+        raise TypeError(
+            f"onedrive_instance expected 'OneDrive', got {type(onedrive_instance).__name__!r}"
+        )
+    if not isinstance(config_path, str) and not isinstance(config_path, Path):
+        raise TypeError(
+            f"config_path expected 'str' or 'Path', got {type(config_path).__name__!r}"
+        )
+    if not isinstance(config_key, str):
+        raise TypeError(f"config_key expected 'str', got {type(config_key).__name__!r}")
+
     # Read the existing configuration from the file if one exists
     try:
         with open(config_path) as config_file:

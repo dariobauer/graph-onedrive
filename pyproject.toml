@@ -4,3 +4,54 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.coverage.run]
+plugins = ["covdefaults",]
+source = ["graph_onedrive"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests",]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+disallow_subclassing_any = true
+no_implicit_optional = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "testing.*",
+    "tests.*",
+    "docs.*"
+]
+disallow_untyped_defs = false
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist =
+    py{37,38,39,310}
+    style-and-typing
+skip_missing_interpreters = true
+
+[testenv]
+setenv =
+    PYTHONPATH = {toxinidir}
+deps = -r{toxinidir}/requirements-dev.txt
+commands =
+    coverage erase
+    coverage run -m pytest {posargs:tests}
+    coverage report --fail-under 50
+
+[testenv:style-and-typing]
+skip_install = true
+deps = pre-commit
+commands = pre-commit run --all-files
+"""

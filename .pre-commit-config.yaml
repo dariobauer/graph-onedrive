@@ -33,11 +33,17 @@ repos:
     hooks:
       - id: check-added-large-files
       - id: check-ast
+      - id: check-case-conflict
       - id: check-docstring-first
       - id: check-yaml
       - id: check-json
       - id: check-merge-conflict
+      - id: check-toml
+      - id: debug-statements
+      - id: detect-private-key
       - id: name-tests-test
+      - id: pretty-format-json
+        args: ["--autofix", "--no-sort-keys"]
       - id: requirements-txt-fixer
       - id: trailing-whitespace
       - id: fix-byte-order-marker
@@ -46,4 +52,4 @@ repos:
     rev: v0.910-1
     hooks:
       - id: mypy
-        additional_dependencies: [types-all]
+        additional_dependencies: [types-aiofiles]
