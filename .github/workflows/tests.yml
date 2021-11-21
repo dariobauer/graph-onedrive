@@ -4,12 +4,14 @@
 name: Tests
 
 on:
-  - pull_request:
-      branches: [ $default-branch ]
-      paths-ignore:
-      - 'docs/**'
-  - push:
-      branches: [ $default-branch ]
+  pull_request:
+    branches:
+    - $default-branch
+    paths-ignore:
+    - 'docs/**'
+  push:
+    branches:
+    - $default-branch
 
 jobs:
   test:
