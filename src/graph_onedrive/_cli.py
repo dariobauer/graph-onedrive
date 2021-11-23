@@ -13,6 +13,11 @@ import graph_onedrive._main as graph_onedrive
 from graph_onedrive.__init__ import __version__
 
 
+CONFIG_EXT = ".json"
+CONFIG_DEF_FILE = "config" + CONFIG_EXT
+CONFIG_DEF_KEY = "onedrive"
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Command line interface tools for the Python package Graph OneDrive.
     Use command --help for details.
@@ -67,8 +72,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if not (args.configure or args.authenticate or args.instance):
         parser.error("No action provided, use --help for details")
 
-    if args.file and not args.file.endswith(".json"):
-        parser.error("--file path must end in a json file")
+    if args.file and not args.file.endswith(CONFIG_EXT):
+        parser.error(f"--file path must have {CONFIG_EXT} extension")
 
     if args.key and args.key == "":
         parser.error("--key provided can not be blank")
@@ -91,28 +96,29 @@ def config(config_path: Optional[str] = None, config_key: Optional[str] = None) 
     # Set the export directory
     if not config_path:
         if (
-            input("Save config.json in current working directory [Y/n]: ")
+            input(f"Save {CONFIG_DEF_FILE} in current working directory [Y/n]: ")
             .strip()
             .lower()
             == "n"
         ):
             config_path = input("Path to save config (including file name): ").strip()
-            if not config_path.endswith(".json"):
-                config_path = config_path + ".json"
         else:
-            config_path = os.path.join(os.getcwd(), "config.json")
+            config_path = os.path.join(os.getcwd(), CONFIG_DEF_FILE)
+
+    if not config_path.endswith(CONFIG_EXT):
+        config_path += CONFIG_EXT
 
     # Set config dictionary key
     if not config_key:
         if (
-            input("Use config dictionary key default 'onedrive' [Y/n]: ")
+            input(f"Use config dictionary key default '{CONFIG_DEF_KEY}' [Y/n]: ")
             .strip()
             .lower()
             == "n"
         ):
             config_key = input("Config dictionary key to use: ").strip()
         else:
-            config_key = "onedrive"
+            config_key = CONFIG_DEF_KEY
 
     # Load the current file if it exists, otherwise create dictionary
     if os.path.isfile(config_path):
@@ -186,7 +192,7 @@ def get_config_file(
         count = 0
         for root, dirs, files in os.walk(cwd_path):
             for file_name in files:
-                if file_name.endswith(".json"):
+                if file_name.endswith(CONFIG_EXT):
                     if (
                         input(f"Found: {file_name} Use this? [Y/n]: ").strip().lower()
                         != "n"
@@ -204,8 +210,8 @@ def get_config_file(
         if not config_path:
             while True:
                 config_path = input("Path to config file: ").strip()
-                if not config_path.endswith(".json"):
-                    config_path = config_path + ".json"
+                if not config_path.endswith(CONFIG_EXT):
+                    config_path = config_path + CONFIG_EXT
                 if os.path.isfile(config_path):
                     break
                 print("Path could not be validated, please try again.")
@@ -216,7 +222,7 @@ def get_config_file(
 
     # Check the config key
     if not config_key:
-        config_key = "onedrive"
+        config_key = CONFIG_DEF_KEY
         if config_key in config:
             if (
                 input("Config dictionary key 'onedrive' found. Use this key? [Y/n]: ")
@@ -443,7 +449,7 @@ def instance(
                 )
                 print(f"New file item id: {item_id}")
 
-            elif command in ["od", "onedrive", "drive"]:
+            elif command in ["od", CONFIG_DEF_KEY, "drive"]:
                 print("Drive id:    ", onedrive._drive_id)
                 print("Drive name:  ", onedrive._drive_name)
                 print("Drive type:  ", onedrive._drive_type)

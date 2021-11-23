@@ -104,6 +104,75 @@ class TestDunders:
         )
 
 
+class TestResponseChecks:
+    """Tests the _raise_unexpected_response method."""
+
+    @pytest.mark.parametrize(
+        "resp_code, check_code, message, has_json",
+        [
+            (200, 200, "", False),
+            (400, [302, 400], "123", False),
+            (500, ["blah", 500], "just a string", True),
+        ],
+    )
+    def test_raise_unexpected_response(
+        self, onedrive, resp_code, check_code, message, has_json
+    ):
+        response = httpx.Response(status_code=resp_code, json={"content": "nothing"})
+        onedrive._raise_unexpected_response(
+            response, check_code, message, has_json=has_json
+        )
+        assert True
+
+    @pytest.mark.parametrize(
+        "resp_code, resp_json, check_code, message, has_json, exp_msg",
+        [
+            (
+                200,
+                {"no": "content"},
+                201,
+                "just a test",
+                False,
+                "just a test (no error message returned)",
+            ),
+            (
+                204,
+                None,
+                204,
+                "test 123",
+                True,
+                "test 123 (response did not contain json)",
+            ),
+            (
+                400,
+                {"error": {"message": "Invalid request"}},
+                204,
+                "could not delete link",
+                True,
+                "could not delete link (Invalid request)",
+            ),
+            (
+                500,
+                {"error_description": "Unauthorized"},
+                201,
+                "could not get headers",
+                True,
+                "could not get headers (Unauthorized)",
+            ),
+        ],
+    )
+    def test_raise_unexpected_response_failure(
+        self, onedrive, resp_code, check_code, message, resp_json, has_json, exp_msg
+    ):
+        response = httpx.Response(status_code=resp_code, json=resp_json)
+        with pytest.raises(GraphAPIError) as excinfo:
+            onedrive._raise_unexpected_response(
+                response, check_code, message, has_json=has_json
+            )
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+
 class TestGetTokens:
     """Tests the _get_token method."""
 
