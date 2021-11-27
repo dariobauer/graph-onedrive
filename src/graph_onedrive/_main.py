@@ -1,12 +1,33 @@
-"""Graph-OneDrive main functions to create instances of the OneDrive class and save the calss configs.
-Funtions: create, create_from_config_file, save_to_config_file.
+"""OneDrive instance constructor classes.
 """
-import json
+from __future__ import annotations
+
+import warnings
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional
-from typing import Union
+from typing import Generator
 
 from graph_onedrive._onedrive import OneDrive
+
+
+@contextmanager
+def OneDriveManager(
+    file_path: str | Path, config_key: str = "onedrive"
+) -> Generator[OneDrive, None, None]:
+    """Context manager for the OneDrive class, only use this if you want to save and read from a file.
+    Positional arguments:
+        file_path (str|Path) -- path to configuration json file
+    Keyword arguments:
+        config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+    Returns:
+        onedrive_instance (OneDrive) -- OneDrive object instance
+    """
+    onedrive_instance = OneDrive.from_json(file_path, config_key)
+    yield onedrive_instance
+    onedrive_instance.to_json(file_path, config_key)
+
+
+# The following functions are depreciated and will be removed completely in a future release.
 
 
 def create(
@@ -14,9 +35,10 @@ def create(
     client_secret: str,
     tenant: str = "common",
     redirect_url: str = "http://localhost:8080",
-    refresh_token: Optional[str] = None,
+    refresh_token: str | None = None,
 ) -> OneDrive:
-    """Create an instance of the OneDrive class from arguments.
+    """DEPRECIATED: use OneDrive() instead.
+    Create an instance of the OneDrive class from arguments.
     Positional arguments:
         client_id (str) -- Azure app client id
         client_secret (str) -- Azure app client secret
@@ -27,24 +49,12 @@ def create(
     Returns:
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
-    # Check types
-    if not isinstance(client_id, str):
-        raise TypeError(f"client_id expected 'str', got {type(client_id).__name__!r}")
-    if not isinstance(client_secret, str):
-        raise TypeError(
-            f"client_secret expected 'str', got {type(client_secret).__name__!r}"
-        )
-    if not isinstance(tenant, str):
-        raise TypeError(f"tenant expected 'str', got {type(tenant).__name__!r}")
-    if not isinstance(redirect_url, str):
-        raise TypeError(
-            f"redirect_url expected 'str', got {type(redirect_url).__name__!r}"
-        )
-    if refresh_token and not isinstance(refresh_token, str):
-        raise TypeError(
-            f"refresh_token expected 'str', got {type(refresh_token).__name__!r}"
-        )
-
+    # Warn to use class directly
+    warnings.warn(
+        "create() depreciated, use OneDrive()",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
     # Return the OneDrive object instance
     return OneDrive(
         client_id=client_id,
@@ -56,9 +66,10 @@ def create(
 
 
 def create_from_config_file(
-    config_path: Union[str, Path], config_key: str = "onedrive"
+    config_path: str | Path, config_key: str = "onedrive"
 ) -> OneDrive:
-    """Create an instance of the OneDrive class from a config file.
+    """DEPRECIATED: use OneDrive.from_json() instead.
+    Create an instance of the OneDrive class from a config file.
     Positional arguments:
         config_path (str|Path) -- path to configuration json file
     Keyword arguments:
@@ -66,63 +77,23 @@ def create_from_config_file(
     Returns:
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
-    # Check types
-    if not isinstance(config_path, str) and not isinstance(config_path, Path):
-        raise TypeError(
-            f"config_path expected 'str' or 'Path', got {type(config_path).__name__!r}"
-        )
-    if not isinstance(config_key, str):
-        raise TypeError(f"config_key expected 'str', got {type(config_key).__name__!r}")
-
-    # Read configuration from config file
-    print("Reading OneDrive configs")
-    config_path = Path(config_path)
-    with open(config_path) as config_file:
-        config = json.load(config_file)
-    if config_key not in config:
-        raise KeyError(f"Config Error : Config dict key '{config_key}' incorrect")
-    try:
-        tenant_id = config[config_key]["tenant_id"]
-        client_id = config[config_key]["client_id"]
-        client_secret = config[config_key]["client_secret_value"]
-    except KeyError:
-        raise KeyError("Config Error : Config not in acceptable format")
-    try:
-        redirect_url = config[config_key]["redirect_url"]
-    except KeyError:
-        redirect_url = "http://localhost:8080"
-    try:
-        refresh_token = config[config_key]["refresh_token"]
-    except KeyError:
-        refresh_token = None
-
-    # Create OneDrive object instance
-    onedrive_instance = create(
-        client_id=client_id,
-        client_secret=client_secret,
-        tenant=tenant_id,
-        redirect_url=redirect_url,
-        refresh_token=refresh_token,
+    # Warn to use class directly
+    warnings.warn(
+        "create_from_config_file() depreciated, use OneDrive.from_json()",
+        category=DeprecationWarning,
+        stacklevel=2,
     )
-
-    # Get refresh token from instance and update config file
-    print("Saving refresh token")
-    with open(config_path) as config_file:
-        config = json.load(config_file)
-    config[config_key]["refresh_token"] = onedrive_instance.refresh_token
-    with open(config_path, "w") as config_file:
-        json.dump(config, config_file, indent=4)
-
     # Return the OneDrive instance
-    return onedrive_instance
+    return OneDrive.from_json(config_path, config_key)
 
 
 def save_to_config_file(
     onedrive_instance: OneDrive,
-    config_path: Union[str, Path],
+    config_path: str | Path,
     config_key: str = "onedrive",
 ) -> None:
-    """Save the configuration to a json config file.
+    """DEPRECIATED: use OneDrive.to_json() instead.
+    Save the configuration to a json config file.
     Positional arguments:
         onedrive_instance (OneDrive) -- instance with the config to save
         config_path (str|Path) -- path to configuration json file
@@ -134,33 +105,14 @@ def save_to_config_file(
         raise TypeError(
             f"onedrive_instance expected 'OneDrive', got {type(onedrive_instance).__name__!r}"
         )
-    if not isinstance(config_path, str) and not isinstance(config_path, Path):
-        raise TypeError(
-            f"config_path expected 'str' or 'Path', got {type(config_path).__name__!r}"
-        )
-    if not isinstance(config_key, str):
-        raise TypeError(f"config_key expected 'str', got {type(config_key).__name__!r}")
-
-    # Read the existing configuration from the file if one exists
-    try:
-        with open(config_path) as config_file:
-            config = json.load(config_file)
-    except FileNotFoundError:
-        config = {}
-
-    if config_key not in config:
-        config[config_key] = {}
-
-    # Set the new configuation
-    config[config_key]["tenant_id"] = onedrive_instance._tenant_id
-    config[config_key]["client_id"] = onedrive_instance._client_id
-    config[config_key]["client_secret_value"] = onedrive_instance._client_secret
-    config[config_key]["redirect_url"] = onedrive_instance._redirect
-    config[config_key]["refresh_token"] = onedrive_instance.refresh_token
-
-    # Save the configuration to config file
-    with open(config_path, "w") as config_file:
-        json.dump(config, config_file, indent=4)
+    # Warn to use class directly
+    warnings.warn(
+        "save_to_config_file() depreciated, use OneDrive.to_json()",
+        category=DeprecationWarning,
+        stacklevel=2,
+    )
+    # Save to json
+    onedrive_instance.to_json(config_path, config_key)
 
     # Nothing returned which signals no errors
     return

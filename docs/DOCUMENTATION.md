@@ -166,28 +166,49 @@ Graph-OneDrive is an object-orientated package that uses an OneDrive class allow
 
 To create an instance, you need to provide the configuration.
 
-#### a) Using a config file (recommended)
+#### a) Using a config file and the context manager (recommended)
 
+The context manager is reccommend as it will save the configuration back to file inclusing the tokens.
 Refer above section on configuration to learn about config files.
 
 ```python
+from graph_onedrive import OneDriveManager
+
 config_path = "config.json"  # path to config file
 config_key = "onedrive"  # cofig file dictionary key (default = "onedrive")
-my_instance = graph_onedrive.create_from_config_file(config_path, config_key)
+with OneDriveManager(config_path, config_key) as onedrive:
+    pass  # do stuff
 ```
 
-#### b) Using in-line configuration parameters
+#### b) Using a config file
+
+Useful if wanting to use a config file but don't want to save the tokens back to file.
+Refer above section on configuration to learn about config files.
+
+```python
+from graph_onedrive import OneDrive
+
+config_path = "config.json"  # path to config file
+config_key = "onedrive"  # cofig file dictionary key (default = "onedrive")
+my_instance = OneDrive.from_json(config_path, config_key)
+# do stuff
+my_instance.to_json(config_path, config_key)  # optionally resave the config
+```
+
+#### c) Using in-line configuration parameters
 
 This solution is slightly easier but could be a security issue, especially if sharing code.
 
 ```python
+from graph_onedrive import OneDrive
+
 client_id = ""
 client_secret_value = ""
 tenant = ""
 redirect_url = "http://localhost:8080"
-my_instance = graph_onedrive.create(
-    client_id, client_secret_value, tenant, redirect_url
-)
+my_instance = OneDrive(client_id, client_secret_value, tenant, redirect_url)
+# do stuff
+my_instance.to_json(config_path, config_key)  # optionally resave the config
 ```
 
 ### Authenticating the instance
@@ -221,10 +242,11 @@ WARNING: Saving the refresh token presents a security risk as it could be used b
 
 ##### a) Saving to a config file
 
-If using a configuration file then you can have the helper functions save the refresh token to your configuration. Simply add the following call after your last API request.
+If using a configuration file then it is suggested that you use the `OneDriveManager` context manager which will save the refresh token to your configuration.
+Alternatively you can manually save to a file (suggested after your last API request to ensure the latest tokens are used).
 
 ```python
-graph_onedrive.save_to_config_file(my_instance, config_path, config_key="onedrive")
+my_instance.to_json(config_path="config.json", config_key="onedrive")
 ```
 
 Then when creating the instance again using your config file, the refresh token will be used.
@@ -245,16 +267,39 @@ Then when creating an instance later, provide the refresh token:
 my_instance = graph_onedrive.create(..., refresh_token=refresh_token)
 ```
 
-### Module functions
+### Context manager
 
-Module functions are called from the `graph_onedrive` package.
+#### OneDriveManager
 
-#### create
+Create an instance of the OneDrive class using a context manager (generator).
+Uses from_json() on entry and to_json() on exit.
+
+```python
+with graph_onedrive.OneDriveManager(
+    config_path="config.json", config_key="onedrive"
+) as onedrive:
+    pass
+```
+
+Keyword arguments:
+
+* config_path (str|Path) -- path to configuration json file (default = "config.json")
+* config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+
+Yields:
+
+* onedrive_instance (OneDrive) -- OneDrive object instance
+
+### Class methods
+
+Module class constructors and deconstructors.
+
+#### OneDrive()
 
 Create an instance of the OneDrive class for arguments, and assist in creating and saving OneDrive class objects.
 
 ```python
-onedrive_instance = graph_onedrive.create(
+onedrive_instance = graph_onedrive.OneDrive(
     client_id,
     client_secret,
     tenant="common",
@@ -278,45 +323,36 @@ Returns:
 
 * onedrive_instance (OneDrive) -- OneDrive object instance
 
-#### create_from_config_file
+#### from_json
 
-Create an instance of the OneDrive class from a config file.
+Create an instance of the OneDrive class from a configuration json file.
 
 ```python
-onedrive_instance = graph_onedrive.create_from_config_file(
-    config_path, config_key="onedrive"
+onedrive_instance = graph_onedrive.OneDrive.from_json(
+    config_path="config.json", config_key="onedrive"
 )
 ```
 
-Positional arguments:
-
-* config_path (str|Path) -- path to configuration json file
-
 Keyword arguments:
 
+* config_path (str|Path) -- path to configuration json file (default = "config.json")
 * config_key (str) -- key of the json item storing the configuration (default = "onedrive")
 
 Returns:
 
 * onedrive_instance (OneDrive) -- OneDrive object instance
 
-#### save_to_config_file
+#### to_json
 
-Save the configuration to a json config file.
+Save the configuration to a json configuration file.
 
 ```python
-graph_onedrive.save_to_config_file(
-    onedrive_instance, config_path, config_key="onedrive"
-)
+onedrive_instance.to_json(config_path="config.json", config_key="onedrive")
 ```
-
-Positional arguments:
-
-* onedrive_instance (OneDrive) -- instance with the config to save
-* config_path (str|Path) -- path to configuration json file
 
 Keyword arguments:
 
+* config_path (str|Path) -- path to configuration json file (default = "config.json")
 * config_key (str) -- key of the json item storing the configuration (default = "onedrive")
 
 Returns:

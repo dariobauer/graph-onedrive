@@ -1,6 +1,9 @@
 """Contains the OneDrive object class to interact through the Graph API using the Python package Graph-OneDrive.
 """
+from __future__ import annotations
+
 import asyncio
+import json
 import os
 import re
 import secrets
@@ -15,11 +18,6 @@ from json.decoder import JSONDecodeError
 from pathlib import Path
 from time import sleep
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 import aiofiles
 import httpx
@@ -44,6 +42,10 @@ class OneDrive:
         refresh_token (str) -- optional token from previous session (default = None)
     Attributes:
         refresh_token (str) -- single-use token to supply when recreating the instance to skip authorization
+    Constructor methods:
+        from_dict           -- create an instance from a dictionary
+        from_json           -- create an instance from a json file
+        to_json             -- export an instance configuration to a json file
     Methods:
         get_usage           -- account current usage and total capacity
         list_directory      -- lists all of the items and their attributes within a directory
@@ -74,7 +76,7 @@ class OneDrive:
         client_secret: str,
         tenant: str = "common",
         redirect_url: str = "http://localhost:8080",
-        refresh_token: Optional[str] = None,
+        refresh_token: str | None = None,
     ) -> None:
         # Set private attributes after checking types
         if not isinstance(client_id, str):
@@ -119,10 +121,127 @@ class OneDrive:
     def __repr__(self) -> str:
         return f"<OneDrive {self._drive_type} {self._drive_name} {self._owner_name}>"
 
+    @classmethod
+    def from_dict(cls, config: dict[str, Any]) -> OneDrive:
+        """Create an instance of the OneDrive class from a dictionary.
+        Keyword arguments:
+            config (dict) -- dictionary containing at minimum tenant_id, client_id, client_secret_value
+        Returns:
+            onedrive_instance (OneDrive) -- OneDrive object instance
+        """
+        # Check config contents
+        try:
+            tenant_id = config["tenant_id"]
+        except KeyError:
+            raise KeyError("expected tenant_id in first level of dictionary")
+        try:
+            client_id = config["client_id"]
+        except KeyError:
+            raise KeyError("expected client_id in first level of dictionary")
+        try:
+            client_secret = config["client_secret_value"]
+        except KeyError:
+            raise KeyError("expected client_secret_value in first level of dictionary")
+        try:
+            redirect_url = config["redirect_url"]
+        except KeyError:
+            redirect_url = "http://localhost:8080"
+        try:
+            refresh_token = config["refresh_token"]
+        except KeyError:
+            refresh_token = None
+        # Create OneDrive object instance
+        return cls(
+            client_id=client_id,
+            client_secret=client_secret,
+            tenant=tenant_id,
+            redirect_url=redirect_url,
+            refresh_token=refresh_token,
+        )
+
+    @classmethod
+    def from_json(
+        cls, file_path: str | Path = "config.json", config_key: str = "onedrive"
+    ) -> OneDrive:
+        """Create an instance of the OneDrive class from a config json file.
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration json file (default = "config.json")
+            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+        Returns:
+            onedrive_instance (OneDrive) -- OneDrive object instance
+        """
+        # Check types
+        if not isinstance(file_path, str) and not isinstance(file_path, Path):
+            raise TypeError(
+                f"config_path expected 'str' or 'Path', got {type(file_path).__name__!r}"
+            )
+        if not isinstance(config_key, str):
+            raise TypeError(
+                f"config_key expected 'str', got {type(config_key).__name__!r}"
+            )
+        # Read configuration from config file
+        print("Reading OneDrive configs")
+        config_path = Path(file_path)
+        with open(config_path) as config_file:
+            config = json.load(config_file)
+        if config_key not in config:
+            raise KeyError(
+                f"config_key '{config_key}' not found in '{config_path.name}'"
+            )
+        # Create the instance
+        onedrive_instance = cls.from_dict(config[config_key])
+        # Get refresh token from instance and update config file
+        print("Saving refresh token")
+        with open(config_path) as config_file:
+            config = json.load(config_file)
+        config[config_key]["refresh_token"] = onedrive_instance.refresh_token
+        with open(config_path, "w") as config_file:
+            json.dump(config, config_file, indent=4)
+        # Return the OneDrive instance
+        return onedrive_instance
+
+    def to_json(
+        self, file_path: str | Path = "config.json", config_key: str = "onedrive"
+    ) -> None:
+        """Save the configuration to a json config file.
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration json file (default = "config.json")
+            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+        """
+        # Check types
+        if not isinstance(file_path, str) and not isinstance(file_path, Path):
+            raise TypeError(
+                f"file_path expected 'str' or 'Path', got {type(file_path).__name__!r}"
+            )
+        if not isinstance(config_key, str):
+            raise TypeError(
+                f"config_key expected 'str', got {type(config_key).__name__!r}"
+            )
+        # Read the existing configuration from the file if one exists
+        try:
+            with open(file_path) as config_file:
+                config = json.load(config_file)
+        except FileNotFoundError:
+            config = {}
+        # Create the config key
+        if config_key not in config:
+            config[config_key] = {}
+        # Set the new configuation
+        config[config_key]["tenant_id"] = self._tenant_id
+        config[config_key]["client_id"] = self._client_id
+        config[config_key]["client_secret_value"] = self._client_secret
+        config[config_key]["redirect_url"] = self._redirect
+        config[config_key]["refresh_token"] = self.refresh_token
+        # Save the configuration to config file
+        with open(file_path, "w") as config_file:
+            json.dump(config, config_file, indent=4)
+        # Nothing returned which signals no errors
+        return
+
     def _raise_unexpected_response(
         self,
         response: httpx.Response,
-        expected: Union[int, List[int]] = 200,
+        expected: int | list[int] = 200,
         message: str = "could not complete request",
         has_json: bool = False,
     ) -> None:
@@ -135,7 +254,7 @@ class OneDrive:
             has_json (bool) -- check the response has json (default = False)
         """
         # Ensure expected is a list
-        expected = expected if isinstance(expected, List) else [expected]
+        expected = expected if isinstance(expected, list) else [expected]
         # Check the status code
         if response.status_code not in expected:
             # Try get the api error message and raise an exception
@@ -291,7 +410,7 @@ class OneDrive:
     @token_required
     def get_usage(
         self, unit: str = "gb", refresh: bool = False, verbose: bool = False
-    ) -> Tuple[float, float, str]:
+    ) -> tuple[float, float, str]:
         """Get the current usage and capacity of the connected OneDrive.
         Keyword arguments:
             unit (str) -- unit to return value ["b", "kb", "mb", "gb"] (default = "gb")
@@ -336,8 +455,8 @@ class OneDrive:
 
     @token_required
     def list_directory(
-        self, folder_id: Optional[str] = None, verbose: bool = False
-    ) -> List[Dict[Any, Any]]:
+        self, folder_id: str | None = None, verbose: bool = False
+    ) -> list[dict[Any, Any]]:
         """List the files and folders within the input folder/root of the connected OneDrive.
         Keyword arguments:
             folder_id (str) -- the item id of the folder to look into, None being the root directory (default = None)
@@ -378,7 +497,7 @@ class OneDrive:
         return items_list
 
     @token_required
-    def detail_item(self, item_id: str, verbose: bool = False) -> Dict[str, Any]:
+    def detail_item(self, item_id: str, verbose: bool = False) -> dict[str, Any]:
         """Retrieves the metadata for an item.
         Positional arguments:
             item_id (str) -- item id of the folder or file
@@ -406,7 +525,7 @@ class OneDrive:
         return response_data
 
     @token_required
-    def detail_item_path(self, item_path: str, verbose: bool = False) -> Dict[str, Any]:
+    def detail_item_path(self, item_path: str, verbose: bool = False) -> dict[str, Any]:
         """Retrieves the metadata for an item from a web path.
         Positional arguments:
             item_path (str) -- web path of the drive folder or file
@@ -437,7 +556,7 @@ class OneDrive:
         # Return the item details
         return response_data
 
-    def _print_item_details(self, item_details: Dict[str, Any]) -> None:
+    def _print_item_details(self, item_details: dict[str, Any]) -> None:
         """INTERNAL: Prints the details of an item.
         Positional arguments:
             item_details (dict) -- item details in a dictionary format, typically from detail_item method
@@ -520,8 +639,8 @@ class OneDrive:
         self,
         item_id: str,
         link_type: str = "view",
-        password: Optional[str] = None,
-        expiration: Optional[datetime] = None,
+        password: str | None = None,
+        expiration: datetime | None = None,
         scope: str = "anonymous",
     ) -> str:
         """Creates a basic sharing link for an item.
@@ -614,7 +733,7 @@ class OneDrive:
     def make_folder(
         self,
         folder_name: str,
-        parent_folder_id: Optional[str] = None,
+        parent_folder_id: str | None = None,
         check_existing: bool = True,
         if_exists: str = "rename",
     ) -> str:
@@ -676,8 +795,8 @@ class OneDrive:
 
     @token_required
     def move_item(
-        self, item_id: str, new_folder_id: str, new_name: Optional[str] = None
-    ) -> Tuple[str, str]:
+        self, item_id: str, new_folder_id: str, new_name: str | None = None
+    ) -> tuple[str, str]:
         """Moves an item (folder/file) within the connected OneDrive. Optionally rename an item at the same time.
         Positional arguments:
             item_id (str) -- item id of the folder or file to move
@@ -702,7 +821,7 @@ class OneDrive:
         # Create request url based on input item id that should be moved
         request_url = self._api_drive_url + "items/" + item_id
         # Create the request body
-        body: Dict[str, Any] = {"parentReference": {"id": new_folder_id}}
+        body: dict[str, Any] = {"parentReference": {"id": new_folder_id}}
         if new_name:
             body["name"] = new_name
         # Make the Graph API request
@@ -720,10 +839,10 @@ class OneDrive:
         self,
         item_id: str,
         new_folder_id: str,
-        new_name: Optional[str] = None,
+        new_name: str | None = None,
         confirm_complete: bool = True,
         verbose: bool = False,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """Copies an item (folder/file) within the connected OneDrive server-side.
         Positional arguments:
             item_id (str) -- item id of the folder or file to copy
@@ -749,7 +868,7 @@ class OneDrive:
         # Create request url based on input item id that should be moved
         request_url = self._api_drive_url + "items/" + item_id + "/copy"
         # Create the request body
-        body: Dict[str, Any] = {
+        body: dict[str, Any] = {
             "parentReference": {"driveId": self._drive_id, "id": new_folder_id}
         }
         if new_name:
@@ -1042,9 +1161,9 @@ class OneDrive:
     @token_required
     def upload_file(
         self,
-        file_path: Union[str, Path],
-        new_file_name: Optional[str] = None,
-        parent_folder_id: Optional[str] = None,
+        file_path: str | Path,
+        new_file_name: str | None = None,
+        parent_folder_id: str | None = None,
         if_exists: str = "rename",
         verbose: bool = False,
     ) -> str:
@@ -1194,12 +1313,11 @@ class OneDrive:
                         content=content,
                     )
         except KeyboardInterrupt:
-            # Upload cancelled, send delete request, re-raise exception
             httpx.delete(upload_url)
             if verbose:
                 print("Upload cancelled by user.")
             raise
-        except GraphAPIError:
+        except Exception:
             httpx.delete(upload_url)
             raise
         finally:
@@ -1216,9 +1334,7 @@ class OneDrive:
         item_id = response_data["id"]
         return item_id
 
-    def _get_local_file_metadata(
-        self, file_path: Union[str, Path]
-    ) -> Tuple[int, str, str]:
+    def _get_local_file_metadata(self, file_path: str | Path) -> tuple[int, str, str]:
         """Retreives local file metadata (size, dates).
         Note results differ based on platform, with creation date not available on Linux.
         Positional arguments:

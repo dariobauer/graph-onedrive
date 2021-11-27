@@ -1,4 +1,4 @@
-import graph_onedrive
+from graph_onedrive import OneDrive
 
 
 def main() -> None:
@@ -12,14 +12,13 @@ def main() -> None:
     refresh_token = None  # Optional: from last session
 
     # Create session instance
-    my_drive = graph_onedrive.create(
-        client_id, client_secret, tenant, redirect_url, refresh_token
-    )
+    my_drive = OneDrive(client_id, client_secret, tenant, redirect_url, refresh_token)
 
     # Complete tasks using the instance. For this example we will just display the usage
     my_drive.get_usage(verbose=True)
 
     # OPTIONAL: Get refresh token that can be saved somewhere to recreate session
+    # Suggested you use a configuration file and the context manager
     refresh_token = my_drive.refresh_token
 
 

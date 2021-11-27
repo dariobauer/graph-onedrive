@@ -1,6 +1,6 @@
 from os import path
 
-import graph_onedrive
+from graph_onedrive import OneDrive
 
 
 def main() -> None:
@@ -15,13 +15,14 @@ def main() -> None:
     config_key = "onedrive"
 
     # Create session instance
-    my_drive = graph_onedrive.create_from_config_file(config_path, config_key)
+    my_drive = OneDrive.from_json(config_path, config_key)
 
     # Complete tasks using the instance. For this example we will just display the usage
     my_drive.get_usage(verbose=True)
 
     # OPTIONAL: save back to the config file to retain the refresh token which can be used to bypass authentication.
-    graph_onedrive.save_to_config_file(my_drive, config_path, config_key)
+    # If you are doing this then it is reccommended that you use the context manager instead.
+    my_drive.to_json(config_path, config_key)
 
 
 if __name__ == "__main__":
