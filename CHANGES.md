@@ -14,6 +14,7 @@
 * `create` depreciated, use the OneDrive class directly
 * `create_from_config_file`, use `OneDrive.from_json` or the `OneDriveManager` context manager
 * `save_to_config_file`, use `OneDrive.to_json` or the `OneDriveManager` context manager
+* Added basic logging
 * Docs, examples, and tests updated to reflect above changes
 
 

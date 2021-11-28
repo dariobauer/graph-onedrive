@@ -1,5 +1,6 @@
 """Decorators to wrap Graph-OneDrive package methods and functions.
 """
+import logging
 from datetime import datetime
 from functools import wraps
 from typing import no_type_check
@@ -18,9 +19,12 @@ def token_required(func):
         now = datetime.timestamp(datetime.now())
         # Refresh access token if expires does not exist or has expired
         if expires <= now:
+            logging.info(
+                "access token expired, redeeming refresh token for new access token"
+            )
             onedrive_instance._get_token()
             onedrive_instance._create_headers()
-        # Fucnction that is wrapped runs here
+        # Function that is wrapped runs here
         wrapped_func = func(*args, **kwargs)
         # After run do nothing
         # Return the wrapped function

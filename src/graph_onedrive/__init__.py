@@ -1,3 +1,8 @@
-__version__ = "0.1.1dev1"
+__version__ = "0.1.1dev2"
+
+import logging
 
 from graph_onedrive._main import *
+
+# Set default logging handler to avoid "No handler found" warnings
+logging.getLogger(__name__).addHandler(logging.NullHandler())

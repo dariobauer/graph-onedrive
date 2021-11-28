@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import secrets
@@ -22,6 +23,7 @@ from typing import Any
 import aiofiles
 import httpx
 
+from graph_onedrive.__init__ import __version__
 from graph_onedrive._decorators import token_required
 
 
@@ -117,6 +119,9 @@ class OneDrive:
         self._create_headers()
         # Set additional attributes from the server
         self._get_drive_details()
+        logging.debug(
+            f"Graph-OneDrive version={__version__}, client_id={client_id}, tenant={tenant}"
+        )
 
     def __repr__(self) -> str:
         return f"<OneDrive {self._drive_type} {self._drive_name} {self._owner_name}>"
@@ -184,7 +189,7 @@ class OneDrive:
                 f"config_key expected 'str', got {type(config_key).__name__!r}"
             )
         # Read configuration from config file
-        print("Reading OneDrive configs")
+        logging.info("reading OneDrive configuration")
         config_path = Path(file_path)
         with open(config_path) as config_file:
             config = json.load(config_file)
@@ -196,7 +201,7 @@ class OneDrive:
         onedrive_instance = cls.from_dict(config[config_key])
         # Get refresh token from instance and update config file
         if save_refresh_token:
-            print("Saving refresh token")
+            logging.info("saving refresh token")
             with open(config_path) as config_file:
                 config = json.load(config_file)
             config[config_key]["refresh_token"] = onedrive_instance.refresh_token
@@ -225,6 +230,7 @@ class OneDrive:
         # Read the existing configuration from the file if one exists
         try:
             with open(file_path) as config_file:
+                logging.debug(f"attempting to load exiting config '{config_file}'")
                 config = json.load(config_file)
         except FileNotFoundError:
             config = {}
@@ -241,6 +247,7 @@ class OneDrive:
         with open(file_path, "w") as config_file:
             json.dump(config, config_file, indent=4)
         # Nothing returned which signals no errors
+        logging.info(f"saved config to '{file_path}' with key '{config_key}'")
 
     def _raise_unexpected_response(
         self,
@@ -270,13 +277,16 @@ class OneDrive:
                     graph_error = api_error
                 elif auth_error:
                     graph_error = auth_error
+            logging.error(f"{message} ({graph_error})")
             raise GraphAPIError(f"{message} ({graph_error})")
         # Check response has json
         if has_json:
             try:
                 response.json()
             except JSONDecodeError:
-                raise GraphAPIError(f"{message} (response did not contain json)")
+                graph_error = "response did not contain json"
+                logging.error(f"{message} ({graph_error})")
+                raise GraphAPIError(f"{message} ({graph_error})")
 
     def _get_token(self) -> None:
         """INTERNAL: Get access and refresh tokens from the Graph API.
@@ -303,8 +313,10 @@ class OneDrive:
         # Set the header and encode the query
         headers = {"content-type": "application/x-www-form-urlencoded"}
         query_encoded = urllib.parse.urlencode(query, encoding="utf-8")
+        logging.debug(f"token request query={query_encoded}")
 
         # Make the request
+        logging.info(f"requesting access and refresh tokens from {request_url}")
         response = httpx.post(request_url, headers=headers, content=query_encoded)
 
         # Check and parse the response
@@ -315,20 +327,24 @@ class OneDrive:
 
         # Set the access and refresh tokens to the instance attributes
         if not response_data.get("access_token"):
+            logging.error("response did not return an access token")
             raise GraphAPIError("response did not return an access token")
         self._access_token = response_data["access_token"]
 
         if response_data.get("refresh_token"):
             self.refresh_token = response_data["refresh_token"]
         else:
+            warning_message = "token request did not return a refresh token, existing config not updated"
+            logging.warning(warning_message)
             warnings.warn(
-                "GraphAPIWarn: response did not return a refresh token, existing config not updated",
+                f"GraphAPIWarn: {warning_message}",
                 stacklevel=2,
             )
 
         # Set an expiry time, removing 60 seconds assumed for processing
         expires = response_data.get("expires_in", 660) - 60
         expires = datetime.now() + timedelta(seconds=expires)
+        logging.info(f"access token expires: {expires}")
         self._access_expires = datetime.timestamp(expires)
 
     def _get_authorization(self) -> str:
@@ -363,18 +379,24 @@ class OneDrive:
         return_state = re.search("[?|&]state=([^&]+)", response)
         if return_state:
             if return_state.group(1) != state:
-                raise GraphAPIError(
-                    "response 'state' not for this request, occurs when reusing an old authorization url"
-                )
+                error_message = "response 'state' not for this request, occurs when reusing an old authorization url"
+                logging.error(error_message)
+                raise GraphAPIError(error_message)
         else:
+            warning_message = (
+                "response 'state' was not in returned url, response not confirmed"
+            )
+            logging.warning(warning_message)
             warnings.warn(
-                "GraphAPIWarn: response 'state' was not in returned url, response not confirmed",
+                f"GraphAPIWarn: {warning_message}",
                 stacklevel=2,
             )
         # Extract the code from the response
         authorization_code_re = re.search("[?|&]code=([^&]+)", response)
         if authorization_code_re is None:
-            raise GraphAPIError("response did not contain an authorization code")
+            error_message = "response did not contain an authorization code"
+            logging.error(error_message)
+            raise GraphAPIError(error_message)
         authorization_code = authorization_code_re.group(1)
         # Return the authorization code to be used to get tokens
         return authorization_code
@@ -1010,8 +1032,10 @@ class OneDrive:
                 f"max_connections expected 'int', got {type(max_connections).__name__!r}"
             )
         if max_connections > 16:
+            warning_message = f"max_connections={max_connections} could result in throttling and enforced cool-down period, refer Docs"
+            logging.warning(warning_message)
             warnings.warn(
-                f"GraphAPIWarn: max_connections={max_connections} could result in throttling and enforced cool-down period, refer Docs",
+                f"GraphAPIWarn: {warning_message}",
                 stacklevel=2,
             )
         # Get item details
@@ -1024,6 +1048,7 @@ class OneDrive:
         # If the file is empty, just create it and return
         if size == 0:
             Path(file_name).touch()
+            logging.warning("downloaded file size=0, empty file created")
             warnings.warn(f"Empty file {file_name} created.")
             return file_name
         # Create request url based on input item id to be downloaded
@@ -1035,6 +1060,7 @@ class OneDrive:
         # Validate request response and parse
         self._raise_unexpected_response(response, 302, "could not get download url")
         download_url = response.headers["Location"]
+        logging.debug(f"download_url={download_url}")
         # Download the file asynchronously
         asyncio.run(
             self._download_async(
@@ -1087,6 +1113,9 @@ class OneDrive:
                 print(
                     f"File {file_name} ({pretty_size}mb) will be downloaded in {num_coroutines} segments."
                 )
+            logging.debug(
+                f"file_size={file_size}B, min_typ_chunk_size={min_typ_chunk_size}B, num_coroutines={num_coroutines}, typ_chunk_size={typ_chunk_size}"
+            )
             for i in range(num_coroutines):
                 # Get the file part Path, placed in the temp directory
                 part_file_path = Path(tmp_dir).joinpath(file_name + "." + str(i + 1))
@@ -1150,6 +1179,9 @@ class OneDrive:
                 print(
                     f"Starting download of file segment {part_name} (bytes {start}-{end})"
                 )
+            logging.debug(
+                f"starting download segment={part_name} start={start} end={end}"
+            )
             # Create an AsyncIterator over our GET request
             async with client.stream("GET", download_url, headers=headers) as response:
                 # Iterates over incoming bytes in chunks and saves them to file
@@ -1210,6 +1242,7 @@ class OneDrive:
         else:  # Other systems including Mac, Linux
             file_path = str(file_path).replace("\\", "")
         file_path = Path(file_path)
+        logging.debug(f"file_path={file_path}")
         # Set file name
         if new_file_name:
             destination_file_name = new_file_name
@@ -1232,6 +1265,7 @@ class OneDrive:
         request_url += (
             urllib.parse.quote(destination_file_name) + ":/createUploadSession"
         )
+        logging.debug(f"upload session request_url={request_url}")
         # Create request body for the upload session
         body = {
             "item": {
@@ -1243,6 +1277,7 @@ class OneDrive:
                 },
             }
         }
+        logging.debug(f"upload session body={body}")
         # Make the Graph API request for the upload session
         if verbose:
             print(f"Requesting upload session")
@@ -1252,15 +1287,22 @@ class OneDrive:
             response, 200, "upload session could not be created", has_json=True
         )
         upload_url = response.json()["uploadUrl"]
+        logging.debug(f"upload_url={upload_url}")
         # Determine the upload file chunk size
         chunk_size: int = (
             1024 * 320 * 16
         )  # = 5MiB. Docs: Must be multiple of 320KiB, recommend 5-10MiB, max 60MiB
         no_of_uploads: int = -(-file_size // chunk_size)
+        logging.debug(
+            f"chunk_size={chunk_size}B, file_size={file_size}, no_of_uploads={no_of_uploads}"
+        )
         if verbose and no_of_uploads > 1:
             print(
                 f"File {destination_file_name} will be uploaded in {no_of_uploads} segments"
             )
+        logging.info(
+            f"file {destination_file_name} will be uploaded in {no_of_uploads} segments"
+        )
         # Create an upload connection client
         timeout = httpx.Timeout(10.0, read=180.0, write=180.0)
         client = httpx.Client(timeout=timeout)
@@ -1269,6 +1311,7 @@ class OneDrive:
             # Open the file pointer
             if verbose:
                 print("Loading file")
+            logging.info(f"opening file '{file_path}'")
             data = open(file_path, "rb")
             # Start the upload in a loop for as long as there is data left to upload
             n = 0
@@ -1285,6 +1328,9 @@ class OneDrive:
                         print(
                             f"Uploading segment {n}/{no_of_uploads} (~{int((n-1)/no_of_uploads*100)}% complete)"
                         )
+                logging.debug(
+                    f"uploading file segment={n}, content_range_start={content_range_start}, content_range_end={content_range_end}"
+                )
                 # Upload chunks
                 if (file_size - data.tell()) > chunk_size:
                     # Typical chunk upload
@@ -1339,7 +1385,7 @@ class OneDrive:
         return item_id
 
     def _get_local_file_metadata(self, file_path: str | Path) -> tuple[int, str, str]:
-        """Retreives local file metadata (size, dates).
+        """Retrieves local file metadata (size, dates).
         Note results differ based on platform, with creation date not available on Linux.
         Positional arguments:
             file_path (str|Path) -- path of the local source file to upload
@@ -1386,5 +1432,8 @@ class OneDrive:
             .astimezone(timezone.utc)
             .isoformat(timespec="seconds")
             .replace("+00:00", "Z")
+        )
+        logging.debug(
+            f"platform={os.name}, file_created_str={file_created_str}, file_modified_str={file_modified_str}"
         )
         return file_size, file_created_str, file_modified_str
