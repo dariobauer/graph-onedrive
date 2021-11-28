@@ -252,7 +252,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
 
         # Create session
         onedrive = graph_onedrive.OneDrive.from_json(
-            config_path_verified, config_key_verified
+            config_path_verified, config_key_verified, True
         )
     else:
         print("Manual configuration entry:")

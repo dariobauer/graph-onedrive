@@ -329,7 +329,7 @@ Create an instance of the OneDrive class from a configuration json file.
 
 ```python
 onedrive_instance = graph_onedrive.OneDrive.from_json(
-    config_path="config.json", config_key="onedrive"
+    config_path="config.json", config_key="onedrive", save_refresh_token=False
 )
 ```
 
@@ -337,6 +337,7 @@ Keyword arguments:
 
 * config_path (str|Path) -- path to configuration json file (default = "config.json")
 * config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+* save_refresh_token (bool) -- save the refresh token back to the config file during instance initiation (default = False)
 
 Returns:
 

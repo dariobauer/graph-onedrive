@@ -161,12 +161,16 @@ class OneDrive:
 
     @classmethod
     def from_json(
-        cls, file_path: str | Path = "config.json", config_key: str = "onedrive"
+        cls,
+        file_path: str | Path = "config.json",
+        config_key: str = "onedrive",
+        save_refresh_token: bool = False,
     ) -> OneDrive:
         """Create an instance of the OneDrive class from a config json file.
         Keyword arguments:
             file_path (str|Path) -- path to configuration json file (default = "config.json")
             config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+            save_refresh_token (bool) -- save the refresh token back to the config file during instance initiation (default = False)
         Returns:
             onedrive_instance (OneDrive) -- OneDrive object instance
         """
@@ -191,12 +195,13 @@ class OneDrive:
         # Create the instance
         onedrive_instance = cls.from_dict(config[config_key])
         # Get refresh token from instance and update config file
-        print("Saving refresh token")
-        with open(config_path) as config_file:
-            config = json.load(config_file)
-        config[config_key]["refresh_token"] = onedrive_instance.refresh_token
-        with open(config_path, "w") as config_file:
-            json.dump(config, config_file, indent=4)
+        if save_refresh_token:
+            print("Saving refresh token")
+            with open(config_path) as config_file:
+                config = json.load(config_file)
+            config[config_key]["refresh_token"] = onedrive_instance.refresh_token
+            with open(config_path, "w") as config_file:
+                json.dump(config, config_file, indent=4)
         # Return the OneDrive instance
         return onedrive_instance
 

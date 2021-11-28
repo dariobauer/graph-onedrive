@@ -45,21 +45,23 @@ graph-onedrive --configure --authenticate -f "config.json" -k "onedrive"
 Save the following in a .py file in the same folder.
 
 ```python
-import graph_onedrive
+from graph_onedrive import OneDriveManager
 
 # Set config file details
-config_path = "config.json"
+config_file = "config.json"
 config_key = "onedrive"
 
-# Create session instance
-my_drive = graph_onedrive.create_from_config_file(config_path, config_key)
+# Use a context manager to manage the session
+with OneDriveManager(config_file, config_key) as my_drive:
 
-# Complete tasks using the instance. For example print the drive usage
-my_drive.get_usage(verbose=True)
+    # Print the OneDrive usage
+    my_drive.get_usage(verbose=True)
 
-# Save the config to retain the refresh token
-graph_onedrive.save_to_config_file(my_drive, config_path, config_key)
+    # Upload a file to the root directory
+    new_file_id = my_drive.upload_file("my-photo.jpg", verbose=True)
 ```
+
+*OneDriveManager is new in version 0.1.1. Refer docs for other instance constructors.*
 
 ## License and Terms of Use
 
