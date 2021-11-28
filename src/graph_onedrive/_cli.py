@@ -1,13 +1,13 @@
 """Command line interface tools for the Python package Graph-OneDrive.
 Run terminal command 'graph-onedrive --help' or 'python -m graph-onedrive --help' for details.
 """
+from __future__ import annotations
+
 import argparse
 import json
 import os
 from datetime import datetime
-from typing import Optional
 from typing import Sequence
-from typing import Tuple
 
 import graph_onedrive._main as graph_onedrive
 from graph_onedrive.__init__ import __version__
@@ -18,7 +18,7 @@ CONFIG_DEF_FILE = "config" + CONFIG_EXT
 CONFIG_DEF_KEY = "onedrive"
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Command line interface tools for the Python package Graph OneDrive.
     Use command --help for details.
     """
@@ -90,7 +90,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     return 0
 
 
-def config(config_path: Optional[str] = None, config_key: Optional[str] = None) -> None:
+def config(config_path: str | None = None, config_key: str | None = None) -> None:
     """Create a configuration file."""
 
     # Set the export directory
@@ -162,28 +162,22 @@ def config(config_path: Optional[str] = None, config_key: Optional[str] = None) 
     print(f"Configuration saved to: {config_path}")
 
 
-def authenticate(
-    config_path: Optional[str] = None, config_key: Optional[str] = None
-) -> None:
+def authenticate(config_path: str | None = None, config_key: str | None = None) -> None:
     """Authenticate with OneDrive and then save the configuration to file."""
     # Get the config file path
     config_path, config_key = get_config_file(config_path, config_key)
 
     # Create the instance
-    onedrive = graph_onedrive.create_from_config_file(
-        config_path=config_path, config_key=config_key
-    )
+    onedrive = graph_onedrive.OneDrive.from_json(config_path, config_key)
 
     # Save the config
-    graph_onedrive.save_to_config_file(
-        onedrive_instance=onedrive, config_path=config_path, config_key=config_key
-    )
+    onedrive.to_json(config_path, config_key)
     print(f"Refresh token saved to configuration: {config_path}")
 
 
 def get_config_file(
-    config_path: Optional[str] = None, config_key: Optional[str] = None
-) -> Tuple[str, str]:
+    config_path: str | None = None, config_key: str | None = None
+) -> tuple[str, str]:
     """Sets a config path and key by searching the cwd with assistance from from user."""
 
     if not config_path:
@@ -238,9 +232,7 @@ def get_config_file(
     return config_path, config_key
 
 
-def instance(
-    config_path: Optional[str] = None, config_key: Optional[str] = None
-) -> None:
+def instance(config_path: str | None = None, config_key: str | None = None) -> None:
     """Interact directly with OneDrive in the command line to perform simple tasks and test the configuration."""
 
     # Check with user if using config file
@@ -259,8 +251,8 @@ def instance(
         )
 
         # Create session
-        onedrive = graph_onedrive.create_from_config_file(
-            config_path=config_path_verified, config_key=config_key_verified
+        onedrive = graph_onedrive.OneDrive.from_json(
+            config_path_verified, config_key_verified
         )
     else:
         print("Manual configuration entry:")
@@ -270,7 +262,7 @@ def instance(
         if tenant == "":
             tenant = "common"
         refresh_token = input("refresh_token (leave blank to reauthenticate): ").strip()
-        onedrive = graph_onedrive.create(
+        onedrive = graph_onedrive.OneDrive(
             client_id, client_secret, tenant, refresh_token
         )
 
@@ -304,7 +296,7 @@ def instance(
                 onedrive.get_usage(verbose=True)
 
             elif command in ["li", "list"]:
-                folder_id: Optional[str] = input(
+                folder_id: str | None = input(
                     "Folder id to look into (enter nothing for root): "
                 ).strip()
                 if folder_id == "":
@@ -363,7 +355,7 @@ def instance(
                 print(response)
 
             elif command in ["md", "mkdir"]:
-                parent_folder_id: Optional[str] = input(
+                parent_folder_id: str | None = input(
                     "Parent folder id (enter nothing for root): "
                 ).strip()
                 if parent_folder_id == "":
@@ -379,7 +371,7 @@ def instance(
                 item_id = input("Item id of the file/folder to move: ").strip()
                 new_folder_id = input("New parent folder id: ").strip()
                 if input("Specify a new file name? [y/N]: ").strip().lower() == "y":
-                    new_file_name: Optional[str] = input(
+                    new_file_name: str | None = input(
                         "New file name (with extension): "
                     ).strip()
                 else:
@@ -486,10 +478,9 @@ def instance(
 
     finally:
         if use_config_file:
-            graph_onedrive.save_to_config_file(
-                onedrive,
-                config_path=config_path_verified,
-                config_key=config_key_verified,
+            onedrive.to_json(
+                config_path_verified,
+                config_key_verified,
             )
 
 
