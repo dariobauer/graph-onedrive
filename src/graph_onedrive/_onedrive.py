@@ -230,7 +230,7 @@ class OneDrive:
         # Read the existing configuration from the file if one exists
         try:
             with open(file_path) as config_file:
-                logging.debug(f"attempting to load exiting config '{config_file}'")
+                logging.debug(f"attempting to load exiting config '{file_path}'")
                 config = json.load(config_file)
         except FileNotFoundError:
             config = {}
