@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 from datetime import datetime
 from typing import Sequence
@@ -65,6 +66,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=str,
         help="optional config file dictionary key",
     )
+    parser.add_argument(
+        "-l",
+        "--log",
+        action="count",
+        default=0,
+        help="displays logs (level=INFO), use -ll for level=DEBUG",
+    )
     # Parse arguments, using function input args when given for tests
     args = parser.parse_args(argv)
 
@@ -77,6 +85,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.key and args.key == "":
         parser.error("--key provided can not be blank")
+
+    # Configure logger
+    if args.log == 1:
+        logging.basicConfig(level=logging.INFO)
+    elif args.log == 2:
+        logging.basicConfig(level=logging.DEBUG)
 
     # Call action functions
     if args.configure:

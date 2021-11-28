@@ -109,12 +109,12 @@ class TestConstructors:
     """Tests the from_dict and from_json methods."""
 
     @pytest.mark.parametrize(
-        "redirect_url, refresh_token",
+        "redirect_url, refresh_token, save_back",
         [
-            (REDIRECT, REFRESH_TOKEN),
-            (False, REFRESH_TOKEN),
-            (REDIRECT, False),
-            (False, False),
+            (REDIRECT, REFRESH_TOKEN, False),
+            (False, REFRESH_TOKEN, True),
+            (REDIRECT, False, True),
+            (False, False, True),
         ],
     )
     @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
@@ -126,6 +126,7 @@ class TestConstructors:
         mock_auth_api,
         redirect_url,
         refresh_token,
+        save_back,
     ):
         # Make a temporary config file
         config_key = "onedrive"
@@ -150,7 +151,9 @@ class TestConstructors:
             input_url = REDIRECT + "?code=" + AUTH_CODE
             monkeypatch.setattr("builtins.input", lambda _: input_url)
         # Run the test
-        onedrive_instance = OneDrive.from_json(config_path, config_key)
+        onedrive_instance = OneDrive.from_json(
+            config_path, config_key, save_refresh_token=save_back
+        )
         assert isinstance(onedrive_instance, OneDrive)
 
     @pytest.mark.parametrize(
@@ -176,8 +179,18 @@ class TestConstructors:
             ),
             (
                 "onedrive",
-                {"tenant_id": "blah"},
+                {"tenant_id": "blah", "client_secret_value": "test"},
                 "expected client_id in first level of dictionary",
+            ),
+            (
+                "onedrive",
+                {"client_id": "blah", "client_secret_value": "test"},
+                "expected tenant_id in first level of dictionary",
+            ),
+            (
+                "onedrive",
+                {"client_id": "blah", "tenant_id": "blah"},
+                "expected client_secret_value in first level of dictionary",
             ),
         ],
     )
@@ -380,7 +393,7 @@ class TestGetTokens:
         assert len(record) == 1
         assert (
             str(record[0].message)
-            == "GraphAPIWarn: response did not return a refresh token, existing config not updated"
+            == "GraphAPIWarn: token request did not return a refresh token, existing config not updated"
         )
         # old refresh token should still be set
         assert temp_onedrive.refresh_token == REFRESH_TOKEN
