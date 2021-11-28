@@ -10,6 +10,11 @@
 * Fixed bug in sharing links part of the CLI
 * Listing a directory now gets all items, even if there are over 200
 * New method detail_item_path details an item by providing a drive path instead of id
+* New `OneDriveManager` conttext manager added
+* `create` depreciated, use the OneDrive class directly
+* `create_from_config_file`, use `OneDrive.from_json` or the `OneDriveManager` context manager
+* `save_to_config_file`, use `OneDrive.to_json` or the `OneDriveManager` context manager
+* Docs, examples, and tests updated to reflect above changes
 
 
 ## Released

@@ -1,6 +1,9 @@
 """Contains the OneDrive object class to interact through the Graph API using the Python package Graph-OneDrive.
 """
+from __future__ import annotations
+
 import asyncio
+import json
 import os
 import re
 import secrets
@@ -11,14 +14,10 @@ import warnings
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from json.decoder import JSONDecodeError
 from pathlib import Path
 from time import sleep
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 import aiofiles
 import httpx
@@ -43,10 +42,15 @@ class OneDrive:
         refresh_token (str) -- optional token from previous session (default = None)
     Attributes:
         refresh_token (str) -- single-use token to supply when recreating the instance to skip authorization
+    Constructor methods:
+        from_dict           -- create an instance from a dictionary
+        from_json           -- create an instance from a json file
+        to_json             -- export an instance configuration to a json file
     Methods:
         get_usage           -- account current usage and total capacity
         list_directory      -- lists all of the items and their attributes within a directory
-        detail_item         -- get item details
+        detail_item         -- get item details by item id
+        detail_item_path    -- get item details by drive path
         item_type           -- get item type, folder or file
         is_folder           -- check if an item is a folder
         is_file             -- check if an item is a file
@@ -72,7 +76,7 @@ class OneDrive:
         client_secret: str,
         tenant: str = "common",
         redirect_url: str = "http://localhost:8080",
-        refresh_token: Optional[str] = None,
+        refresh_token: str | None = None,
     ) -> None:
         # Set private attributes after checking types
         if not isinstance(client_id, str):
@@ -95,6 +99,8 @@ class OneDrive:
                 f"redirect_url expected 'str', got {type(redirect_url).__name__!r}"
             )
         self._redirect = redirect_url
+        self._drive_path = "me/drive/"
+        self._api_drive_url = self._API_URL + self._drive_path
         self._access_token = ""
         self._access_expires = 0.0
         # Set public attributes
@@ -114,6 +120,159 @@ class OneDrive:
 
     def __repr__(self) -> str:
         return f"<OneDrive {self._drive_type} {self._drive_name} {self._owner_name}>"
+
+    @classmethod
+    def from_dict(cls, config: dict[str, Any]) -> OneDrive:
+        """Create an instance of the OneDrive class from a dictionary.
+        Keyword arguments:
+            config (dict) -- dictionary containing at minimum tenant_id, client_id, client_secret_value
+        Returns:
+            onedrive_instance (OneDrive) -- OneDrive object instance
+        """
+        # Check config contents
+        try:
+            tenant_id = config["tenant_id"]
+        except KeyError:
+            raise KeyError("expected tenant_id in first level of dictionary")
+        try:
+            client_id = config["client_id"]
+        except KeyError:
+            raise KeyError("expected client_id in first level of dictionary")
+        try:
+            client_secret = config["client_secret_value"]
+        except KeyError:
+            raise KeyError("expected client_secret_value in first level of dictionary")
+        try:
+            redirect_url = config["redirect_url"]
+        except KeyError:
+            redirect_url = "http://localhost:8080"
+        try:
+            refresh_token = config["refresh_token"]
+        except KeyError:
+            refresh_token = None
+        # Create OneDrive object instance
+        return cls(
+            client_id=client_id,
+            client_secret=client_secret,
+            tenant=tenant_id,
+            redirect_url=redirect_url,
+            refresh_token=refresh_token,
+        )
+
+    @classmethod
+    def from_json(
+        cls, file_path: str | Path = "config.json", config_key: str = "onedrive"
+    ) -> OneDrive:
+        """Create an instance of the OneDrive class from a config json file.
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration json file (default = "config.json")
+            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+        Returns:
+            onedrive_instance (OneDrive) -- OneDrive object instance
+        """
+        # Check types
+        if not isinstance(file_path, str) and not isinstance(file_path, Path):
+            raise TypeError(
+                f"config_path expected 'str' or 'Path', got {type(file_path).__name__!r}"
+            )
+        if not isinstance(config_key, str):
+            raise TypeError(
+                f"config_key expected 'str', got {type(config_key).__name__!r}"
+            )
+        # Read configuration from config file
+        print("Reading OneDrive configs")
+        config_path = Path(file_path)
+        with open(config_path) as config_file:
+            config = json.load(config_file)
+        if config_key not in config:
+            raise KeyError(
+                f"config_key '{config_key}' not found in '{config_path.name}'"
+            )
+        # Create the instance
+        onedrive_instance = cls.from_dict(config[config_key])
+        # Get refresh token from instance and update config file
+        print("Saving refresh token")
+        with open(config_path) as config_file:
+            config = json.load(config_file)
+        config[config_key]["refresh_token"] = onedrive_instance.refresh_token
+        with open(config_path, "w") as config_file:
+            json.dump(config, config_file, indent=4)
+        # Return the OneDrive instance
+        return onedrive_instance
+
+    def to_json(
+        self, file_path: str | Path = "config.json", config_key: str = "onedrive"
+    ) -> None:
+        """Save the configuration to a json config file.
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration json file (default = "config.json")
+            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+        """
+        # Check types
+        if not isinstance(file_path, str) and not isinstance(file_path, Path):
+            raise TypeError(
+                f"file_path expected 'str' or 'Path', got {type(file_path).__name__!r}"
+            )
+        if not isinstance(config_key, str):
+            raise TypeError(
+                f"config_key expected 'str', got {type(config_key).__name__!r}"
+            )
+        # Read the existing configuration from the file if one exists
+        try:
+            with open(file_path) as config_file:
+                config = json.load(config_file)
+        except FileNotFoundError:
+            config = {}
+        # Create the config key
+        if config_key not in config:
+            config[config_key] = {}
+        # Set the new configuation
+        config[config_key]["tenant_id"] = self._tenant_id
+        config[config_key]["client_id"] = self._client_id
+        config[config_key]["client_secret_value"] = self._client_secret
+        config[config_key]["redirect_url"] = self._redirect
+        config[config_key]["refresh_token"] = self.refresh_token
+        # Save the configuration to config file
+        with open(file_path, "w") as config_file:
+            json.dump(config, config_file, indent=4)
+        # Nothing returned which signals no errors
+        return
+
+    def _raise_unexpected_response(
+        self,
+        response: httpx.Response,
+        expected: int | list[int] = 200,
+        message: str = "could not complete request",
+        has_json: bool = False,
+    ) -> None:
+        """INTERNAL: Checks a API HTTPX Response object status and raises an exception if not as expected.
+        Positional arguments:
+            response (Response) -- HTTPX response object
+        Keyword arguments:
+            expected (int|[int]) -- valid status checks expected (default = 200)
+            message (str) -- exception message to display (default = "could not complete request")
+            has_json (bool) -- check the response has json (default = False)
+        """
+        # Ensure expected is a list
+        expected = expected if isinstance(expected, list) else [expected]
+        # Check the status code
+        if response.status_code not in expected:
+            # Try get the api error message and raise an exception
+            graph_error = "no error message returned"
+            if response.headers.get("content-type") == "application/json":
+                api_error = response.json().get("error", {}).get("message")
+                auth_error = response.json().get("error_description")
+                if api_error:
+                    graph_error = api_error
+                elif auth_error:
+                    graph_error = auth_error
+            raise GraphAPIError(f"{message} ({graph_error})")
+        # Check response has json
+        if has_json:
+            try:
+                response.json()
+            except JSONDecodeError:
+                raise GraphAPIError(f"{message} (response did not contain json)")
 
     def _get_token(self) -> None:
         """INTERNAL: Get access and refresh tokens from the Graph API.
@@ -144,15 +303,10 @@ class OneDrive:
         # Make the request
         response = httpx.post(request_url, headers=headers, content=query_encoded)
 
-        # Check response was okay
-        if response.status_code != 200:
-            if response.headers.get("content-type") == "application/json":
-                error_message = response.json().get("error_description")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"could not get access token ({error_message})")
-
-        # Decode the response
+        # Check and parse the response
+        self._raise_unexpected_response(
+            response, 200, "could not get access token", has_json=True
+        )
         response_data = response.json()
 
         # Set the access and refresh tokens to the instance attributes
@@ -182,7 +336,7 @@ class OneDrive:
         """
         # Create state used for check
         alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # = string.ascii_letters + string.digits
-        state = "".join(secrets.choice(alphabet) for i in range(10))
+        state = "".join(secrets.choice(alphabet) for _ in range(10))
         # Generate request url
         request_url = self._auth_url + "authorize"
         request_url += "?client_id=" + self._client_id
@@ -234,14 +388,11 @@ class OneDrive:
     def _get_drive_details(self) -> None:
         """INTERNAL: Gets the drive details"""
         # Generate request url
-        request_url = self._API_URL + "me/drive/"
+        request_url = self._api_drive_url
         response = httpx.get(request_url, headers=self._headers)
-        if response.status_code != 200:
-            if response.headers.get("content-type") == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"could not get drive details ({error_message})")
+        self._raise_unexpected_response(
+            response, 200, "could not get drive details", has_json=True
+        )
         response_data = response.json()
         # Set drive details
         self._drive_id = response_data.get("id")
@@ -259,7 +410,7 @@ class OneDrive:
     @token_required
     def get_usage(
         self, unit: str = "gb", refresh: bool = False, verbose: bool = False
-    ) -> Tuple[float, float, str]:
+    ) -> tuple[float, float, str]:
         """Get the current usage and capacity of the connected OneDrive.
         Keyword arguments:
             unit (str) -- unit to return value ["b", "kb", "mb", "gb"] (default = "gb")
@@ -304,8 +455,8 @@ class OneDrive:
 
     @token_required
     def list_directory(
-        self, folder_id: Optional[str] = None, verbose: bool = False
-    ) -> List[Dict[Any, Any]]:
+        self, folder_id: str | None = None, verbose: bool = False
+    ) -> list[dict[Any, Any]]:
         """List the files and folders within the input folder/root of the connected OneDrive.
         Keyword arguments:
             folder_id (str) -- the item id of the folder to look into, None being the root directory (default = None)
@@ -319,20 +470,17 @@ class OneDrive:
                 raise TypeError(
                     f"folder_id expected 'str', got {type(folder_id).__name__!r}"
                 )
-            request_url = self._API_URL + "me/drive/items/" + folder_id + "/children"
+            request_url = self._api_drive_url + "items/" + folder_id + "/children"
         else:
-            request_url = self._API_URL + "me/drive/root/children"
+            request_url = self._api_drive_url + "root/children"
         # Make the Graph API request
         items_list = []
         while True:
             response = httpx.get(request_url, headers=self._headers)
             # Validate request response and parse
-            if response.status_code != 200:
-                if response.headers["content-type"] == "application/json":
-                    error_message = response.json().get("error", {}).get("message")
-                else:
-                    error_message = "no error message returned"
-                raise GraphAPIError(f"directory could not be listed ({error_message})")
+            self._raise_unexpected_response(
+                response, 200, "directory could not be listed", has_json=True
+            )
             response_data = response.json()
             # Add the items to the item list
             items_list += response_data.get("value", {})
@@ -349,7 +497,7 @@ class OneDrive:
         return items_list
 
     @token_required
-    def detail_item(self, item_id: str, verbose: bool = False) -> Dict[str, Any]:
+    def detail_item(self, item_id: str, verbose: bool = False) -> dict[str, Any]:
         """Retrieves the metadata for an item.
         Positional arguments:
             item_id (str) -- item id of the folder or file
@@ -362,16 +510,13 @@ class OneDrive:
         if not isinstance(item_id, str):
             raise TypeError(f"item_id expected 'str', got {type(item_id).__name__!r}")
         # Create request url based on input item id
-        request_url = self._API_URL + "me/drive/items/" + item_id
+        request_url = self._api_drive_url + "items/" + item_id
         # Make the Graph API request
         response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
-        if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"item could not be detailed ({error_message})")
+        self._raise_unexpected_response(
+            response, 200, "item could not be detailed", has_json=True
+        )
         response_data = response.json()
         # Print the item details
         if verbose:
@@ -380,7 +525,7 @@ class OneDrive:
         return response_data
 
     @token_required
-    def detail_item_path(self, item_path: str, verbose: bool = False) -> Dict[str, Any]:
+    def detail_item_path(self, item_path: str, verbose: bool = False) -> dict[str, Any]:
         """Retrieves the metadata for an item from a web path.
         Positional arguments:
             item_path (str) -- web path of the drive folder or file
@@ -397,16 +542,13 @@ class OneDrive:
         # Create request url based on input item id
         if item_path[0] != "/":
             item_path = "/" + item_path
-        request_url = self._API_URL + "me/drive/root:" + item_path
+        request_url = self._api_drive_url + "root:" + item_path
         # Make the Graph API request
         response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
-        if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"item could not be detailed ({error_message})")
+        self._raise_unexpected_response(
+            response, 200, "item could not be detailed", has_json=True
+        )
         response_data = response.json()
         # Print the item details
         if verbose:
@@ -414,7 +556,7 @@ class OneDrive:
         # Return the item details
         return response_data
 
-    def _print_item_details(self, item_details: Dict[str, Any]) -> None:
+    def _print_item_details(self, item_details: dict[str, Any]) -> None:
         """INTERNAL: Prints the details of an item.
         Positional arguments:
             item_details (dict) -- item details in a dictionary format, typically from detail_item method
@@ -497,8 +639,8 @@ class OneDrive:
         self,
         item_id: str,
         link_type: str = "view",
-        password: Optional[str] = None,
-        expiration: Optional[datetime] = None,
+        password: str | None = None,
+        expiration: datetime | None = None,
         scope: str = "anonymous",
     ) -> str:
         """Creates a basic sharing link for an item.
@@ -558,7 +700,7 @@ class OneDrive:
                 f"scope='organization' is not available for {self._drive_type} OneDrive accounts"
             )
         # Create the request url
-        request_url = self._API_URL + "me/drive/items/" + item_id + "/createLink"
+        request_url = self._api_drive_url + "items/" + item_id + "/createLink"
         # Create the body
         body = {"type": link_type, "scope": scope}
         # Add link password to body if it exists
@@ -575,12 +717,9 @@ class OneDrive:
         # Make the request
         response = httpx.post(request_url, headers=self._headers, json=body)
         # Verify and parse the response
-        if response.status_code != 201 and response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"share link could not be created ({error_message})")
+        self._raise_unexpected_response(
+            response, [200, 201], "share link could not be created", has_json=True
+        )
         response_data = response.json()
         # Extract the html iframe or link and return it
         if link_type == "embed":
@@ -594,7 +733,7 @@ class OneDrive:
     def make_folder(
         self,
         folder_name: str,
-        parent_folder_id: Optional[str] = None,
+        parent_folder_id: str | None = None,
         check_existing: bool = True,
         if_exists: str = "rename",
     ) -> str:
@@ -627,16 +766,16 @@ class OneDrive:
         # Create request url based on input parent folder
         if parent_folder_id:
             request_url = (
-                self._API_URL + "me/drive/items/" + parent_folder_id + "/children"
+                self._api_drive_url + "items/" + parent_folder_id + "/children"
             )
         else:
-            request_url = self._API_URL + "me/drive/root/children"
+            request_url = self._api_drive_url + "root/children"
         # Check if folder already exists
         if check_existing:
             items = self.list_directory(parent_folder_id)
-            for i, entry in enumerate(items):
-                if entry.get("name") == folder_name and "folder" in entry:
-                    return entry["id"]
+            for item in items:
+                if item.get("name") == folder_name and "folder" in item:
+                    return item["id"]
         # Create the request body
         body = {
             "name": folder_name,
@@ -646,12 +785,9 @@ class OneDrive:
         # Make the Graph API request
         response = httpx.post(request_url, headers=self._headers, json=body)
         # Validate request response and parse
-        if response.status_code != 201:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"folder not created ({error_message})")
+        self._raise_unexpected_response(
+            response, 201, "folder not created", has_json=True
+        )
         response_data = response.json()
         folder_id = response_data["id"]
         # Return the folder item id
@@ -659,8 +795,8 @@ class OneDrive:
 
     @token_required
     def move_item(
-        self, item_id: str, new_folder_id: str, new_name: Optional[str] = None
-    ) -> Tuple[str, str]:
+        self, item_id: str, new_folder_id: str, new_name: str | None = None
+    ) -> tuple[str, str]:
         """Moves an item (folder/file) within the connected OneDrive. Optionally rename an item at the same time.
         Positional arguments:
             item_id (str) -- item id of the folder or file to move
@@ -683,20 +819,15 @@ class OneDrive:
         if new_name and not isinstance(new_name, str):
             raise TypeError(f"new_name expected 'str', got {type(new_name).__name__!r}")
         # Create request url based on input item id that should be moved
-        request_url = self._API_URL + "me/drive/items/" + item_id
+        request_url = self._api_drive_url + "items/" + item_id
         # Create the request body
-        body: Dict[str, Any] = {"parentReference": {"id": new_folder_id}}
+        body: dict[str, Any] = {"parentReference": {"id": new_folder_id}}
         if new_name:
             body["name"] = new_name
         # Make the Graph API request
         response = httpx.patch(request_url, headers=self._headers, json=body)
         # Validate request response and parse
-        if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"item not moved ({error_message})")
+        self._raise_unexpected_response(response, 200, "item not moved", has_json=True)
         response_data = response.json()
         item_id = response_data["id"]
         parent_folder_id = response_data["parentReference"]["id"]
@@ -708,10 +839,10 @@ class OneDrive:
         self,
         item_id: str,
         new_folder_id: str,
-        new_name: Optional[str] = None,
+        new_name: str | None = None,
         confirm_complete: bool = True,
         verbose: bool = False,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """Copies an item (folder/file) within the connected OneDrive server-side.
         Positional arguments:
             item_id (str) -- item id of the folder or file to copy
@@ -735,9 +866,9 @@ class OneDrive:
         if new_name and not isinstance(new_name, str):
             raise TypeError(f"new_name expected 'str', got {type(new_name).__name__!r}")
         # Create request url based on input item id that should be moved
-        request_url = self._API_URL + "me/drive/items/" + item_id + "/copy"
+        request_url = self._api_drive_url + "items/" + item_id + "/copy"
         # Create the request body
-        body: Dict[str, Any] = {
+        body: dict[str, Any] = {
             "parentReference": {"driveId": self._drive_id, "id": new_folder_id}
         }
         if new_name:
@@ -745,12 +876,7 @@ class OneDrive:
         # Make the Graph API request
         response = httpx.post(request_url, headers=self._headers, json=body)
         # Validate request response and parse
-        if response.status_code != 202:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"item not copied ({error_message})")
+        self._raise_unexpected_response(response, 202, "item not copied")
         if verbose:
             print("Copy request sent.")
         if confirm_complete:
@@ -806,18 +932,15 @@ class OneDrive:
         if not isinstance(new_name, str):
             raise TypeError(f"new_name expected 'str', got {type(new_name).__name__!r}")
         # Create request url based on input item id that should be renamed
-        request_url = self._API_URL + "me/drive/items/" + item_id
+        request_url = self._api_drive_url + "items/" + item_id
         # Create the request body
         body = {"name": new_name}
         # Make the Graph API request
         response = httpx.patch(request_url, headers=self._headers, json=body)
         # Validate request response and parse
-        if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"item not renamed ({error_message})")
+        self._raise_unexpected_response(
+            response, 200, "item not renamed", has_json=True
+        )
         response_data = response.json()
         item_name = response_data["name"]
         # Return the item name
@@ -852,16 +975,11 @@ class OneDrive:
                 print("Aborted.")
                 return False
         # Create request url based on input item id that should be deleted
-        request_url = self._API_URL + "me/drive/items/" + item_id
+        request_url = self._api_drive_url + "items/" + item_id
         # Make the Graph API request
         response = httpx.delete(request_url, headers=self._headers)
         # Validate request response
-        if response.status_code != 204:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"item not deleted ({error_message})")
+        self._raise_unexpected_response(response, 204, "item not deleted")
         # Return confirmation of deletion
         return True
 
@@ -905,18 +1023,13 @@ class OneDrive:
             warnings.warn(f"Empty file {file_name} created.")
             return file_name
         # Create request url based on input item id to be downloaded
-        request_url = self._API_URL + "me/drive/items/" + item_id + "/content"
+        request_url = self._api_drive_url + "items/" + item_id + "/content"
         # Make the Graph API request
         if verbose:
             print("Getting the file download url")
         response = httpx.get(request_url, headers=self._headers)
         # Validate request response and parse
-        if response.status_code != 302:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"could not get download url ({error_message})")
+        self._raise_unexpected_response(response, 302, "could not get download url")
         download_url = response.headers["Location"]
         # Download the file asynchronously
         asyncio.run(
@@ -944,6 +1057,7 @@ class OneDrive:
             max_connections (int) -- max concurrent open http requests
             verbose (bool) -- prints status message during the download process (default = False)
         """
+        # Assert rather then check as this is an internal method
         assert isinstance(download_url, str)
         assert isinstance(file_name, str)
         assert isinstance(file_size, int)
@@ -1035,12 +1149,9 @@ class OneDrive:
             # Create an AsyncIterator over our GET request
             async with client.stream("GET", download_url, headers=headers) as response:
                 # Iterates over incoming bytes in chunks and saves them to file
-                if response.status_code != 206 and response.status_code != 200:
-                    if response.headers["content-type"] == "application/json":
-                        error_message = response.json().get("error", {}).get("message")
-                    else:
-                        error_message = "no error message returned"
-                    raise GraphAPIError(f"item not downloaded ({error_message})")
+                self._raise_unexpected_response(
+                    response, [200, 206], "item not downloaded"
+                )
                 write_chunk_size = 64 * 1024  # 64 KiB
                 async for chunk in response.aiter_bytes(write_chunk_size):
                     await fw.write(chunk)
@@ -1050,9 +1161,9 @@ class OneDrive:
     @token_required
     def upload_file(
         self,
-        file_path: Union[str, Path],
-        new_file_name: Optional[str] = None,
-        parent_folder_id: Optional[str] = None,
+        file_path: str | Path,
+        new_file_name: str | None = None,
+        parent_folder_id: str | None = None,
         if_exists: str = "rename",
         verbose: bool = False,
     ) -> str:
@@ -1111,9 +1222,9 @@ class OneDrive:
         )
         # Create request url for the upload session
         if parent_folder_id:
-            request_url = self._API_URL + "me/drive/items/" + parent_folder_id + ":/"
+            request_url = self._api_drive_url + "items/" + parent_folder_id + ":/"
         else:
-            request_url = self._API_URL + "me/drive/root:/"
+            request_url = self._api_drive_url + "root:/"
         request_url += (
             urllib.parse.quote(destination_file_name) + ":/createUploadSession"
         )
@@ -1133,14 +1244,9 @@ class OneDrive:
             print(f"Requesting upload session")
         response = httpx.post(request_url, headers=self._headers, json=body)
         # Validate upload session request response and parse
-        if response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(
-                f"upload session could not be created ({error_message})"
-            )
+        self._raise_unexpected_response(
+            response, 200, "upload session could not be created", has_json=True
+        )
         upload_url = response.json()["uploadUrl"]
         # Determine the upload file chunk size
         chunk_size: int = (
@@ -1188,19 +1294,9 @@ class OneDrive:
                         content=content,
                     )
                     # Validate request response
-                    if response.status_code != 202:
-                        httpx.delete(upload_url)
-                        if response.headers["content-type"] == "application/json":
-                            error_message = (
-                                response.json().get("error", {}).get("message")
-                            )
-                        else:
-                            error_message = (
-                                "no error message returned, code={response.status_code}"
-                            )
-                        raise GraphAPIError(
-                            f"could not upload chuck {n} of {no_of_uploads} ({error_message})"
-                        )
+                    self._raise_unexpected_response(
+                        response, 202, f"could not upload chuck {n} of {no_of_uploads}"
+                    )
                     # Calculate next chunk range
                     content_range_start = data.tell()
                     content_range_end = data.tell() + chunk_size - 1
@@ -1217,21 +1313,20 @@ class OneDrive:
                         content=content,
                     )
         except KeyboardInterrupt:
-            # Upload cancelled, send delete request, re-raise exception
             httpx.delete(upload_url)
             if verbose:
                 print("Upload cancelled by user.")
+            raise
+        except Exception:
+            httpx.delete(upload_url)
             raise
         finally:
             data.close()
             client.close()
         # Validate request response
-        if response.status_code != 201 and response.status_code != 200:
-            if response.headers["content-type"] == "application/json":
-                error_message = response.json().get("error", {}).get("message")
-            else:
-                error_message = "no error message returned"
-            raise GraphAPIError(f"item not uploaded ({error_message})")
+        self._raise_unexpected_response(
+            response, [200, 201], "item not uploaded", has_json=True
+        )
         if verbose:
             print("Upload complete")
         # Return the file item id
@@ -1239,9 +1334,7 @@ class OneDrive:
         item_id = response_data["id"]
         return item_id
 
-    def _get_local_file_metadata(
-        self, file_path: Union[str, Path]
-    ) -> Tuple[int, str, str]:
+    def _get_local_file_metadata(self, file_path: str | Path) -> tuple[int, str, str]:
         """Retreives local file metadata (size, dates).
         Note results differ based on platform, with creation date not available on Linux.
         Positional arguments:

@@ -1,4 +1,5 @@
 """Tests the OneDrive class using pytest."""
+import json
 import os
 import re
 from pathlib import Path
@@ -102,6 +103,227 @@ class TestDunders:
             repr(onedrive)
             == f"<OneDrive {onedrive._drive_type} {onedrive._drive_name} {onedrive._owner_name}>"
         )
+
+
+class TestConstructors:
+    """Tests the from_dict and from_json methods."""
+
+    @pytest.mark.parametrize(
+        "redirect_url, refresh_token",
+        [
+            (REDIRECT, REFRESH_TOKEN),
+            (False, REFRESH_TOKEN),
+            (REDIRECT, False),
+            (False, False),
+        ],
+    )
+    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
+    def test_from_json(
+        self,
+        tmp_path,
+        monkeypatch,
+        mock_graph_api,
+        mock_auth_api,
+        redirect_url,
+        refresh_token,
+    ):
+        # Make a temporary config file
+        config_key = "onedrive"
+        config = {
+            config_key: {
+                "tenant_id": TENANT,
+                "client_id": CLIENT_ID,
+                "client_secret_value": CLIENT_SECRET,
+            }
+        }
+        if redirect_url:
+            config[config_key]["redirect_url"] = redirect_url
+        if refresh_token:
+            config[config_key]["refresh_token"] = refresh_token
+        temp_dir = Path(tmp_path, "temp_config")
+        temp_dir.mkdir()
+        config_path = Path(temp_dir, "config.json")
+        with open(config_path, "w") as fw:
+            json.dump(config, fw)
+        # If no refresh token provided then monkeypatch the auth input
+        if not refresh_token:
+            input_url = REDIRECT + "?code=" + AUTH_CODE
+            monkeypatch.setattr("builtins.input", lambda _: input_url)
+        # Run the test
+        onedrive_instance = OneDrive.from_json(config_path, config_key)
+        assert isinstance(onedrive_instance, OneDrive)
+
+    @pytest.mark.parametrize(
+        "config_path, config_key, exp_msg",
+        [
+            (123, None, "config_path expected 'str' or 'Path', got 'int'"),
+            ("str", 4.1, "config_key expected 'str', got 'float'"),
+        ],
+    )
+    def test_from_json_failure_type(self, config_path, config_key, exp_msg):
+        with pytest.raises(TypeError) as excinfo:
+            OneDrive.from_json(config_path, config_key)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+    @pytest.mark.parametrize(
+        "config_key_input, config, exp_msg",
+        [
+            (
+                "bad-key",
+                {"tenant_id": "blah"},
+                "config_key 'bad-key' not found in 'config.json'",
+            ),
+            (
+                "onedrive",
+                {"tenant_id": "blah"},
+                "expected client_id in first level of dictionary",
+            ),
+        ],
+    )
+    def test_from_json_failure_key(self, tmp_path, config_key_input, config, exp_msg):
+        # Make a temporary config file
+        config = {"onedrive": config}
+        temp_dir = Path(tmp_path, "temp_config")
+        temp_dir.mkdir()
+        config_path = Path(temp_dir, "config.json")
+        with open(config_path, "w") as fw:
+            json.dump(config, fw)
+        # Run the test
+        with pytest.raises(KeyError) as excinfo:
+            OneDrive.from_json(config_path, config_key_input)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+
+class TestDeconstructors:
+    """Tests the to_json method."""
+
+    @pytest.mark.parametrize(
+        "config_key",
+        [None, "onedrive", "my random key"],
+    )
+    def test_to_json(self, onedrive, tmp_path, config_key):
+        temp_dir = Path(tmp_path, "temp_config")
+        temp_dir.mkdir()
+        config_path = Path(temp_dir, f"config-{config_key}.json")
+        # Run the test
+        if config_key:
+            onedrive.to_json(config_path, config_key)
+        else:
+            onedrive.to_json(config_path)
+        assert os.path.isfile(config_path)
+        with open(config_path) as fr:
+            config = json.load(fr)
+        if config_key is None:
+            config_key = "onedrive"
+        assert config_key in config
+        assert config[config_key]["tenant_id"] == onedrive._tenant_id
+        assert config[config_key]["client_id"] == onedrive._client_id
+        assert config[config_key]["client_secret_value"] == onedrive._client_secret
+        assert config[config_key]["redirect_url"] == onedrive._redirect
+        assert config[config_key]["refresh_token"] == onedrive.refresh_token
+
+    def test_to_json_existing(self, onedrive, tmp_path):
+        # Create an existing json file
+        temp_dir = Path(tmp_path, "temp_config")
+        temp_dir.mkdir()
+        config_path = Path(temp_dir, "config.json")
+        with open(config_path, "w") as fw:
+            json.dump({"other": 100}, fw)
+        # Run the test
+        config_key = "new_config"
+        onedrive.to_json(config_path, config_key)
+        with open(config_path) as fr:
+            config = json.load(fr)
+        assert config_key in config
+        assert config["other"] == 100
+
+    @pytest.mark.parametrize(
+        "config_path, config_key, exp_msg",
+        [
+            (
+                123,
+                "str",
+                "file_path expected 'str' or 'Path', got 'int'",
+            ),
+            ("str", 4.1, "config_key expected 'str', got 'float'"),
+        ],
+    )
+    def test_to_json_failure_type(self, onedrive, config_path, config_key, exp_msg):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.to_json(config_path, config_key)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+
+class TestResponseChecks:
+    """Tests the _raise_unexpected_response method."""
+
+    @pytest.mark.parametrize(
+        "resp_code, check_code, message, has_json",
+        [
+            (200, 200, "", False),
+            (400, [302, 400], "123", False),
+            (500, ["blah", 500], "just a string", True),
+        ],
+    )
+    def test_raise_unexpected_response(
+        self, onedrive, resp_code, check_code, message, has_json
+    ):
+        response = httpx.Response(status_code=resp_code, json={"content": "nothing"})
+        onedrive._raise_unexpected_response(
+            response, check_code, message, has_json=has_json
+        )
+        assert True
+
+    @pytest.mark.parametrize(
+        "resp_code, resp_json, check_code, message, has_json, exp_msg",
+        [
+            (
+                200,
+                {"no": "content"},
+                201,
+                "just a test",
+                False,
+                "just a test (no error message returned)",
+            ),
+            (
+                204,
+                None,
+                204,
+                "test 123",
+                True,
+                "test 123 (response did not contain json)",
+            ),
+            (
+                400,
+                {"error": {"message": "Invalid request"}},
+                204,
+                "could not delete link",
+                True,
+                "could not delete link (Invalid request)",
+            ),
+            (
+                500,
+                {"error_description": "Unauthorized"},
+                201,
+                "could not get headers",
+                True,
+                "could not get headers (Unauthorized)",
+            ),
+        ],
+    )
+    def test_raise_unexpected_response_failure(
+        self, onedrive, resp_code, check_code, message, resp_json, has_json, exp_msg
+    ):
+        response = httpx.Response(status_code=resp_code, json=resp_json)
+        with pytest.raises(GraphAPIError) as excinfo:
+            onedrive._raise_unexpected_response(
+                response, check_code, message, has_json=has_json
+            )
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
 
 
 class TestGetTokens:
