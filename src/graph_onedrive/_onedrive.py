@@ -236,7 +236,6 @@ class OneDrive:
         with open(file_path, "w") as config_file:
             json.dump(config, config_file, indent=4)
         # Nothing returned which signals no errors
-        return
 
     def _raise_unexpected_response(
         self,
