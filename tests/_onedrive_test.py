@@ -1,5 +1,6 @@
 """Tests the OneDrive class using pytest."""
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -28,7 +29,6 @@ class TestDunders:
         "refresh_token",
         [REFRESH_TOKEN, None],
     )
-    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
     def test_init(self, mock_graph_api, mock_auth_api, monkeypatch, refresh_token):
         # monkeypatch the Authorization step when no refresh token provided
         input_url = REDIRECT + "?code=" + AUTH_CODE
@@ -117,7 +117,6 @@ class TestConstructors:
             (False, False, True),
         ],
     )
-    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
     def test_from_json(
         self,
         tmp_path,
@@ -342,7 +341,6 @@ class TestResponseChecks:
 class TestGetTokens:
     """Tests the _get_token method."""
 
-    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
     def test_get_tokens_using_auth_code(self, temp_onedrive, monkeypatch):
         # monkeypatch the response url typically input by user
         input_url = REDIRECT + "?code=" + AUTH_CODE
@@ -381,19 +379,19 @@ class TestGetTokens:
         mock_auth_api.routes["access_token"].rollback()
 
     def test_get_token_failure_bad_return_refresh_token(
-        self, temp_onedrive, mock_auth_api
+        self, temp_onedrive, mock_auth_api, caplog
     ):
         mock_auth_api.routes["access_token"].snapshot()
         mock_auth_api.routes["access_token"].side_effect = None
         mock_auth_api.routes["access_token"].return_value = httpx.Response(
             200, json={"access_token": ACCESS_TOKEN, "refresh_token": None}
         )
-        with pytest.warns(None) as record:
+        with caplog.at_level(logging.WARNING, logger="graph_onedrive"):
             temp_onedrive._get_token()
-        assert len(record) == 1
+        assert len(caplog.records) == 1
         assert (
-            str(record[0].message)
-            == "GraphAPIWarn: token request did not return a refresh token, existing config not updated"
+            str(caplog.records[0].message)
+            == "token request did not return a refresh token, existing config not updated"
         )
         # old refresh token should still be set
         assert temp_onedrive.refresh_token == REFRESH_TOKEN
@@ -413,7 +411,6 @@ class TestGetTokens:
 class TestAuthorization:
     """Tests the _get_authorization method."""
 
-    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
     def test_get_authorization(self, temp_onedrive, monkeypatch):
         # monkeypatch the response url typically input by user
         input_url = REDIRECT + "?code=" + AUTH_CODE
@@ -436,7 +433,6 @@ class TestAuthorization:
             ),
         ],
     )
-    @pytest.mark.filterwarnings("ignore:GraphAPIWarn")
     def test_get_authorization_failure(
         self, temp_onedrive, monkeypatch, input_url, exp_msg
     ):
@@ -448,17 +444,17 @@ class TestAuthorization:
         (msg,) = excinfo.value.args
         assert msg == exp_msg
 
-    def test_get_authorization_warn(self, temp_onedrive, monkeypatch):
+    def test_get_authorization_warn(self, temp_onedrive, monkeypatch, caplog):
         # monkeypatch the response url typically input by user
         input_url = REDIRECT + "?code=" + AUTH_CODE
         monkeypatch.setattr("builtins.input", lambda _: input_url)
         # make the request
-        with pytest.warns(None) as record:
+        with caplog.at_level(logging.WARNING, logger="graph_onedrive"):
             auth_code = temp_onedrive._get_authorization()
-        assert len(record) == 1
+        assert len(caplog.records) == 1
         assert (
-            str(record[0].message)
-            == "GraphAPIWarn: response 'state' was not in returned url, response not confirmed"
+            str(caplog.records[0].message)
+            == "response 'state' was not in returned url, response not confirmed"
         )
         assert auth_code == AUTH_CODE
 

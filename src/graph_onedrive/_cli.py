@@ -10,8 +10,8 @@ import os
 from datetime import datetime
 from typing import Sequence
 
-import graph_onedrive._main as graph_onedrive
 from graph_onedrive.__init__ import __version__
+from graph_onedrive._main import OneDrive
 
 
 CONFIG_EXT = ".json"
@@ -182,7 +182,7 @@ def authenticate(config_path: str | None = None, config_key: str | None = None) 
     config_path, config_key = get_config_file(config_path, config_key)
 
     # Create the instance
-    onedrive = graph_onedrive.OneDrive.from_json(config_path, config_key)
+    onedrive = OneDrive.from_json(config_path, config_key)
 
     # Save the config
     onedrive.to_json(config_path, config_key)
@@ -265,9 +265,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
         )
 
         # Create session
-        onedrive = graph_onedrive.OneDrive.from_json(
-            config_path_verified, config_key_verified, True
-        )
+        onedrive = OneDrive.from_json(config_path_verified, config_key_verified, True)
     else:
         print("Manual configuration entry:")
         client_id = input("client_id: ").strip()
@@ -276,9 +274,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
         if tenant == "":
             tenant = "common"
         refresh_token = input("refresh_token (leave blank to reauthenticate): ").strip()
-        onedrive = graph_onedrive.OneDrive(
-            client_id, client_secret, tenant, refresh_token
-        )
+        onedrive = OneDrive(client_id, client_secret, tenant, refresh_token)
 
     # Command menu for the user
     help_info = """

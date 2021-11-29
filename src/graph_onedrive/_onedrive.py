@@ -277,7 +277,10 @@ class OneDrive:
                     graph_error = api_error
                 elif auth_error:
                     graph_error = auth_error
-            logging.error(f"{message} ({graph_error})")
+                logging.debug(f"response_json={response.json()}")
+            logging.debug(
+                f"expected_codes={expected}, response_code={response.status_code}, package_error={message}"
+            )
             raise GraphAPIError(f"{message} ({graph_error})")
         # Check response has json
         if has_json:
@@ -285,7 +288,6 @@ class OneDrive:
                 response.json()
             except JSONDecodeError:
                 graph_error = "response did not contain json"
-                logging.error(f"{message} ({graph_error})")
                 raise GraphAPIError(f"{message} ({graph_error})")
 
     def _get_token(self) -> None:
@@ -334,11 +336,8 @@ class OneDrive:
         if response_data.get("refresh_token"):
             self.refresh_token = response_data["refresh_token"]
         else:
-            warning_message = "token request did not return a refresh token, existing config not updated"
-            logging.warning(warning_message)
-            warnings.warn(
-                f"GraphAPIWarn: {warning_message}",
-                stacklevel=2,
+            logging.warning(
+                "token request did not return a refresh token, existing config not updated"
             )
 
         # Set an expiry time, removing 60 seconds assumed for processing
@@ -383,13 +382,8 @@ class OneDrive:
                 logging.error(error_message)
                 raise GraphAPIError(error_message)
         else:
-            warning_message = (
+            logging.warning(
                 "response 'state' was not in returned url, response not confirmed"
-            )
-            logging.warning(warning_message)
-            warnings.warn(
-                f"GraphAPIWarn: {warning_message}",
-                stacklevel=2,
             )
         # Extract the code from the response
         authorization_code_re = re.search("[?|&]code=([^&]+)", response)
@@ -675,7 +669,7 @@ class OneDrive:
         Keyword arguments:
             link_type (str) -- type of sharing link to create, either "view", "edit", or ("embed" for OneDrive personal only) (default = "view")
             password (str) -- password for the sharing link (OneDrive personal only) (default = None)
-            expiration (datetime) -- expiration of the sharing link, computer local timezone assummed for 'native' datetime objects (default = None)
+            expiration (datetime) -- expiration of the sharing link, computer local timezone assumed for 'native' datetime objects (default = None)
             scope (str) -- "anonymous" for anyone with the link, or ("organization" to limit to the tenant for OneDrive Business) (default = "anonymous")
         Returns:
             link (str) -- typically a web link, html iframe if link_type="embed"
@@ -1032,10 +1026,8 @@ class OneDrive:
                 f"max_connections expected 'int', got {type(max_connections).__name__!r}"
             )
         if max_connections > 16:
-            warning_message = f"max_connections={max_connections} could result in throttling and enforced cool-down period, refer Docs"
-            logging.warning(warning_message)
             warnings.warn(
-                f"GraphAPIWarn: {warning_message}",
+                f"max_connections={max_connections} could result in throttling and enforced cool-down period",
                 stacklevel=2,
             )
         # Get item details
@@ -1048,8 +1040,9 @@ class OneDrive:
         # If the file is empty, just create it and return
         if size == 0:
             Path(file_name).touch()
-            logging.warning("downloaded file size=0, empty file created")
-            warnings.warn(f"Empty file {file_name} created.")
+            logging.warning(
+                f"downloaded file size=0, empty file '{file_name}' created."
+            )
             return file_name
         # Create request url based on input item id to be downloaded
         request_url = self._api_drive_url + "items/" + item_id + "/content"

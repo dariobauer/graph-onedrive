@@ -3,7 +3,6 @@ import json
 import os
 import re
 import urllib.parse
-import warnings
 from typing import List
 from typing import Tuple
 
@@ -216,9 +215,9 @@ def side_effect_make_folder(request):
         new_folder_name = body["name"]
     except:
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
-    # Check the conflict behaviour
-    conflict_behaviour = body.get("@microsoft.graph.conflictBehavior", "rename")
-    if conflict_behaviour not in ("fail", "replace", "rename"):
+    # Check the conflict behavior
+    conflict_behavior = body.get("@microsoft.graph.conflictBehavior", "rename")
+    if conflict_behavior not in ("fail", "replace", "rename"):
         return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
     # Load mocked items from file and loop through them
     parent_id_valid = False
@@ -226,13 +225,13 @@ def side_effect_make_folder(request):
         # Check new folder does not conflict
         if (
             "folder" in item
-            and conflict_behaviour != "replace"
+            and conflict_behavior != "replace"
             and item["name"] == new_folder_name
         ):
             if (parent_id and item["parentReference"]["id"] == parent_id) or (
                 parent_id is None and item["parentReference"]["path"] == "/drive/root:"
             ):
-                if conflict_behaviour == "fail":
+                if conflict_behavior == "fail":
                     return httpx.Response(
                         400, json=MOCKED_RESPONSE_DATA["invalid-request"]
                     )
@@ -277,7 +276,7 @@ def side_effect_sharing_link(request):
 
 
 def side_effect_patch_item(request):
-    # If a parent folder is specfied, check it exists
+    # If a parent folder is specified, check it exists
     item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
     if item_id_re:
         matching_item_list = [
@@ -308,7 +307,7 @@ def side_effect_patch_item(request):
 
 
 def side_effect_copy_item(request):
-    # If a parent folder is specfied, check it exists
+    # If a parent folder is specified, check it exists
     item_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
     if item_id_re:
         item_id = item_id_re.group(1)
@@ -358,7 +357,7 @@ def side_effect_delete_item(request):
 
 
 def side_effect_upload_session(request):
-    # If a parent folder is specfied, check it exists
+    # If a parent folder is specified, check it exists
     parent_id_re = re.search("items/([0-9a-zA-Z-]+)", request.url.path)
     if parent_id_re:
         item_id = parent_id_re.group(1)
@@ -381,8 +380,8 @@ def side_effect_upload_session(request):
             body = json.loads(request.content)["item"]
         except Exception:
             return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
-        conflict_behaviour = body.get("@microsoft.graph.conflictBehavior", "rename")
-        if conflict_behaviour not in ("rename", "replace", "fail"):
+        conflict_behavior = body.get("@microsoft.graph.conflictBehavior", "rename")
+        if conflict_behavior not in ("rename", "replace", "fail"):
             return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
         if file_name_raw.group(1) != urllib.parse.quote(body.get("name")):
             return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
@@ -476,7 +475,7 @@ def side_effect_access_token(request):
 def onedrive(mock_graph_api, mock_auth_api):
     """Creates a OneDrive instance, scope for whole module so is shared for efficiency.
     Use temp_onedrive instead if intending to edit the instance attributes."""
-    onedrive = graph_onedrive.create(
+    onedrive = graph_onedrive.OneDrive(
         CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
     )
     yield onedrive
@@ -485,7 +484,7 @@ def onedrive(mock_graph_api, mock_auth_api):
 @pytest.fixture(scope="function")
 def temp_onedrive(mock_graph_api, mock_auth_api):
     """Creates a OneDrive instance, scope limited to the function, so can be negatively altered."""
-    onedrive = graph_onedrive.create(
+    onedrive = graph_onedrive.OneDrive(
         CLIENT_ID, CLIENT_SECRET, TENANT, REDIRECT, REFRESH_TOKEN
     )
     yield onedrive

@@ -2,33 +2,11 @@
 """
 from __future__ import annotations
 
-import logging
 import warnings
-from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 
+from graph_onedrive._manager import OneDriveManager
 from graph_onedrive._onedrive import OneDrive
-
-
-@contextmanager
-def OneDriveManager(
-    file_path: str | Path, config_key: str = "onedrive"
-) -> Generator[OneDrive, None, None]:
-    """Context manager for the OneDrive class, only use this if you want to save and read from a file.
-    Positional arguments:
-        file_path (str|Path) -- path to configuration json file
-    Keyword arguments:
-        config_key (str) -- key of the json item storing the configuration (default = "onedrive")
-    Returns:
-        onedrive_instance (OneDrive) -- OneDrive object instance
-    """
-    logging.info("OneDriveManager creating instance")
-    onedrive_instance = OneDrive.from_json(file_path, config_key)
-    yield onedrive_instance
-    logging.info("OneDriveManager saving instance configuration to file")
-    onedrive_instance.to_json(file_path, config_key)
-
 
 # The following functions are depreciated and will be removed completely in a future release.
 
@@ -53,7 +31,6 @@ def create(
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
     # Warn to use class directly
-    logging.warning("create() depreciated, use OneDrive()")
     warnings.warn(
         "create() depreciated, use OneDrive()",
         category=DeprecationWarning,
@@ -82,7 +59,6 @@ def create_from_config_file(
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
     # Warn to use class directly
-    logging.warning("create_from_config_file() depreciated, use OneDrive.from_json()")
     warnings.warn(
         "create_from_config_file() depreciated, use OneDrive.from_json()",
         category=DeprecationWarning,
@@ -111,7 +87,6 @@ def save_to_config_file(
             f"onedrive_instance expected 'OneDrive', got {type(onedrive_instance).__name__!r}"
         )
     # Warn to use class directly
-    logging.warning("save_to_config_file() depreciated, use OneDrive.to_json()")
     warnings.warn(
         "save_to_config_file() depreciated, use OneDrive.to_json()",
         category=DeprecationWarning,
