@@ -47,12 +47,8 @@ Save the following in a .py file in the same folder.
 ```python
 from graph_onedrive import OneDriveManager
 
-# Set config file details
-config_file = "config.json"
-config_key = "onedrive"
-
 # Use a context manager to manage the session
-with OneDriveManager(config_file, config_key) as my_drive:
+with OneDriveManager(config_path="config.json", config_key="onedrive") as my_drive:
 
     # Print the OneDrive usage
     my_drive.get_usage(verbose=True)
@@ -61,7 +57,7 @@ with OneDriveManager(config_file, config_key) as my_drive:
     new_file_id = my_drive.upload_file("my-photo.jpg", verbose=True)
 ```
 
-*OneDriveManager is new in version 0.1.1. Refer docs for other instance constructors.*
+*OneDriveManager is new in version 0.2.0. Refer docs for other instance constructors.*
 
 ## License and Terms of Use
 
