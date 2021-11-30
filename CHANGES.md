@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+
+
+## Released
+
+### Version 0.1.1
+
+Released 2021-11-30
+
 * Added py.typed for mypy typing support
 * Added ability to create sharing links (Issue [#16](https://github.com/dariobauer/graph-onedrive/issues/16))
 * Improved upload to attempt to retain file creation and modified metadata (Issue [#13](https://github.com/dariobauer/graph-onedrive/issues/13))
@@ -16,9 +24,6 @@
 * `save_to_config_file`, use `OneDrive.to_json` or the `OneDriveManager` context manager
 * Added basic logging
 * Docs, examples, and tests updated to reflect above changes
-
-
-## Released
 
 ### Version 0.1.0
 
