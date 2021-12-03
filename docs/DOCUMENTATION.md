@@ -401,6 +401,27 @@ Returns:
 
 * items (dict) -- details of all the items within the requested directory
 
+#### search
+
+List files and folders matching a search query.
+
+```python
+items = my_instance.search(query, top=-1, verbose=False)
+```
+
+Positional arguments:
+
+* query (str) -- search query string
+
+Keyword arguments:
+
+* top (int) -- limits the results list length, use -1 to not limit (default = -1)
+* verbose (bool) -- print the items along with their ids (default = False)
+
+Returns:
+
+* items (dict) -- details of items matching the search query
+
 #### detail_item
 
 Retrieves the metadata for an item by id.

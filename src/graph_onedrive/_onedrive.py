@@ -51,6 +51,7 @@ class OneDrive:
     Methods:
         get_usage           -- account current usage and total capacity
         list_directory      -- lists all of the items and their attributes within a directory
+        search              -- list items matching a seearch query
         detail_item         -- get item details by item id
         detail_item_path    -- get item details by drive path
         item_type           -- get item type, folder or file
@@ -476,7 +477,7 @@ class OneDrive:
     @token_required
     def list_directory(
         self, folder_id: str | None = None, verbose: bool = False
-    ) -> list[dict[Any, Any]]:
+    ) -> list[dict[str, object]]:
         """List the files and folders within the input folder/root of the connected OneDrive.
         Keyword arguments:
             folder_id (str) -- the item id of the folder to look into, None being the root directory (default = None)
@@ -506,6 +507,55 @@ class OneDrive:
             items_list += response_data.get("value", {})
             # Break if these is no next link, else set the request link
             if response_data.get("@odata.nextLink") is None:
+                break
+            else:
+                request_url = response_data["@odata.nextLink"]
+        # Print the items in the directory along with their item ids
+        if verbose:
+            for item in items_list:
+                print(item["id"], item["name"])
+        # Return the items dictionary
+        return items_list
+
+    @token_required
+    def search(
+        self, query: str, top: int = -1, verbose: bool = False
+    ) -> list[dict[str, object]]:
+        """List files and folders matching a search query.
+        Positional arguments:
+            query (str) -- search query string
+        Keyword arguments:
+            top (int) -- limits the results list length, use -1 to not limit (default = -1)
+            verbose (bool) -- print the items along with their ids (default = False)
+        Returns:
+            items (dict) -- details of all the top items matching the search query
+        """
+        # Validate attributes
+        if not isinstance(query, str):
+            raise TypeError(f"query expected 'str', got {type(query).__name__!r}")
+        if not isinstance(top, int):
+            raise TypeError(f"top expected 'int', got {type(query).__name__!r}")
+        if query in ("", " ", "%20"):
+            raise AttributeError(
+                f"cannot search for blank string. Did you mean list_directory(folder_id=None)?"
+            )
+        # Build and make the request
+        request_url = self._api_drive_url + f"root/search(q='{query}')"
+        if top >= 1:
+            request_url += f"?$top={top}"
+        # Make the Graph API request
+        items_list = []
+        while True:
+            response = httpx.get(request_url, headers=self._headers)
+            # Validate request response and parse
+            self._raise_unexpected_response(
+                response, 200, "search could not complete", has_json=True
+            )
+            response_data = response.json()
+            # Add the items to the item list
+            items_list += response_data.get("value", {})
+            # Break if these is no next link, else set the request link
+            if len(items_list) >= top or response_data.get("@odata.nextLink") is None:
                 break
             else:
                 request_url = response_data["@odata.nextLink"]

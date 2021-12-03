@@ -282,6 +282,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
     u / usage      :  prints the OneDrive usage
     od / onedrive  :  print the OneDrive details
     li / list      :  list the contents of a folder
+    se / search    :  list items matching a query
     de / detail    :  print metadata of an item
     sl / link      :  create a sharing link for an item
     md / mkdir     :  make a new folder
@@ -315,6 +316,15 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                     print("The item id is not a folder.")
                     continue
                 onedrive.list_directory(folder_id, verbose=True)
+
+            elif command in ("se", "search"):
+                query = input("Search query: ").strip()
+                top = input("Max number of results: ").strip()
+                try:
+                    top_n = int(top)
+                except ValueError:
+                    top_n = 10
+                onedrive.search(query, top_n, verbose=True)
 
             elif command in ["de", "detail"]:
                 item_id = input("Item id or root path starting with /: ").strip()

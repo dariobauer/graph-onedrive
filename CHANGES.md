@@ -6,6 +6,7 @@
 
 ## Released
 
+* Add search method to OneDrive class and CLI
 ### Version 0.2.0
 
 Released 2021-11-30
