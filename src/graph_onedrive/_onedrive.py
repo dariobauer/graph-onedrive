@@ -562,7 +562,10 @@ class OneDrive:
         # Print the items in the directory along with their item ids
         if verbose:
             for item in items_list:
-                print(item["id"], item["name"])
+                if "folder" in item:
+                    print(item["id"], "folder", item["name"])
+                else:
+                    print(item["id"], "file  ", item["name"])
         # Return the items dictionary
         return items_list
 
