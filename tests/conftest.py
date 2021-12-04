@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import secrets
 import urllib.parse
 from typing import List
 from typing import Tuple
@@ -61,6 +62,13 @@ def mock_graph_api():
             headers=headers,
             name="list_directory",
         ).mock(side_effect=side_effect_list_dir)
+
+        # Search
+        search_route = respx_mock.get(
+            path__regex=r"me/drive/root/search\(q='[0-9a-zA-Z% -]+'\)(?:\?\$top=[0-9]+)?(?:&\$skiptoken=s![0-9a-zA-Z-]+)?$",
+            headers=headers,
+            name="search",
+        ).mock(side_effect=side_effect_search)
 
         # Sharing Link
         share_link_route = respx_mock.post(
@@ -199,6 +207,48 @@ def side_effect_list_dir(request):
         return httpx.Response(200, json=MOCKED_RESPONSE_DATA["list-directory-empty"])
     # Prepare and return the response
     return httpx.Response(200, json=MOCKED_RESPONSE_DATA["list-directory"])
+
+
+def side_effect_search(request):
+    # Extract the item id
+    search_match = re.search(r"search\(q='([0-9a-zA-Z% -]+)'\)", request.url.path)
+    if not search_match:
+        return httpx.Response(400, json=MOCKED_RESPONSE_DATA["invalid-request"])
+    query = search_match.group(1)
+    params = dict(request.url.params.items())
+    try:
+        top = int(params["$top"])
+        if top > 100:
+            top = 100
+    except (KeyError, TypeError):
+        top = 100
+    skip_token = params.get("$skiptoken", None)
+    # Create list of matching items
+    matching_item_list = [
+        item for item in MOCKED_ITEMS_ALL if (re.search(query, item.get("name")))
+    ]
+    # Trim the list
+    if len(matching_item_list) > top:
+        if skip_token:
+            matching_item_list = matching_item_list[top : (top * 2)]
+            next = False  # pretending that there are no more results
+        else:
+            matching_item_list = matching_item_list[0:top]
+            next = True
+    else:
+        next = False
+    # Prepare and return the response
+    response_json = {
+        "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)",
+        "value": matching_item_list,
+    }
+    if next:
+        alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # = string.ascii_letters + string.digits
+        skip_token = "s!" + "".join(secrets.choice(alphabet) for _ in range(10))
+        response_json[
+            "@odata.nextLink"
+        ] = f"https://graph.microsoft.com/v1.0/me/drive/root/search(q='{query}')?$top={top}&$skiptoken={skip_token}"
+    return httpx.Response(200, json=response_json)
 
 
 def side_effect_make_folder(request):

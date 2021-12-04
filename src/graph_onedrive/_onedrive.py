@@ -534,10 +534,10 @@ class OneDrive:
         if not isinstance(query, str):
             raise TypeError(f"query expected 'str', got {type(query).__name__!r}")
         if not isinstance(top, int):
-            raise TypeError(f"top expected 'int', got {type(query).__name__!r}")
+            raise TypeError(f"top expected 'int', got {type(top).__name__!r}")
         if query in ("", " ", "%20"):
-            raise AttributeError(
-                f"cannot search for blank string. Did you mean list_directory(folder_id=None)?"
+            raise ValueError(
+                "cannot search for blank string. Did you mean list_directory(folder_id=None)?"
             )
         # Build and make the request
         request_url = self._api_drive_url + f"root/search(q='{query}')"

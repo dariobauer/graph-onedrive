@@ -578,7 +578,7 @@ class TestListingDirectories:
         assert items[0].get("id") == "01BYE5RZZWSN2ASHUEBJH2XJJ25WSEBUJ3"
 
     @pytest.mark.skip(reason="not implemented")
-    def test_list_directory_failure(self, ondrive):
+    def test_list_directory_failure(self, onedrive):
         ...
 
     def test_list_directory_failure_type(self, onedrive):
@@ -586,6 +586,56 @@ class TestListingDirectories:
             onedrive.list_directory(123)
         (msg,) = excinfo.value.args
         assert msg == "folder_id expected 'str', got 'int'"
+
+
+class TestSearch:
+    """Tests the search method."""
+
+    @pytest.mark.parametrize(
+        "query, top, exp_len",
+        [
+            ("Contoso", 4, 4),
+            ("Sales", 200, 6),
+            ("does not exist", 150, 0),
+        ],
+    )
+    def test_search(self, onedrive, query, top, exp_len):
+        items = onedrive.search(query, top=top)
+        assert len(items) == exp_len
+
+    @pytest.mark.skip(reason="not implemented")
+    def test_search_failure(self, onedrive):
+        ...
+
+    @pytest.mark.parametrize(
+        "query, top, exp_msg",
+        [
+            (123, 4, "query expected 'str', got 'int'"),
+            ("123", 4.0, "top expected 'int', got 'float'"),
+        ],
+    )
+    def test_search_failure_type(self, onedrive, query, top, exp_msg):
+        with pytest.raises(TypeError) as excinfo:
+            onedrive.search(query, top)
+        (msg,) = excinfo.value.args
+        assert msg == exp_msg
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "",
+            " ",
+            "%20",
+        ],
+    )
+    def test_search_failure_value(self, onedrive, query):
+        with pytest.raises(ValueError) as excinfo:
+            onedrive.search(query)
+        (msg,) = excinfo.value.args
+        assert (
+            msg
+            == "cannot search for blank string. Did you mean list_directory(folder_id=None)?"
+        )
 
 
 class TestItemDetails:
