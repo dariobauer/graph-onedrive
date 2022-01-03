@@ -1,11 +1,4 @@
 from setuptools import setup
 
-# Metadata goes in setup.cfg. These are here for GitHub's dependency graph.
-setup(
-    name="graph_onedrive",
-    install_requires=[
-        "aiofiles",
-        "httpx",
-    ],  # To-do: specify a min version based on testing
-    extras_require={"yaml": ["pyyaml"]},
-)
+# Refer setup.cfg
+setup(name="graph_onedrive")

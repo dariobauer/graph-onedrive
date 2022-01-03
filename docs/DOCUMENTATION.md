@@ -50,7 +50,7 @@ The configuration details required are below displayed in the typical configurat
 }
 ```
 
- An equivalent YAML format can also be used, however the PyYAML package must be installed. This can be installed using `pip install PyYAML` or `pip install graph-onedrive[yaml]`.
+ An equivalent YAML format can also be used when the corresponding optional dependency is installed.
 
 Note that the `onedrive` dictionary key can be any string and could facilitate multiple instances running from the same configuration file with different keys.
 
@@ -71,7 +71,7 @@ Depending on your installation you may need to use `pip3` instead.
 pip install graph-onedrive
 ```
 
-If you plan to use YAML formatted config files, then install the yaml optional:
+If you plan to use YAML formatted config files, then install the yaml optional dependency:
 
 ```console
 pip install 'graph-onedrive[yaml]'
@@ -85,7 +85,18 @@ pip install https://github.com/dariobauer/graph-onedrive/archive/main.zip
 
 #### Dependencies
 
-The package currently requires [HTTPX](https://pypi.org/project/httpx/), and [aiofiles](https://pypi.org/project/aiofiles/). These will be installed automatically if using pip as described above.
+##### Required Dependencies
+
+These dependencies provide critical functions for the package to run and will typically be installed automatically if using pip as described above.
+
+* [HTTPX](https://pypi.org/project/httpx/) - used for http requests
+* [aiofiles](https://pypi.org/project/aiofiles/) - used when downloading files
+
+##### Optional Dependencies
+
+Optional dependencies provide secondary features that are not part of the core package functionality and will not typically be installed automatically. These can be installed manually or as a package extra as described in [installation](#installation).
+
+* [PyYAML](https://pypi.org/project/PyYAML/) - enables yaml config files
 
 ## Command-line interface
 
@@ -115,7 +126,7 @@ You can use flags to specify the config file path and/or dictionary key.
 
 Optional argument | Description
 ---|---
--f, --file PATH | Optional path to config json file
+-f, --file PATH | Optional path to config file
 -k, --key KEY | Optional config file dictionary key
 
 Use these flags by using the flag followed by the input, for example:
@@ -335,9 +346,9 @@ Returns:
 
 Create an instance of the OneDrive class from a configuration file.
 
-Note that `from_json` and `from_yaml` are simply alias of `from_file`.
+Note `from_json` and `from_yaml` are alias of `from_file` and are pending depreciation.
 
-Note that to use yaml files PyYAML is required. This can be installed separately or as a package optional: `pip install graph-onedrive[yaml]'`.
+To use yaml config files the corresponding [optional dependencies](#dependencies) are required.
 
 ```python
 onedrive_instance = graph_onedrive.OneDrive.from_file(
@@ -359,9 +370,9 @@ Returns:
 
 Save the configuration to a configuration file.
 
-Note that `to_json` and `to_yaml` are simply alias of `to_file`.
+Note `to_json` and `to_yaml` are alias of `to_file` and are pending depreciation.
 
-Note that to use yaml files PyYAML is required. This can be installed separately or as a package optional: `pip install graph-onedrive[yaml]'`.
+To use yaml config files the corresponding [optional dependencies](#dependencies) are required.
 
 ```python
 onedrive_instance.to_file(config_path="config.json", config_key="onedrive")
