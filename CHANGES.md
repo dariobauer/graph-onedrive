@@ -2,11 +2,11 @@
 
 ## Unreleased
 
-
+* Added search method to OneDrive class and CLI
+* Added optional yaml config files support with optional PyYAML dependency
 
 ## Released
 
-* Add search method to OneDrive class and CLI
 ### Version 0.2.0
 
 Released 2021-11-30

@@ -16,14 +16,14 @@ def OneDriveManager(
 ) -> Generator[OneDrive, None, None]:
     """Context manager for the OneDrive class, only use this if you want to save and read from a file.
     Positional arguments:
-        config_path (str|Path) -- path to configuration json file
+        config_path (str|Path) -- path to configuration file
     Keyword arguments:
-        config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+        config_key (str) -- key of the item storing the configuration (default = "onedrive")
     Returns:
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
     logging.info("OneDriveManager creating instance")
-    onedrive_instance = OneDrive.from_json(config_path, config_key)
+    onedrive_instance = OneDrive.from_file(config_path, config_key)
     yield onedrive_instance
     logging.info("OneDriveManager saving instance configuration to file")
-    onedrive_instance.to_json(config_path, config_key)
+    onedrive_instance.to_file(config_path, config_key)

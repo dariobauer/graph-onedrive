@@ -10,13 +10,23 @@ import os
 from datetime import datetime
 from typing import Sequence
 
+try:
+    import yaml
+
+    optionals_yaml = True
+except ImportError:
+    optionals_yaml = False
+
 from graph_onedrive.__init__ import __version__
 from graph_onedrive._main import OneDrive
 
 
-CONFIG_EXT = ".json"
-CONFIG_DEF_FILE = "config" + CONFIG_EXT
-CONFIG_DEF_KEY = "onedrive"
+if optionals_yaml:
+    CONFIG_EXTS: tuple[str, ...] = (".json", ".yaml")
+else:
+    CONFIG_EXTS = (".json",)
+CONFIG_DEFAULT_FILENAME = "config"
+CONFIG_DEFAULT_KEY = "onedrive"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -57,7 +67,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store",
         type=str,
         metavar="PATH",
-        help="optional path to config json file",
+        help="optional path to config json or yaml file",
     )
     parser.add_argument(
         "-k",
@@ -80,8 +90,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not (args.configure or args.authenticate or args.instance):
         parser.error("No action provided, use --help for details")
 
-    if args.file and not args.file.endswith(CONFIG_EXT):
-        parser.error(f"--file path must have {CONFIG_EXT} extension")
+    if args.file and not args.file.endswith(CONFIG_EXTS):
+        if args.file.endswith((".yaml",)):
+            parser.error(f"--file path was to yaml file but PyYAML is not installed")
+        else:
+            parser.error(
+                f"--file path must have {', '.join([i for i in CONFIG_EXTS])} extension"
+            )
 
     if args.key and args.key == "":
         parser.error("--key provided can not be blank")
@@ -107,37 +122,56 @@ def main(argv: Sequence[str] | None = None) -> int:
 def config(config_path: str | None = None, config_key: str | None = None) -> None:
     """Create a configuration file."""
 
-    # Set the export directory
+    if config_path and not config_path.endswith(CONFIG_EXTS):
+        raise ValueError(
+            f"config_path expected extension {', '.join([i for i in CONFIG_EXTS])}"
+        )
+
+    # Set the export directory when not set as an argument
     if not config_path:
+        if len(CONFIG_EXTS) > 1:
+            file_type = "unspecified"
+            while file_type not in CONFIG_EXTS:
+                file_type = input(
+                    f"Config file type ({', '.join([i for i in CONFIG_EXTS])}): "
+                ).strip()
+                if not file_type.startswith("."):
+                    file_type = "." + file_type
+        else:
+            file_type = ".json"
         if (
-            input(f"Save {CONFIG_DEF_FILE} in current working directory [Y/n]: ")
+            input(
+                f"Save {CONFIG_DEFAULT_FILENAME}{file_type} in current working directory [Y/n]: "
+            )
             .strip()
             .lower()
             == "n"
         ):
             config_path = input("Path to save config (including file name): ").strip()
         else:
-            config_path = os.path.join(os.getcwd(), CONFIG_DEF_FILE)
-
-    if not config_path.endswith(CONFIG_EXT):
-        config_path += CONFIG_EXT
+            config_path = os.path.join(os.getcwd(), CONFIG_DEFAULT_FILENAME + file_type)
 
     # Set config dictionary key
     if not config_key:
         if (
-            input(f"Use config dictionary key default '{CONFIG_DEF_KEY}' [Y/n]: ")
+            input(f"Use config dictionary key default '{CONFIG_DEFAULT_KEY}' [Y/n]: ")
             .strip()
             .lower()
             == "n"
         ):
             config_key = input("Config dictionary key to use: ").strip()
         else:
-            config_key = CONFIG_DEF_KEY
+            config_key = CONFIG_DEFAULT_KEY
 
     # Load the current file if it exists, otherwise create dictionary
     if os.path.isfile(config_path):
         with open(config_path) as config_file:
-            config = json.load(config_file)
+            if config_path.endswith(".json"):
+                config = json.load(config_file)
+            elif config_path.endswith(".yaml"):
+                config = yaml.safe_load(config_file)
+            else:
+                raise NotImplementedError("config file type not supported")
         # For safety do not overwrite existing configs
         if config_key in config:
             raise SystemExit(
@@ -172,7 +206,12 @@ def config(config_path: str | None = None, config_key: str | None = None) -> Non
 
     # Save the configuration to config file
     with open(config_path, "w") as config_file:
-        json.dump(config, config_file, indent=4)
+        if config_path.endswith(".json"):
+            json.dump(config, config_file, indent=4)
+        elif config_path.endswith(".yaml"):
+            yaml.safe_dump(config, config_file)
+        else:
+            raise NotImplementedError("config file type not supported")
     print(f"Configuration saved to: {config_path}")
 
 
@@ -181,11 +220,16 @@ def authenticate(config_path: str | None = None, config_key: str | None = None) 
     # Get the config file path
     config_path, config_key = get_config_file(config_path, config_key)
 
-    # Create the instance
-    onedrive = OneDrive.from_json(config_path, config_key)
+    # Create the instance and save the config
+    if config_path.endswith(".json"):
+        onedrive = OneDrive.from_json(config_path, config_key)
+        onedrive.to_json(config_path, config_key)
+    elif config_path.endswith(".yaml"):
+        onedrive = OneDrive.from_yaml(config_path, config_key)
+        onedrive.to_yaml(config_path, config_key)
+    else:
+        raise NotImplementedError("config file type not supported")
 
-    # Save the config
-    onedrive.to_json(config_path, config_key)
     print(f"Refresh token saved to configuration: {config_path}")
 
 
@@ -200,7 +244,7 @@ def get_config_file(
         count = 0
         for root, dirs, files in os.walk(cwd_path):
             for file_name in files:
-                if file_name.endswith(CONFIG_EXT):
+                if file_name.endswith(CONFIG_EXTS):
                     if (
                         input(f"Found: {file_name} Use this? [Y/n]: ").strip().lower()
                         != "n"
@@ -218,19 +262,24 @@ def get_config_file(
         if not config_path:
             while True:
                 config_path = input("Path to config file: ").strip()
-                if not config_path.endswith(CONFIG_EXT):
-                    config_path = config_path + CONFIG_EXT
-                if os.path.isfile(config_path):
+                if os.path.isfile(config_path) and config_path.endswith(CONFIG_EXTS):
                     break
                 print("Path could not be validated, please try again.")
+                print("Ensure that the path includes the filename and extension.")
+                print(f"Acceptable file types: {CONFIG_EXTS}")
 
     # Open the config file
     with open(config_path) as config_file:
-        config = json.load(config_file)
+        if config_path.endswith(".json"):
+            config = json.load(config_file)
+        elif config_path.endswith(".yaml"):
+            config = yaml.safe_load(config_file)
+        else:
+            raise NotImplementedError("file type not implemented")
 
     # Check the config key
     if not config_key:
-        config_key = CONFIG_DEF_KEY
+        config_key = CONFIG_DEFAULT_KEY
         if config_key in config:
             if (
                 input("Config dictionary key 'onedrive' found. Use this key? [Y/n]: ")
@@ -265,7 +314,8 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
         )
 
         # Create session
-        onedrive = OneDrive.from_json(config_path_verified, config_key_verified, True)
+        onedrive = OneDrive.from_file(config_path_verified, config_key_verified, True)
+
     else:
         print("Manual configuration entry:")
         client_id = input("client_id: ").strip()
@@ -281,7 +331,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
     Graph-OneDrive cli instance actions:
     u / usage      :  prints the OneDrive usage
     od / onedrive  :  print the OneDrive details
-    li / list      :  list the contents of a folder
+    ls / list      :  list the contents of a folder
     se / search    :  list items matching a query
     de / detail    :  print metadata of an item
     sl / link      :  create a sharing link for an item
@@ -303,10 +353,10 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
             if command == "help":
                 print(help_info)
 
-            elif command in ["u", "usage"]:
+            elif command in ("u", "usage"):
                 onedrive.get_usage(verbose=True)
 
-            elif command in ["li", "list"]:
+            elif command in ("ls", "li", "list"):
                 folder_id: str | None = input(
                     "Folder id to look into (enter nothing for root): "
                 ).strip()
@@ -326,7 +376,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                     top_n = 10
                 onedrive.search(query, top_n, verbose=True)
 
-            elif command in ["de", "detail"]:
+            elif command in ("de", "detail"):
                 item_id = input("Item id or root path starting with /: ").strip()
                 if item_id[0] == "/":
                     onedrive.detail_item_path(item_id, verbose=True)
@@ -374,7 +424,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                 )
                 print(response)
 
-            elif command in ["md", "mkdir"]:
+            elif command in ("md", "mkdir"):
                 parent_folder_id: str | None = input(
                     "Parent folder id (enter nothing for root): "
                 ).strip()
@@ -387,7 +437,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                 response = onedrive.make_folder(folder_name, parent_folder_id)
                 print(response)
 
-            elif command in ["mv", "move"]:
+            elif command in ("mv", "move"):
                 item_id = input("Item id of the file/folder to move: ").strip()
                 new_folder_id = input("New parent folder id: ").strip()
                 if input("Specify a new file name? [y/N]: ").strip().lower() == "y":
@@ -399,7 +449,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                 response = onedrive.move_item(item_id, new_folder_id, new_file_name)
                 print(f"Item {item_id} was moved to {new_folder_id}")
 
-            elif command in ["cp", "copy"]:
+            elif command in ("cp", "copy"):
                 item_id = input("Item id of the file/folder to copy: ").strip()
                 new_folder_id = input("New parent folder id: ").strip()
                 if input("Specify a new name? [y/N]: ").strip().lower() == "y":
@@ -417,19 +467,19 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                     f"Item was copied to folder {new_folder_id} with new item id {response}"
                 )
 
-            elif command in ["rn", "rename"]:
+            elif command in ("rn", "rename"):
                 item_id = input("Item id of the file/folder to rename: ").strip()
                 new_file_name = input("New file name (with extension): ").strip()
                 response = onedrive.rename_item(item_id, new_file_name)
                 print("Item was renamed.")
 
-            elif command in ["rm", "remove", "delete"]:
+            elif command in ("rm", "remove", "delete"):
                 item_id = input("Item id of the file/folder to remove: ").strip()
                 response = onedrive.delete_item(item_id)
                 if response == True:
                     print(f"Item {item_id} was successfully removed.")
 
-            elif command in ["dl", "download"]:
+            elif command in ("dl", "download"):
                 item_id = input("File item id to download: ").strip()
                 if onedrive.is_folder(item_id):
                     print("Item id is a folder. Folders cannot be downloaded.")
@@ -440,7 +490,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                     f"Item was downloaded in the current working directory as {response}"
                 )
 
-            elif command in ["ul", "upload"]:
+            elif command in ("ul", "upload"):
                 file_path = input("Provide full file path: ").strip()
                 if input("Rename file? [y/N]: ").strip().lower() == "y":
                     new_file_name = input(
@@ -461,7 +511,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
                 )
                 print(f"New file item id: {item_id}")
 
-            elif command in ["od", CONFIG_DEF_KEY, "drive"]:
+            elif command in ("od", CONFIG_DEFAULT_KEY, "drive"):
                 print("Drive id:    ", onedrive._drive_id)
                 print("Drive name:  ", onedrive._drive_name)
                 print("Drive type:  ", onedrive._drive_type)
@@ -490,7 +540,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
             elif command == "_refresh":
                 print(onedrive.refresh_token)
 
-            elif command in ["exit", "exit()", "quit", "q", "end"]:
+            elif command in ("exit", "exit()", "quit", "q", "end"):
                 break
 
             else:
@@ -498,7 +548,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
 
     finally:
         if use_config_file:
-            onedrive.to_json(
+            onedrive.to_file(
                 config_path_verified,
                 config_key_verified,
             )

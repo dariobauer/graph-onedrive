@@ -50,6 +50,8 @@ The configuration details required are below displayed in the typical configurat
 }
 ```
 
+ An equivalent YAML format can also be used, however the PyYAML package must be installed. This can be installed using `pip install PyYAML` or `pip install graph-onedrive[yaml]`.
+
 Note that the `onedrive` dictionary key can be any string and could facilitate multiple instances running from the same configuration file with different keys.
 
 The `redirect_url` and `refresh_token` values are default so these lines can be removed if you are using the defaults. To learn about the refresh token, refer to the corresponding section in the docs below.
@@ -67,6 +69,12 @@ Depending on your installation you may need to use `pip3` instead.
 
 ```console
 pip install graph-onedrive
+```
+
+If you plan to use YAML formatted config files, then install the yaml optional:
+
+```console
+pip install graph-onedrive[yaml]
 ```
 
 You can also install the in-development version:
@@ -168,14 +176,14 @@ To create an instance, you need to provide the configuration.
 
 #### a) Using a config file and the context manager (recommended)
 
-The context manager is reccommend as it will save the configuration back to file inclusing the tokens.
+The context manager is recommend as it will save the configuration back to file including the tokens.
 Refer above section on configuration to learn about config files.
 
 ```python
 from graph_onedrive import OneDriveManager
 
 config_path = "config.json"  # path to config file
-config_key = "onedrive"  # cofig file dictionary key (default = "onedrive")
+config_key = "onedrive"  # config file dictionary key (default = "onedrive")
 with OneDriveManager(config_path, config_key) as onedrive:
     pass  # do stuff
 ```
@@ -189,10 +197,10 @@ Refer above section on configuration to learn about config files.
 from graph_onedrive import OneDrive
 
 config_path = "config.json"  # path to config file
-config_key = "onedrive"  # cofig file dictionary key (default = "onedrive")
-my_instance = OneDrive.from_json(config_path, config_key)
+config_key = "onedrive"  # config file dictionary key (default = "onedrive")
+my_instance = OneDrive.from_file(config_path, config_key)
 # do stuff
-my_instance.to_json(config_path, config_key)  # optionally resave the config
+my_instance.to_file(config_path, config_key)  # optionally resave the config
 ```
 
 #### c) Using in-line configuration parameters
@@ -208,7 +216,7 @@ tenant = ""
 redirect_url = "http://localhost:8080"
 my_instance = OneDrive(client_id, client_secret_value, tenant, redirect_url)
 # do stuff
-my_instance.to_json(config_path, config_key)  # optionally resave the config
+my_instance.to_file(config_path, config_key)  # optionally resave the config
 ```
 
 ### Authenticating the instance
@@ -246,7 +254,7 @@ If using a configuration file then it is suggested that you use the `OneDriveMan
 Alternatively you can manually save to a file (suggested after your last API request to ensure the latest tokens are used).
 
 ```python
-my_instance.to_json(config_path="config.json", config_key="onedrive")
+my_instance.to_file(config_path="config.json", config_key="onedrive")
 ```
 
 Then when creating the instance again using your config file, the refresh token will be used.
@@ -261,10 +269,10 @@ You can get the refresh token from your instance:
 refresh_token = my_instance.refresh_token
 ```
 
-Then when creating an instance later, provide the refresh token:
+Then when creating an instance later, provide the refresh token to :
 
 ```python
-my_instance = graph_onedrive.create(..., refresh_token=refresh_token)
+my_instance = graph_onedrive.OneDrive(..., refresh_token=refresh_token)
 ```
 
 ### Context manager
@@ -272,7 +280,7 @@ my_instance = graph_onedrive.create(..., refresh_token=refresh_token)
 #### OneDriveManager
 
 Create an instance of the OneDrive class using a context manager (generator).
-Uses from_json() on entry and to_json() on exit.
+Uses from_file() on entry and to_file() on exit.
 
 ```python
 with graph_onedrive.OneDriveManager(
@@ -283,8 +291,8 @@ with graph_onedrive.OneDriveManager(
 
 Keyword arguments:
 
-* config_path (str|Path) -- path to configuration json file (default = "config.json")
-* config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+* config_path (str|Path) -- path to configuration file (default = "config.json")
+* config_key (str) -- key of the item storing the configuration (default = "onedrive")
 
 Yields:
 
@@ -292,7 +300,7 @@ Yields:
 
 ### Class methods
 
-Module class constructors and deconstructors.
+Module class constructors and deconstructors/exporters.
 
 #### OneDrive()
 
@@ -323,38 +331,46 @@ Returns:
 
 * onedrive_instance (OneDrive) -- OneDrive object instance
 
-#### from_json
+#### from_file
 
-Create an instance of the OneDrive class from a configuration json file.
+Create an instance of the OneDrive class from a configuration file.
+
+Note that `from_json` and `from_yaml` are simply alias of `from_file`.
+
+Note that to use yaml files PyYAML is required. This can be installed separately or as a package optional: `pip install graph-onedrive[yaml]'`.
 
 ```python
-onedrive_instance = graph_onedrive.OneDrive.from_json(
+onedrive_instance = graph_onedrive.OneDrive.from_file(
     config_path="config.json", config_key="onedrive", save_refresh_token=False
 )
 ```
 
 Keyword arguments:
 
-* config_path (str|Path) -- path to configuration json file (default = "config.json")
-* config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+* config_path (str|Path) -- path to configuration file (default = "config.json")
+* config_key (str) -- key of the item storing the configuration (default = "onedrive")
 * save_refresh_token (bool) -- save the refresh token back to the config file during instance initiation (default = False)
 
 Returns:
 
 * onedrive_instance (OneDrive) -- OneDrive object instance
 
-#### to_json
+#### to_file, to_json, to_yaml
 
-Save the configuration to a json configuration file.
+Save the configuration to a configuration file.
+
+Note that `to_json` and `to_yaml` are simply alias of `to_file`.
+
+Note that to use yaml files PyYAML is required. This can be installed separately or as a package optional: `pip install graph-onedrive[yaml]'`.
 
 ```python
-onedrive_instance.to_json(config_path="config.json", config_key="onedrive")
+onedrive_instance.to_file(config_path="config.json", config_key="onedrive")
 ```
 
 Keyword arguments:
 
-* config_path (str|Path) -- path to configuration json file (default = "config.json")
-* config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+* config_path (str|Path) -- path to configuration file (default = "config.json")
+* config_key (str) -- key of the item storing the configuration (default = "onedrive")
 
 Returns:
 

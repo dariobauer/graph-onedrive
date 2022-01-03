@@ -15,14 +15,14 @@ def main() -> None:
     config_key = "onedrive"
 
     # Create session instance
-    my_drive = OneDrive.from_json(config_path, config_key)
+    my_drive = OneDrive.from_file(config_path, config_key)
 
     # Complete tasks using the instance. For this example we will just display the usage
     my_drive.get_usage(verbose=True)
 
     # OPTIONAL: save back to the config file to retain the refresh token which can be used to bypass authentication.
     # If you are doing this then it is reccommended that you use the context manager instead.
-    my_drive.to_json(config_path, config_key)
+    my_drive.to_file(config_path, config_key)
 
 
 if __name__ == "__main__":
