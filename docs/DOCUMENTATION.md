@@ -74,7 +74,7 @@ pip install graph-onedrive
 If you plan to use YAML formatted config files, then install the yaml optional:
 
 ```console
-pip install graph-onedrive[yaml]
+pip install 'graph-onedrive[yaml]'
 ```
 
 You can also install the in-development version:
