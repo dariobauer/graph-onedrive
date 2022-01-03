@@ -7,4 +7,5 @@ setup(
         "aiofiles",
         "httpx",
     ],  # To-do: specify a min version based on testing
+    extras_require={"yaml": ["pyyaml"]},
 )

@@ -19,9 +19,17 @@ from json.decoder import JSONDecodeError
 from pathlib import Path
 from time import sleep
 from typing import Any
+from typing import Dict
 
 import aiofiles
 import httpx
+
+try:
+    import yaml
+
+    optionals_yaml = True
+except ImportError:
+    optionals_yaml = False
 
 from graph_onedrive.__init__ import __version__
 from graph_onedrive._decorators import token_required
@@ -46,8 +54,8 @@ class OneDrive:
         refresh_token (str) -- single-use token to supply when recreating the instance to skip authorization
     Constructor methods:
         from_dict           -- create an instance from a dictionary
-        from_json           -- create an instance from a json file
-        to_json             -- export an instance configuration to a json file
+        from_file           -- create an instance from a config file
+        to_file             -- export an instance configuration to a config file
     Methods:
         get_usage           -- account current usage and total capacity
         list_directory      -- lists all of the items and their attributes within a directory
@@ -166,16 +174,16 @@ class OneDrive:
         )
 
     @classmethod
-    def from_json(
+    def from_file(
         cls,
         file_path: str | Path = "config.json",
         config_key: str = "onedrive",
         save_refresh_token: bool = False,
     ) -> OneDrive:
-        """Create an instance of the OneDrive class from a config json file.
+        """Create an instance of the OneDrive class from a config file.
         Keyword arguments:
-            file_path (str|Path) -- path to configuration json file (default = "config.json")
-            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+            file_path (str|Path) -- path to configuration file (default = "config.json")
+            config_key (str) -- key of the item storing the configuration (default = "onedrive")
             save_refresh_token (bool) -- save the refresh token back to the config file during instance initiation (default = False)
         Returns:
             onedrive_instance (OneDrive) -- OneDrive object instance
@@ -190,10 +198,15 @@ class OneDrive:
                 f"config_key expected 'str', got {type(config_key).__name__!r}"
             )
         # Read configuration from config file
-        logging.info("reading OneDrive configuration")
         config_path = Path(file_path)
+        logging.info(f"reading OneDrive configuration from {config_path.name}")
         with open(config_path) as config_file:
-            config = json.load(config_file)
+            if config_path.name.endswith(".json"):
+                config = json.load(config_file)
+            elif config_path.name.endswith(".yaml"):
+                config = yaml.safe_load(config_file)
+            else:
+                raise NotImplementedError("file extension not supported")
         if config_key not in config:
             raise KeyError(
                 f"config_key '{config_key}' not found in '{config_path.name}'"
@@ -204,20 +217,31 @@ class OneDrive:
         if save_refresh_token:
             logging.info("saving refresh token")
             with open(config_path) as config_file:
-                config = json.load(config_file)
+                if config_path.name.endswith(".json"):
+                    config = json.load(config_file)
+                elif config_path.name.endswith(".yaml"):
+                    config = yaml.safe_load(config_file)
+                else:
+                    raise NotImplementedError("file extension not supported")
             config[config_key]["refresh_token"] = onedrive_instance.refresh_token
             with open(config_path, "w") as config_file:
-                json.dump(config, config_file, indent=4)
+                if config_path.name.endswith(".json"):
+                    json.dump(config, config_file, indent=4)
+                elif config_path.name.endswith(".yaml"):
+                    yaml.safe_dump(config, config_file)
+                else:
+                    raise NotImplementedError("file extension not supported")
+
         # Return the OneDrive instance
         return onedrive_instance
 
-    def to_json(
+    def to_file(
         self, file_path: str | Path = "config.json", config_key: str = "onedrive"
     ) -> None:
-        """Save the configuration to a json config file.
+        """Save the configuration to a config file.
         Keyword arguments:
-            file_path (str|Path) -- path to configuration json file (default = "config.json")
-            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+            file_path (str|Path) -- path to configuration file (default = "config.json")
+            config_key (str) -- key of the item storing the configuration (default = "onedrive")
         """
         # Check types
         if not isinstance(file_path, str) and not isinstance(file_path, Path):
@@ -232,13 +256,18 @@ class OneDrive:
         try:
             with open(file_path) as config_file:
                 logging.debug(f"attempting to load exiting config '{file_path}'")
-                config = json.load(config_file)
+                if str(file_path).endswith(".json"):
+                    config = json.load(config_file)
+                elif str(file_path).endswith(".yaml"):
+                    config = yaml.safe_load(config_file)
+                else:
+                    raise NotImplementedError("file extension not supported")
         except FileNotFoundError:
             config = {}
         # Create the config key
         if config_key not in config:
             config[config_key] = {}
-        # Set the new configuation
+        # Set the new configuration
         config[config_key]["tenant_id"] = self._tenant_id
         config[config_key]["client_id"] = self._client_id
         config[config_key]["client_secret_value"] = self._client_secret
@@ -246,9 +275,94 @@ class OneDrive:
         config[config_key]["refresh_token"] = self.refresh_token
         # Save the configuration to config file
         with open(file_path, "w") as config_file:
-            json.dump(config, config_file, indent=4)
+            if str(file_path).endswith(".json"):
+                json.dump(config, config_file, indent=4)
+            elif str(file_path).endswith(".yaml"):
+                yaml.safe_dump(config, config_file)
+            else:
+                raise NotImplementedError("file extension not supported")
         # Nothing returned which signals no errors
         logging.info(f"saved config to '{file_path}' with key '{config_key}'")
+
+    @classmethod
+    def from_json(
+        cls,
+        file_path: str | Path = "config.json",
+        config_key: str = "onedrive",
+        save_refresh_token: bool = False,
+    ) -> OneDrive:
+        """Create an instance of the OneDrive class from a config json file.
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration json file (default = "config.json")
+            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+            save_refresh_token (bool) -- save the refresh token back to the config file during instance initiation (default = False)
+        Returns:
+            onedrive_instance (OneDrive) -- OneDrive object instance
+        """
+        warnings.warn(
+            "from_json will be depreciated in the future, use from_file",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        # Pass to generic constructor
+        return cls.from_file(file_path, config_key, save_refresh_token)
+
+    def to_json(
+        self, file_path: str | Path = "config.json", config_key: str = "onedrive"
+    ) -> None:
+        """Save the configuration to a json config file.
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration json file (default = "config.json")
+            config_key (str) -- key of the json item storing the configuration (default = "onedrive")
+        """
+        warnings.warn(
+            "to_json will be depreciated in the future, use to_file",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        # Pass to generic exporter
+        return self.to_file(file_path, config_key)
+
+    @classmethod
+    def from_yaml(
+        cls,
+        file_path: str | Path = "config.yaml",
+        config_key: str = "onedrive",
+        save_refresh_token: bool = False,
+    ) -> OneDrive:
+        """Create an instance of the OneDrive class from a config yaml file.
+        Note this requires the yaml optional (pip install graph-onedrive[yaml]).
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration yaml file (default = "config.yaml")
+            config_key (str) -- key of the yaml item storing the configuration (default = "onedrive")
+            save_refresh_token (bool) -- save the refresh token back to the config file during instance initiation (default = False)
+        Returns:
+            onedrive_instance (OneDrive) -- OneDrive object instance
+        """
+        warnings.warn(
+            "from_yaml will be depreciated in the future, use from_file",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        # Pass to generic constructor
+        return cls.from_file(file_path, config_key, save_refresh_token)
+
+    def to_yaml(
+        self, file_path: str | Path = "config.yaml", config_key: str = "onedrive"
+    ) -> None:
+        """Save the configuration to a yaml config file.
+        Note this requires the yaml optional (pip install graph-onedrive[yaml]).
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration yaml file (default = "config.yaml")
+            config_key (str) -- key of the yaml item storing the configuration (default = "onedrive")
+        """
+        warnings.warn(
+            "to_yaml will be depreciated in the future, use to_file",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        # Pass to generic exporter
+        return self.to_file(file_path, config_key)
 
     def _raise_unexpected_response(
         self,

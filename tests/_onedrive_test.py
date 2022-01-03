@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+import yaml
 
 from .conftest import ACCESS_TOKEN
 from .conftest import AUTH_CODE
@@ -106,18 +107,22 @@ class TestDunders:
 
 
 class TestConstructors:
-    """Tests the from_dict and from_json methods."""
+    """Tests the from_dict, from_file, from_json, from_yaml methods."""
 
     @pytest.mark.parametrize(
-        "redirect_url, refresh_token, save_back",
+        "redirect_url, refresh_token, save_back, file_ext",
         [
-            (REDIRECT, REFRESH_TOKEN, False),
-            (False, REFRESH_TOKEN, True),
-            (REDIRECT, False, True),
-            (False, False, True),
+            (REDIRECT, REFRESH_TOKEN, False, "json"),
+            (False, REFRESH_TOKEN, True, "json"),
+            (REDIRECT, False, True, "json"),
+            (False, False, True, "json"),
+            (REDIRECT, REFRESH_TOKEN, False, "yaml"),
+            (False, REFRESH_TOKEN, True, "yaml"),
+            (REDIRECT, False, True, "yaml"),
+            (False, False, True, "yaml"),
         ],
     )
-    def test_from_json(
+    def test_from_file(
         self,
         tmp_path,
         monkeypatch,
@@ -126,6 +131,7 @@ class TestConstructors:
         redirect_url,
         refresh_token,
         save_back,
+        file_ext,
     ):
         # Make a temporary config file
         config_key = "onedrive"
@@ -142,15 +148,20 @@ class TestConstructors:
             config[config_key]["refresh_token"] = refresh_token
         temp_dir = Path(tmp_path, "temp_config")
         temp_dir.mkdir()
-        config_path = Path(temp_dir, "config.json")
+        config_path = Path(temp_dir, f"config.{file_ext}")
         with open(config_path, "w") as fw:
-            json.dump(config, fw)
+            if file_ext == "json":
+                json.dump(config, fw)
+            elif file_ext == "yaml":
+                yaml.safe_dump(config, fw)
+            else:
+                raise NotImplementedError("testing extension not implemented")
         # If no refresh token provided then monkeypatch the auth input
         if not refresh_token:
             input_url = REDIRECT + "?code=" + AUTH_CODE
             monkeypatch.setattr("builtins.input", lambda _: input_url)
         # Run the test
-        onedrive_instance = OneDrive.from_json(
+        onedrive_instance = OneDrive.from_file(
             config_path, config_key, save_refresh_token=save_back
         )
         assert isinstance(onedrive_instance, OneDrive)
@@ -162,9 +173,9 @@ class TestConstructors:
             ("str", 4.1, "config_key expected 'str', got 'float'"),
         ],
     )
-    def test_from_json_failure_type(self, config_path, config_key, exp_msg):
+    def test_from_file_failure_type(self, config_path, config_key, exp_msg):
         with pytest.raises(TypeError) as excinfo:
-            OneDrive.from_json(config_path, config_key)
+            OneDrive.from_file(config_path, config_key)
         (msg,) = excinfo.value.args
         assert msg == exp_msg
 
@@ -193,7 +204,7 @@ class TestConstructors:
             ),
         ],
     )
-    def test_from_json_failure_key(self, tmp_path, config_key_input, config, exp_msg):
+    def test_from_file_failure_key(self, tmp_path, config_key_input, config, exp_msg):
         # Make a temporary config file
         config = {"onedrive": config}
         temp_dir = Path(tmp_path, "temp_config")
@@ -203,30 +214,86 @@ class TestConstructors:
             json.dump(config, fw)
         # Run the test
         with pytest.raises(KeyError) as excinfo:
-            OneDrive.from_json(config_path, config_key_input)
+            OneDrive.from_file(config_path, config_key_input)
         (msg,) = excinfo.value.args
         assert msg == exp_msg
 
-
-class TestDeconstructors:
-    """Tests the to_json method."""
-
-    @pytest.mark.parametrize(
-        "config_key",
-        [None, "onedrive", "my random key"],
-    )
-    def test_to_json(self, onedrive, tmp_path, config_key):
+    def test_from_json(self, tmp_path, mock_graph_api, mock_auth_api):
+        # Make a temporary config file
+        config_key = "onedrive"
+        config = {
+            config_key: {
+                "tenant_id": TENANT,
+                "client_id": CLIENT_ID,
+                "client_secret_value": CLIENT_SECRET,
+                "redirect_url": REDIRECT,
+                "refresh_token": REFRESH_TOKEN,
+            }
+        }
         temp_dir = Path(tmp_path, "temp_config")
         temp_dir.mkdir()
-        config_path = Path(temp_dir, f"config-{config_key}.json")
+        config_path = Path(temp_dir, "config.json")
+        with open(config_path, "w") as fw:
+            json.dump(config, fw)
+        # Run the test
+        with pytest.deprecated_call():
+            onedrive_instance = OneDrive.from_json(config_path, config_key)
+        assert isinstance(onedrive_instance, OneDrive)
+
+    def test_from_yaml(self, tmp_path, mock_graph_api, mock_auth_api):
+        # Make a temporary config file
+        config_key = "onedrive"
+        config = {
+            config_key: {
+                "tenant_id": TENANT,
+                "client_id": CLIENT_ID,
+                "client_secret_value": CLIENT_SECRET,
+                "redirect_url": REDIRECT,
+                "refresh_token": REFRESH_TOKEN,
+            }
+        }
+        temp_dir = Path(tmp_path, "temp_config")
+        temp_dir.mkdir()
+        config_path = Path(temp_dir, "config.yaml")
+        with open(config_path, "w") as fw:
+            yaml.safe_dump(config, fw)
+        # Run the test
+        with pytest.deprecated_call():
+            onedrive_instance = OneDrive.from_yaml(config_path, config_key)
+        assert isinstance(onedrive_instance, OneDrive)
+
+
+class TestDeconstructors:
+    """Tests the to_file, to_json, to_yaml methods."""
+
+    @pytest.mark.parametrize(
+        "config_key, file_ext",
+        [
+            (None, "json"),
+            ("onedrive", "json"),
+            ("my random key", "json"),
+            (None, "yaml"),
+            ("onedrive", "yaml"),
+            ("my random key", "yaml"),
+        ],
+    )
+    def test_to_file(self, onedrive, tmp_path, config_key, file_ext):
+        temp_dir = Path(tmp_path, "temp_config")
+        temp_dir.mkdir()
+        config_path = Path(temp_dir, f"config-{config_key}.{file_ext}")
         # Run the test
         if config_key:
-            onedrive.to_json(config_path, config_key)
+            onedrive.to_file(config_path, config_key)
         else:
-            onedrive.to_json(config_path)
+            onedrive.to_file(config_path)
         assert os.path.isfile(config_path)
         with open(config_path) as fr:
-            config = json.load(fr)
+            if file_ext == "json":
+                config = json.load(fr)
+            elif file_ext == "yaml":
+                config = yaml.safe_load(fr)
+            else:
+                config = {}
         if config_key is None:
             config_key = "onedrive"
         assert config_key in config
@@ -236,7 +303,7 @@ class TestDeconstructors:
         assert config[config_key]["redirect_url"] == onedrive._redirect
         assert config[config_key]["refresh_token"] == onedrive.refresh_token
 
-    def test_to_json_existing(self, onedrive, tmp_path):
+    def test_to_file_existing(self, onedrive, tmp_path):
         # Create an existing json file
         temp_dir = Path(tmp_path, "temp_config")
         temp_dir.mkdir()
@@ -245,7 +312,7 @@ class TestDeconstructors:
             json.dump({"other": 100}, fw)
         # Run the test
         config_key = "new_config"
-        onedrive.to_json(config_path, config_key)
+        onedrive.to_file(config_path, config_key)
         with open(config_path) as fr:
             config = json.load(fr)
         assert config_key in config
@@ -262,9 +329,9 @@ class TestDeconstructors:
             ("str", 4.1, "config_key expected 'str', got 'float'"),
         ],
     )
-    def test_to_json_failure_type(self, onedrive, config_path, config_key, exp_msg):
+    def test_to_file_failure_type(self, onedrive, config_path, config_key, exp_msg):
         with pytest.raises(TypeError) as excinfo:
-            onedrive.to_json(config_path, config_key)
+            onedrive.to_file(config_path, config_key)
         (msg,) = excinfo.value.args
         assert msg == exp_msg
 

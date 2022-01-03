@@ -2,5 +2,7 @@ covdefaults
 coverage[toml]
 pytest
 pytest-asyncio
+pyyaml
 respx
+toml
 tox

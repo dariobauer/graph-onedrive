@@ -65,7 +65,7 @@ def create_from_config_file(
         stacklevel=2,
     )
     # Return the OneDrive instance
-    return OneDrive.from_json(config_path, config_key)
+    return OneDrive.from_file(config_path, config_key)
 
 
 def save_to_config_file(
@@ -93,4 +93,4 @@ def save_to_config_file(
         stacklevel=2,
     )
     # Save to json
-    onedrive_instance.to_json(config_path, config_key)
+    onedrive_instance.to_file(config_path, config_key)

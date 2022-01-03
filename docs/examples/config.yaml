@@ -1,0 +1,9 @@
+# Note that using yaml config files requires the optional dependency PyYAML.
+# Required: add values below for tenant_id, client_id, and client_secret_value.
+# Optional: redirect_url and refresh_token are optional, these lines can be removed.
+onedrive:
+    tenant_id:
+    client_id:
+    client_secret_value:
+    redirect_url: http://localhost:8080
+    refresh_token: null
