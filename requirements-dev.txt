@@ -6,3 +6,6 @@ pyyaml
 respx
 toml
 tox
+types-aiofiles
+types-PyYAML
+types-toml

@@ -4,29 +4,31 @@ Run terminal command 'graph-onedrive --help' or 'python -m graph-onedrive --help
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Sequence
 
-try:
-    import yaml
-
-    optionals_yaml = True
-except ImportError:
-    optionals_yaml = False
-
 from graph_onedrive.__init__ import __version__
+from graph_onedrive._config import CONFIG_EXTS
+from graph_onedrive._config import dump_config
+from graph_onedrive._config import load_config
 from graph_onedrive._main import OneDrive
 
 
-if optionals_yaml:
-    CONFIG_EXTS: tuple[str, ...] = (".json", ".yaml")
-else:
-    CONFIG_EXTS = (".json",)
 CONFIG_DEFAULT_FILENAME = "config"
 CONFIG_DEFAULT_KEY = "onedrive"
+
+
+# Set logger
+logger = logging.getLogger(__name__)
+package_logger = logging.getLogger(__package__)
+package_logger.propagate = True
+handler = logging.StreamHandler()
+formatter = logging.Formatter("[%(levelname)s] %(message)s")
+handler.setFormatter(formatter)
+package_logger.addHandler(handler)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -81,7 +83,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--log",
         action="count",
         default=0,
-        help="displays logs (level=INFO), use -ll for level=DEBUG",
+        help="displays INFO logs, use -ll for DEBUG logs",
     )
     # Parse arguments, using function input args when given for tests
     args = parser.parse_args(argv)
@@ -93,19 +95,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.file and not args.file.endswith(CONFIG_EXTS):
         if args.file.endswith((".yaml",)):
             parser.error(f"--file path was to yaml file but PyYAML is not installed")
+        elif args.file.endswith((".toml",)):
+            parser.error(f"--file path was to toml file but TOML is not installed")
         else:
             parser.error(
-                f"--file path must have {', '.join([i for i in CONFIG_EXTS])} extension"
+                f"--file path must have {' or '.join([i for i in CONFIG_EXTS])} extension"
             )
 
     if args.key and args.key == "":
         parser.error("--key provided can not be blank")
 
-    # Configure logger
+    # Configure logger level
     if args.log == 1:
-        logging.basicConfig(level=logging.INFO)
+        package_logger.setLevel(logging.INFO)
+        logger.info("Logging enabled with level=INFO")
     elif args.log == 2:
-        logging.basicConfig(level=logging.DEBUG)
+        package_logger.setLevel(logging.DEBUG)
+        logger.info("Logging enabled with level=DEBUG")
 
     # Call action functions
     if args.configure:
@@ -124,32 +130,28 @@ def config(config_path: str | None = None, config_key: str | None = None) -> Non
 
     if config_path and not config_path.endswith(CONFIG_EXTS):
         raise ValueError(
-            f"config_path expected extension {', '.join([i for i in CONFIG_EXTS])}"
+            f"config_path expected extension {' or '.join([i for i in CONFIG_EXTS])}"
         )
 
     # Set the export directory when not set as an argument
     if not config_path:
-        if len(CONFIG_EXTS) > 1:
-            file_type = "unspecified"
-            while file_type not in CONFIG_EXTS:
-                file_type = input(
-                    f"Config file type ({', '.join([i for i in CONFIG_EXTS])}): "
-                ).strip()
-                if not file_type.startswith("."):
-                    file_type = "." + file_type
-        else:
-            file_type = ".json"
+
         if (
             input(
-                f"Save {CONFIG_DEFAULT_FILENAME}{file_type} in current working directory [Y/n]: "
+                f"Save as {CONFIG_DEFAULT_FILENAME}.json in current working directory? [Y/n]: "
             )
             .strip()
             .lower()
-            == "n"
+            != "n"
         ):
-            config_path = input("Path to save config (including file name): ").strip()
+            config_path = os.path.join(os.getcwd(), CONFIG_DEFAULT_FILENAME + ".json")
+
         else:
-            config_path = os.path.join(os.getcwd(), CONFIG_DEFAULT_FILENAME + file_type)
+            config_path = ""
+            while not config_path.endswith(CONFIG_EXTS):
+                config_path = input(
+                    f"Path to config file (with extension {' or '.join([i for i in CONFIG_EXTS])}): "
+                ).strip()
 
     # Set config dictionary key
     if not config_key:
@@ -165,21 +167,15 @@ def config(config_path: str | None = None, config_key: str | None = None) -> Non
 
     # Load the current file if it exists, otherwise create dictionary
     if os.path.isfile(config_path):
-        with open(config_path) as config_file:
-            if config_path.endswith(".json"):
-                config = json.load(config_file)
-            elif config_path.endswith(".yaml"):
-                config = yaml.safe_load(config_file)
-            else:
-                raise NotImplementedError("config file type not supported")
+        config = load_config(config_path, config_key)
         # For safety do not overwrite existing configs
-        if config_key in config:
-            raise SystemExit(
-                f"Error: '{config_key}' already exists in file, overwrite not permitted."
+        if config:
+            logger.error(
+                f"'{config_key}' already exists within {Path(config_path).name}"
             )
-        config[config_key] = {}
+            raise SystemExit()
     else:
-        config = {config_key: {}}
+        config = {}
 
     # Set basic app credentials
     tenant_id = input("tenant: ").strip()
@@ -198,42 +194,28 @@ def config(config_path: str | None = None, config_key: str | None = None) -> Non
         redirect_url = "http://localhost:8080"
 
     # Format the config into the dictionary
-    config[config_key]["tenant_id"] = tenant_id
-    config[config_key]["client_id"] = client_id
-    config[config_key]["client_secret_value"] = client_secret_value
-    config[config_key]["redirect_url"] = redirect_url
-    config[config_key]["refresh_token"] = None
+    config["tenant_id"] = tenant_id
+    config["client_id"] = client_id
+    config["client_secret_value"] = client_secret_value
+    config["redirect_url"] = redirect_url
+    config["refresh_token"] = None
 
     # Save the configuration to config file
-    with open(config_path, "w") as config_file:
-        if config_path.endswith(".json"):
-            json.dump(config, config_file, indent=4)
-        elif config_path.endswith(".yaml"):
-            yaml.safe_dump(config, config_file)
-        else:
-            raise NotImplementedError("config file type not supported")
+    dump_config(config, config_path, config_key)
     print(f"Configuration saved to: {config_path}")
 
 
 def authenticate(config_path: str | None = None, config_key: str | None = None) -> None:
     """Authenticate with OneDrive and then save the configuration to file."""
     # Get the config file path
-    config_path, config_key = get_config_file(config_path, config_key)
+    config_path, config_key = _get_config_file(config_path, config_key)
 
     # Create the instance and save the config
-    if config_path.endswith(".json"):
-        onedrive = OneDrive.from_json(config_path, config_key)
-        onedrive.to_json(config_path, config_key)
-    elif config_path.endswith(".yaml"):
-        onedrive = OneDrive.from_yaml(config_path, config_key)
-        onedrive.to_yaml(config_path, config_key)
-    else:
-        raise NotImplementedError("config file type not supported")
-
+    OneDrive.from_file(config_path, config_key, save_refresh_token=True)
     print(f"Refresh token saved to configuration: {config_path}")
 
 
-def get_config_file(
+def _get_config_file(
     config_path: str | None = None, config_key: str | None = None
 ) -> tuple[str, str]:
     """Sets a config path and key by searching the cwd with assistance from from user."""
@@ -269,28 +251,24 @@ def get_config_file(
                 print(f"Acceptable file types: {CONFIG_EXTS}")
 
     # Open the config file
-    with open(config_path) as config_file:
-        if config_path.endswith(".json"):
-            config = json.load(config_file)
-        elif config_path.endswith(".yaml"):
-            config = yaml.safe_load(config_file)
-        else:
-            raise NotImplementedError("file type not implemented")
-
-    # Check the config key
-    if not config_key:
-        config_key = CONFIG_DEFAULT_KEY
-        if config_key in config:
+    if config_key:
+        config = load_config(config_path, config_key)
+    else:
+        try:
+            config_key = CONFIG_DEFAULT_KEY
+            config = load_config(config_path, config_key)
             if (
-                input("Config dictionary key 'onedrive' found. Use this key? [Y/n]: ")
+                input(
+                    f"Config dictionary key '{CONFIG_DEFAULT_KEY}' found. Use this key? [Y/n]: "
+                )
                 .strip()
                 .lower()
                 == "n"
             ):
-                config_key = input("Config dictionary key to use: ").strip()
-    while config_key not in config:
-        print(f"Config dictionary key '{config_key}' not found.")
-        config_key = input("Config dictionary key to use: ").strip()
+                raise KeyError()
+        except KeyError:
+            config_key = input("Config dictionary key to use: ").strip()
+            config = load_config(config_path, config_key)
 
     return config_path, config_key
 
@@ -309,7 +287,7 @@ def instance(config_path: str | None = None, config_key: str | None = None) -> N
     # Create the instance
     if use_config_file:
         # Get the config details
-        config_path_verified, config_key_verified = get_config_file(
+        config_path_verified, config_key_verified = _get_config_file(
             config_path, config_key
         )
 
