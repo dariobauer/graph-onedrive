@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import re
@@ -19,20 +18,18 @@ from json.decoder import JSONDecodeError
 from pathlib import Path
 from time import sleep
 from typing import Any
-from typing import Dict
 
 import aiofiles
 import httpx
 
-try:
-    import yaml
-
-    optionals_yaml = True
-except ImportError:
-    optionals_yaml = False
-
 from graph_onedrive.__init__ import __version__
+from graph_onedrive._config import dump_config
+from graph_onedrive._config import load_config
 from graph_onedrive._decorators import token_required
+
+
+# Set logger
+logger = logging.getLogger(__name__)
 
 
 class GraphAPIError(Exception):
@@ -128,7 +125,7 @@ class OneDrive:
         self._create_headers()
         # Set additional attributes from the server
         self._get_drive_details()
-        logging.debug(
+        logger.debug(
             f"Graph-OneDrive version={__version__}, client_id={client_id}, tenant={tenant}"
         )
 
@@ -199,38 +196,15 @@ class OneDrive:
             )
         # Read configuration from config file
         config_path = Path(file_path)
-        logging.info(f"reading OneDrive configuration from {config_path.name}")
-        with open(config_path) as config_file:
-            if config_path.name.endswith(".json"):
-                config = json.load(config_file)
-            elif config_path.name.endswith(".yaml"):
-                config = yaml.safe_load(config_file)
-            else:
-                raise NotImplementedError("file extension not supported")
-        if config_key not in config:
-            raise KeyError(
-                f"config_key '{config_key}' not found in '{config_path.name}'"
-            )
+        logger.info(f"reading OneDrive configuration from {config_path.name}")
+        config = load_config(config_path, config_key)
         # Create the instance
-        onedrive_instance = cls.from_dict(config[config_key])
+        onedrive_instance = cls.from_dict(config)
         # Get refresh token from instance and update config file
         if save_refresh_token:
-            logging.info("saving refresh token")
-            with open(config_path) as config_file:
-                if config_path.name.endswith(".json"):
-                    config = json.load(config_file)
-                elif config_path.name.endswith(".yaml"):
-                    config = yaml.safe_load(config_file)
-                else:
-                    raise NotImplementedError("file extension not supported")
-            config[config_key]["refresh_token"] = onedrive_instance.refresh_token
-            with open(config_path, "w") as config_file:
-                if config_path.name.endswith(".json"):
-                    json.dump(config, config_file, indent=4)
-                elif config_path.name.endswith(".yaml"):
-                    yaml.safe_dump(config, config_file)
-                else:
-                    raise NotImplementedError("file extension not supported")
+            logger.info("saving refresh token")
+            config["refresh_token"] = onedrive_instance.refresh_token
+            dump_config(config, config_path, config_key)
 
         # Return the OneDrive instance
         return onedrive_instance
@@ -252,37 +226,17 @@ class OneDrive:
             raise TypeError(
                 f"config_key expected 'str', got {type(config_key).__name__!r}"
             )
-        # Read the existing configuration from the file if one exists
-        try:
-            with open(file_path) as config_file:
-                logging.debug(f"attempting to load exiting config '{file_path}'")
-                if str(file_path).endswith(".json"):
-                    config = json.load(config_file)
-                elif str(file_path).endswith(".yaml"):
-                    config = yaml.safe_load(config_file)
-                else:
-                    raise NotImplementedError("file extension not supported")
-        except FileNotFoundError:
-            config = {}
-        # Create the config key
-        if config_key not in config:
-            config[config_key] = {}
         # Set the new configuration
-        config[config_key]["tenant_id"] = self._tenant_id
-        config[config_key]["client_id"] = self._client_id
-        config[config_key]["client_secret_value"] = self._client_secret
-        config[config_key]["redirect_url"] = self._redirect
-        config[config_key]["refresh_token"] = self.refresh_token
+        config = {
+            "tenant_id": self._tenant_id,
+            "client_id": self._client_id,
+            "client_secret_value": self._client_secret,
+            "redirect_url": self._redirect,
+            "refresh_token": self.refresh_token,
+        }
         # Save the configuration to config file
-        with open(file_path, "w") as config_file:
-            if str(file_path).endswith(".json"):
-                json.dump(config, config_file, indent=4)
-            elif str(file_path).endswith(".yaml"):
-                yaml.safe_dump(config, config_file)
-            else:
-                raise NotImplementedError("file extension not supported")
-        # Nothing returned which signals no errors
-        logging.info(f"saved config to '{file_path}' with key '{config_key}'")
+        dump_config(config, file_path, config_key)
+        logger.info(f"saved config to '{file_path}' with key '{config_key}'")
 
     @classmethod
     def from_json(
@@ -292,6 +246,7 @@ class OneDrive:
         save_refresh_token: bool = False,
     ) -> OneDrive:
         """Create an instance of the OneDrive class from a config json file.
+        WARNING: from_json will be depreciated in the future, use from_file.
         Keyword arguments:
             file_path (str|Path) -- path to configuration json file (default = "config.json")
             config_key (str) -- key of the json item storing the configuration (default = "onedrive")
@@ -311,6 +266,7 @@ class OneDrive:
         self, file_path: str | Path = "config.json", config_key: str = "onedrive"
     ) -> None:
         """Save the configuration to a json config file.
+        WARNING: to_json will be depreciated in the future, use to_file.
         Keyword arguments:
             file_path (str|Path) -- path to configuration json file (default = "config.json")
             config_key (str) -- key of the json item storing the configuration (default = "onedrive")
@@ -331,6 +287,7 @@ class OneDrive:
         save_refresh_token: bool = False,
     ) -> OneDrive:
         """Create an instance of the OneDrive class from a config yaml file.
+        WARNING: from_yaml will be depreciated in the future, use from_file.
         Note this requires the yaml optional (pip install graph-onedrive[yaml]).
         Keyword arguments:
             file_path (str|Path) -- path to configuration yaml file (default = "config.yaml")
@@ -351,6 +308,7 @@ class OneDrive:
         self, file_path: str | Path = "config.yaml", config_key: str = "onedrive"
     ) -> None:
         """Save the configuration to a yaml config file.
+        WARNING: to_yaml will be depreciated in the future, use to_file.
         Note this requires the yaml optional (pip install graph-onedrive[yaml]).
         Keyword arguments:
             file_path (str|Path) -- path to configuration yaml file (default = "config.yaml")
@@ -364,8 +322,51 @@ class OneDrive:
         # Pass to generic exporter
         return self.to_file(file_path, config_key)
 
+    @classmethod
+    def from_toml(
+        cls,
+        file_path: str | Path = "config.toml",
+        config_key: str = "onedrive",
+        save_refresh_token: bool = False,
+    ) -> OneDrive:
+        """Create an instance of the OneDrive class from a config toml file.
+        WARNING: from_toml will be depreciated in the future, use from_file.
+        Note this requires the toml optional (pip install graph-onedrive[toml]).
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration toml file (default = "config.toml")
+            config_key (str) -- key of the toml item storing the configuration (default = "onedrive")
+            save_refresh_token (bool) -- save the refresh token back to the config file during instance initiation (default = False)
+        Returns:
+            onedrive_instance (OneDrive) -- OneDrive object instance
+        """
+        warnings.warn(
+            "from_toml will be depreciated in the future, use from_file",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        # Pass to generic constructor
+        return cls.from_file(file_path, config_key, save_refresh_token)
+
+    def to_toml(
+        self, file_path: str | Path = "config.toml", config_key: str = "onedrive"
+    ) -> None:
+        """Save the configuration to a toml config file.
+        WARNING: to_toml will be depreciated in the future, use to_file.
+        Note this requires the toml optional (pip install graph-onedrive[toml]).
+        Keyword arguments:
+            file_path (str|Path) -- path to configuration toml file (default = "config.toml")
+            config_key (str) -- key of the toml item storing the configuration (default = "onedrive")
+        """
+        warnings.warn(
+            "to_toml will be depreciated in the future, use to_file",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
+        # Pass to generic exporter
+        return self.to_file(file_path, config_key)
+
+    @staticmethod
     def _raise_unexpected_response(
-        self,
         response: httpx.Response,
         expected: int | list[int] = 200,
         message: str = "could not complete request",
@@ -392,8 +393,8 @@ class OneDrive:
                     graph_error = api_error
                 elif auth_error:
                     graph_error = auth_error
-                logging.debug(f"response_json={response.json()}")
-            logging.debug(
+                logger.debug(f"response_json={response.json()}")
+            logger.debug(
                 f"expected_codes={expected}, response_code={response.status_code}, package_error={message}"
             )
             raise GraphAPIError(f"{message} ({graph_error})")
@@ -430,10 +431,10 @@ class OneDrive:
         # Set the header and encode the query
         headers = {"content-type": "application/x-www-form-urlencoded"}
         query_encoded = urllib.parse.urlencode(query, encoding="utf-8")
-        logging.debug(f"token request query={query_encoded}")
+        logger.debug(f"token request query={query_encoded}")
 
         # Make the request
-        logging.info(f"requesting access and refresh tokens from {request_url}")
+        logger.info(f"requesting access and refresh tokens from {request_url}")
         response = httpx.post(request_url, headers=headers, content=query_encoded)
 
         # Check and parse the response
@@ -444,21 +445,21 @@ class OneDrive:
 
         # Set the access and refresh tokens to the instance attributes
         if not response_data.get("access_token"):
-            logging.error("response did not return an access token")
+            logger.error("response did not return an access token")
             raise GraphAPIError("response did not return an access token")
         self._access_token = response_data["access_token"]
 
         if response_data.get("refresh_token"):
             self.refresh_token = response_data["refresh_token"]
         else:
-            logging.warning(
+            logger.warning(
                 "token request did not return a refresh token, existing config not updated"
             )
 
         # Set an expiry time, removing 60 seconds assumed for processing
         expires = response_data.get("expires_in", 660) - 60
         expires = datetime.now() + timedelta(seconds=expires)
-        logging.info(f"access token expires: {expires}")
+        logger.info(f"access token expires: {expires}")
         self._access_expires = datetime.timestamp(expires)
 
     def _get_authorization(self) -> str:
@@ -494,17 +495,17 @@ class OneDrive:
         if return_state:
             if return_state.group(1) != state:
                 error_message = "response 'state' not for this request, occurs when reusing an old authorization url"
-                logging.error(error_message)
+                logger.error(error_message)
                 raise GraphAPIError(error_message)
         else:
-            logging.warning(
+            logger.warning(
                 "response 'state' was not in returned url, response not confirmed"
             )
         # Extract the code from the response
         authorization_code_re = re.search("[?|&]code=([^&]+)", response)
         if authorization_code_re is None:
             error_message = "response did not contain an authorization code"
-            logging.error(error_message)
+            logger.error(error_message)
             raise GraphAPIError(error_message)
         authorization_code = authorization_code_re.group(1)
         # Return the authorization code to be used to get tokens
@@ -1207,9 +1208,7 @@ class OneDrive:
         # If the file is empty, just create it and return
         if size == 0:
             Path(file_name).touch()
-            logging.warning(
-                f"downloaded file size=0, empty file '{file_name}' created."
-            )
+            logger.warning(f"downloaded file size=0, empty file '{file_name}' created.")
             return file_name
         # Create request url based on input item id to be downloaded
         request_url = self._api_drive_url + "items/" + item_id + "/content"
@@ -1220,7 +1219,7 @@ class OneDrive:
         # Validate request response and parse
         self._raise_unexpected_response(response, 302, "could not get download url")
         download_url = response.headers["Location"]
-        logging.debug(f"download_url={download_url}")
+        logger.debug(f"download_url={download_url}")
         # Download the file asynchronously
         asyncio.run(
             self._download_async(
@@ -1273,7 +1272,7 @@ class OneDrive:
                 print(
                     f"File {file_name} ({pretty_size}mb) will be downloaded in {num_coroutines} segments."
                 )
-            logging.debug(
+            logger.debug(
                 f"file_size={file_size}B, min_typ_chunk_size={min_typ_chunk_size}B, num_coroutines={num_coroutines}, typ_chunk_size={typ_chunk_size}"
             )
             for i in range(num_coroutines):
@@ -1339,7 +1338,7 @@ class OneDrive:
                 print(
                     f"Starting download of file segment {part_name} (bytes {start}-{end})"
                 )
-            logging.debug(
+            logger.debug(
                 f"starting download segment={part_name} start={start} end={end}"
             )
             # Create an AsyncIterator over our GET request
@@ -1402,7 +1401,7 @@ class OneDrive:
         else:  # Other systems including Mac, Linux
             file_path = str(file_path).replace("\\", "")
         file_path = Path(file_path)
-        logging.debug(f"file_path={file_path}")
+        logger.debug(f"file_path={file_path}")
         # Set file name
         if new_file_name:
             destination_file_name = new_file_name
@@ -1425,7 +1424,7 @@ class OneDrive:
         request_url += (
             urllib.parse.quote(destination_file_name) + ":/createUploadSession"
         )
-        logging.debug(f"upload session request_url={request_url}")
+        logger.debug(f"upload session request_url={request_url}")
         # Create request body for the upload session
         body = {
             "item": {
@@ -1437,7 +1436,7 @@ class OneDrive:
                 },
             }
         }
-        logging.debug(f"upload session body={body}")
+        logger.debug(f"upload session body={body}")
         # Make the Graph API request for the upload session
         if verbose:
             print(f"Requesting upload session")
@@ -1447,20 +1446,20 @@ class OneDrive:
             response, 200, "upload session could not be created", has_json=True
         )
         upload_url = response.json()["uploadUrl"]
-        logging.debug(f"upload_url={upload_url}")
+        logger.debug(f"upload_url={upload_url}")
         # Determine the upload file chunk size
         chunk_size: int = (
             1024 * 320 * 16
         )  # = 5MiB. Docs: Must be multiple of 320KiB, recommend 5-10MiB, max 60MiB
         no_of_uploads: int = -(-file_size // chunk_size)
-        logging.debug(
+        logger.debug(
             f"chunk_size={chunk_size}B, file_size={file_size}, no_of_uploads={no_of_uploads}"
         )
         if verbose and no_of_uploads > 1:
             print(
                 f"File {destination_file_name} will be uploaded in {no_of_uploads} segments"
             )
-        logging.info(
+        logger.info(
             f"file {destination_file_name} will be uploaded in {no_of_uploads} segments"
         )
         # Create an upload connection client
@@ -1471,7 +1470,7 @@ class OneDrive:
             # Open the file pointer
             if verbose:
                 print("Loading file")
-            logging.info(f"opening file '{file_path}'")
+            logger.info(f"opening file '{file_path}'")
             data = open(file_path, "rb")
             # Start the upload in a loop for as long as there is data left to upload
             n = 0
@@ -1488,7 +1487,7 @@ class OneDrive:
                         print(
                             f"Uploading segment {n}/{no_of_uploads} (~{int((n-1)/no_of_uploads*100)}% complete)"
                         )
-                logging.debug(
+                logger.debug(
                     f"uploading file segment={n}, content_range_start={content_range_start}, content_range_end={content_range_end}"
                 )
                 # Upload chunks
@@ -1593,7 +1592,7 @@ class OneDrive:
             .isoformat(timespec="seconds")
             .replace("+00:00", "Z")
         )
-        logging.debug(
+        logger.debug(
             f"platform={os.name}, file_created_str={file_created_str}, file_modified_str={file_modified_str}"
         )
         return file_size, file_created_str, file_modified_str

@@ -4,6 +4,8 @@
 
 * Added search method to OneDrive class and CLI
 * Added optional yaml config files support with optional PyYAML dependency
+* Added optional toml config files support with optional TOML dependency
+* Improved logging
 
 ## Released
 

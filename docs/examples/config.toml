@@ -1,0 +1,7 @@
+# Note that using toml config files requires the optional dependency TOML.
+[onedrive]
+tenant_id = ""  # required
+client_id = ""  # required
+client_secret_value = ""  # required
+redirect_url = "http://localhost:8080"  # optional, remove line if unused
+refresh_token = ""  # optional, remove line if unused

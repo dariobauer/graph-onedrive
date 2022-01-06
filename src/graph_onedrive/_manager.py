@@ -10,6 +10,10 @@ from typing import Generator
 from graph_onedrive._onedrive import OneDrive
 
 
+# Set logger
+logger = logging.getLogger(__name__)
+
+
 @contextmanager
 def OneDriveManager(
     config_path: str | Path, config_key: str = "onedrive"
@@ -22,8 +26,8 @@ def OneDriveManager(
     Returns:
         onedrive_instance (OneDrive) -- OneDrive object instance
     """
-    logging.info("OneDriveManager creating instance")
+    logger.info("OneDriveManager creating instance")
     onedrive_instance = OneDrive.from_file(config_path, config_key)
     yield onedrive_instance
-    logging.info("OneDriveManager saving instance configuration to file")
+    logger.info("OneDriveManager saving instance configuration to file")
     onedrive_instance.to_file(config_path, config_key)

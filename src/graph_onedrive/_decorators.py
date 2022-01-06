@@ -6,6 +6,10 @@ from functools import wraps
 from typing import no_type_check
 
 
+# Set logger
+logger = logging.getLogger(__name__)
+
+
 @no_type_check
 def token_required(func):
     """INTERNAL: Graph-OneDrive decorator to check for and refresh the access token when calling methods."""
@@ -19,7 +23,7 @@ def token_required(func):
         now = datetime.timestamp(datetime.now())
         # Refresh access token if expires does not exist or has expired
         if expires <= now:
-            logging.info(
+            logger.info(
                 "access token expired, redeeming refresh token for new access token"
             )
             onedrive_instance._get_token()

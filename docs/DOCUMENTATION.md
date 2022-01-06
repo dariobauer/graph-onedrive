@@ -50,7 +50,7 @@ The configuration details required are below displayed in the typical configurat
 }
 ```
 
- An equivalent YAML format can also be used when the corresponding optional dependency is installed.
+Equivalent YAML and TOML formats can also be used when the corresponding optional dependency is installed.
 
 Note that the `onedrive` dictionary key can be any string and could facilitate multiple instances running from the same configuration file with different keys.
 
@@ -71,10 +71,10 @@ Depending on your installation you may need to use `pip3` instead.
 pip install graph-onedrive
 ```
 
-If you plan to use YAML formatted config files, then install the yaml optional dependency:
+If you plan to use YAML and/or TOML formatted config files, then the optional install dependencies can be installed:
 
 ```console
-pip install 'graph-onedrive[yaml]'
+pip install 'graph-onedrive[yaml,toml]'
 ```
 
 You can also install the in-development version:
@@ -96,7 +96,8 @@ These dependencies provide critical functions for the package to run and will ty
 
 Optional dependencies provide secondary features that are not part of the core package functionality and will not typically be installed automatically. These can be installed manually or as a package extra as described in [installation](#installation).
 
-* [PyYAML](https://pypi.org/project/PyYAML/) - enables yaml config files
+* [PyYAML](https://pypi.org/project/PyYAML/) - enables .yaml config files
+* [TOML](https://pypi.org/project/TOML/) - enables .toml config files
 
 ## Command-line interface
 
@@ -211,7 +212,7 @@ config_path = "config.json"  # path to config file
 config_key = "onedrive"  # config file dictionary key (default = "onedrive")
 my_instance = OneDrive.from_file(config_path, config_key)
 # do stuff
-my_instance.to_file(config_path, config_key)  # optionally resave the config
+my_instance.to_file(config_path, config_key)  # optionally dump the config
 ```
 
 #### c) Using in-line configuration parameters
@@ -227,7 +228,7 @@ tenant = ""
 redirect_url = "http://localhost:8080"
 my_instance = OneDrive(client_id, client_secret_value, tenant, redirect_url)
 # do stuff
-my_instance.to_file(config_path, config_key)  # optionally resave the config
+my_instance.to_file(config_path, config_key)  # optionally dump the config
 ```
 
 ### Authenticating the instance
@@ -346,9 +347,9 @@ Returns:
 
 Create an instance of the OneDrive class from a configuration file.
 
-Note `from_json` and `from_yaml` are alias of `from_file` and are pending depreciation.
+Note `from_json`, `from_yaml`, and `from_toml` are alias of `from_file` and are pending depreciation.
 
-To use yaml config files the corresponding [optional dependencies](#dependencies) are required.
+To use yaml and toml config files the corresponding [optional dependencies](#dependencies) are required.
 
 ```python
 onedrive_instance = graph_onedrive.OneDrive.from_file(
@@ -366,13 +367,13 @@ Returns:
 
 * onedrive_instance (OneDrive) -- OneDrive object instance
 
-#### to_file, to_json, to_yaml
+#### to_file
 
 Save the configuration to a configuration file.
 
-Note `to_json` and `to_yaml` are alias of `to_file` and are pending depreciation.
+Note `to_json`, `to_yaml`, and `to_toml` are alias of `to_file` and are pending depreciation.
 
-To use yaml config files the corresponding [optional dependencies](#dependencies) are required.
+To use yaml or toml config files the corresponding [optional dependencies](#dependencies) are required.
 
 ```python
 onedrive_instance.to_file(config_path="config.json", config_key="onedrive")
@@ -555,7 +556,7 @@ Keyword arguments:
 
 * link_type (str) -- type of sharing link to create, either "view", "edit", or ("embed" for OneDrive personal only) (default = "view")
 * password (str) -- password for the sharing link (OneDrive personal only) (default = None)
-* expiration (datetime) -- expiration of the sharing link, computer local timezone assummed for 'native' datetime objects (default = None)
+* expiration (datetime) -- expiration of the sharing link, computer local timezone assumed for 'native' datetime objects (default = None)
 * scope (str) -- "anonymous" for anyone with the link, or ("organization" to limit to the tenant for OneDrive Business) Note businesses may choose to disable anonymous links which will result in an error (default = "anonymous")
 
 Returns:

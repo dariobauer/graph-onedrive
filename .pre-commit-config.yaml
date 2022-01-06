@@ -52,4 +52,4 @@ repos:
     rev: v0.930
     hooks:
       - id: mypy
-        additional_dependencies: [types-aiofiles, types-PyYAML]
+        additional_dependencies: [types-aiofiles, types-PyYAML, types-toml]
