@@ -68,13 +68,13 @@ Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) w
 Depending on your installation you may need to use `pip3` instead.
 
 ```console
-pip install graph-onedrive
+pip install -U graph-onedrive
 ```
 
-If you plan to use YAML and/or TOML formatted config files, then the optional install dependencies can be installed:
+If you plan to use YAML and/or TOML formatted config files, then the optional install dependencies can be installed (yaml, toml, or both):
 
 ```console
-pip install 'graph-onedrive[yaml,toml]'
+pip install -U 'graph-onedrive[yaml,toml]'
 ```
 
 You can also install the in-development version:

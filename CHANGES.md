@@ -2,12 +2,18 @@
 
 ## Unreleased
 
+
+## Released
+
+### Version 0.3.0
+
+Released 2022-01-08
+
 * Added search method to OneDrive class and CLI
 * Added optional yaml config files support with optional PyYAML dependency
 * Added optional toml config files support with optional TOML dependency
 * Improved logging
-
-## Released
+* `from_json` and `to_json` are now pending depreciation, use `from_file` and `to_file` instead
 
 ### Version 0.2.0
 

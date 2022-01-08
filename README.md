@@ -27,7 +27,7 @@ The package currently requires Python 3.7 or greater.
 Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) which will use the releases hosted on [PyPI][pypi]. Further options in the docs.
 
 ```console
-pip install graph-onedrive
+pip install -U graph-onedrive
 ```
 
 ## Documentation
@@ -35,6 +35,8 @@ pip install graph-onedrive
 Documentation and examples are [provided on GitHub in the docs folder][docs].
 
 ### A simple example
+
+*This is a simple example using a config file. Refer to the documentation for other instance constructors including inline options.*
 
 Run this command in the terminal after installation which will create a config file in the current working directory.
 
@@ -56,8 +58,6 @@ with OneDriveManager(config_path="config.json", config_key="onedrive") as my_dri
     # Upload a file to the root directory
     new_file_id = my_drive.upload_file("my-photo.jpg", verbose=True)
 ```
-
-*OneDriveManager is new in version 0.2.0. Refer docs for other instance constructors.*
 
 ## License and Terms of Use
 
