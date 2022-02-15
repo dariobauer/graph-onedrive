@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Fixed bug in download_file method when verbose was set to false (Issue [#29](https://github.com/dariobauer/graph-onedrive/issues/29))
 
 ## Released
 
