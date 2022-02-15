@@ -1333,8 +1333,8 @@ class OneDrive:
             # Build the Range HTTP header and add the auth header
             headers = {"Range": f"bytes={start}-{end}"}
             headers.update(self._headers)
+            part_name = part_file_path.suffix.lstrip(".")
             if verbose:
-                part_name = part_file_path.suffix.lstrip(".")
                 print(
                     f"Starting download of file segment {part_name} (bytes {start}-{end})"
                 )
@@ -1352,6 +1352,7 @@ class OneDrive:
                     await fw.write(chunk)
             if verbose:
                 print(f"Finished download of file segment {part_name}")
+            logger.debug(f"finished download segment={part_name}")
 
     @token_required
     def upload_file(
