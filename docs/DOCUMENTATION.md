@@ -676,10 +676,10 @@ Returns:
 Downloads a file to the current working directory asynchronously with multiple concurrent http requests file files larger than 1mb.
 Note folders cannot be downloaded, you need to implement a loop instead.
 
-Future development improvement: specify the file location and name.
-
 ```python
-file_name = my_instance.download_file(item_id, max_connections=8, verbose=False)
+file_path = my_instance.download_file(
+    item_id, max_connections=8, dest_dir=None, verbose=False
+)
 ```
 
 Positional arguments:
@@ -689,11 +689,12 @@ Positional arguments:
 Keyword arguments:
 
 * max_connections (int) -- max concurrent open http requests, refer throttling warning in the gotcha section at the bottom of the docs
+* dest_dir (str | Path) -- destination directory for the downloaded file, default is current working directory (default = None)
 * verbose (bool) -- prints the download progress (default = False)
 
 Returns:
 
-* file_name (str) -- returns the name of the file including extension
+* file_path (Path) -- returns the path to the downloaded file including extension
 
 #### upload_file
 

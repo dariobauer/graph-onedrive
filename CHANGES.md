@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Add destination argument to download_file method (Issue [#30](https://github.com/dariobauer/graph-onedrive/issues/30))
 * Fixed bug in download_file method when verbose was set to false (Issue [#29](https://github.com/dariobauer/graph-onedrive/issues/29))
 
 ## Released

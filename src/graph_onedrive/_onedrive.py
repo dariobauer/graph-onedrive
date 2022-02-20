@@ -18,6 +18,7 @@ from json.decoder import JSONDecodeError
 from pathlib import Path
 from time import sleep
 from typing import Any
+from typing import Optional
 
 import aiofiles
 import httpx
@@ -1173,7 +1174,11 @@ class OneDrive:
 
     @token_required
     def download_file(
-        self, item_id: str, max_connections: int = 8, verbose: bool = False
+        self,
+        item_id: str,
+        max_connections: int = 8,
+        dest_dir: str | Path | None = None,
+        verbose: bool = False,
     ) -> str:
         """Downloads a file to the current working directory asynchronously.
         Note folders cannot be downloaded, you need to use a loop instead.
@@ -1181,9 +1186,10 @@ class OneDrive:
             item_id (str) -- item id of the file to be deleted
         Keyword arguments:
             max_connections (int) -- max concurrent open http requests, refer Docs regarding throttling limits
+            dest_dir (str | Path) -- destination directory for the downloaded file, default is current working directory (default = None)
             verbose (bool) -- prints status message during the download process (default = False)
         Returns:
-            file_name (str) -- returns the name of the file including extension
+            file_path (Path) -- returns the path of the file including extension
         """
         # Validate item_id
         if not isinstance(item_id, str):
@@ -1193,6 +1199,17 @@ class OneDrive:
             raise TypeError(
                 f"max_connections expected 'int', got {type(max_connections).__name__!r}"
             )
+        # Validate dest_dir
+        if dest_dir is None:
+            dest_dir = Path.cwd()
+        elif not isinstance(dest_dir, str) and not isinstance(dest_dir, Path):
+            raise TypeError(
+                f"dest_dir expected 'str' or 'Path', got {type(dest_dir).__name__!r}"
+            )
+        dest_dir = Path(dest_dir)
+        if dest_dir.is_dir() is False:
+            raise ValueError(f"dest_dir {dest_dir} is not a directory")
+        # Check max connections is not excessive
         if max_connections > 16:
             warnings.warn(
                 f"max_connections={max_connections} could result in throttling and enforced cool-down period",
@@ -1204,10 +1221,11 @@ class OneDrive:
         if "folder" in file_details:
             raise ValueError("item_id provided is for a folder, expected file item id")
         file_name = file_details["name"]
+        file_path = dest_dir / file_name
         size = file_details["size"]
         # If the file is empty, just create it and return
         if size == 0:
-            Path(file_name).touch()
+            file_path.touch()
             logger.warning(f"downloaded file size=0, empty file '{file_name}' created.")
             return file_name
         # Create request url based on input item id to be downloaded
@@ -1223,16 +1241,16 @@ class OneDrive:
         # Download the file asynchronously
         asyncio.run(
             self._download_async(
-                download_url, file_name, size, max_connections, verbose
+                download_url, file_path, size, max_connections, verbose
             )
         )
         # Return the file name
-        return file_name
+        return file_path
 
     async def _download_async(
         self,
         download_url: str,
-        file_name: str,
+        file_path: Path,
         file_size: int,
         max_connections: int = 8,
         verbose: bool = False,
@@ -1240,7 +1258,7 @@ class OneDrive:
         """INTERNAL: Creates a list of co-routines each downloading one part of the file, and starts them.
         Positional arguments:
             download_url (str) -- url of the file to download
-            file_name (str) -- name of the final file
+            file_path (Path) -- path of the final file
             file_size (int) -- size of the file being downloaded
         Keyword arguments:
             max_connections (int) -- max concurrent open http requests
@@ -1248,7 +1266,7 @@ class OneDrive:
         """
         # Assert rather then check as this is an internal method
         assert isinstance(download_url, str)
-        assert isinstance(file_name, str)
+        assert isinstance(file_path, Path)
         assert isinstance(file_size, int)
         assert isinstance(max_connections, int)
         tasks = list()
@@ -1270,14 +1288,16 @@ class OneDrive:
             if verbose:
                 pretty_size = round(file_size / 1000000, 1)
                 print(
-                    f"File {file_name} ({pretty_size}mb) will be downloaded in {num_coroutines} segments."
+                    f"File {file_path.name} ({pretty_size}mb) will be downloaded in {num_coroutines} segments."
                 )
             logger.debug(
                 f"file_size={file_size}B, min_typ_chunk_size={min_typ_chunk_size}B, num_coroutines={num_coroutines}, typ_chunk_size={typ_chunk_size}"
             )
             for i in range(num_coroutines):
                 # Get the file part Path, placed in the temp directory
-                part_file_path = Path(tmp_dir).joinpath(file_name + "." + str(i + 1))
+                part_file_path = Path(tmp_dir).joinpath(
+                    file_path.name + "." + str(i + 1)
+                )
                 # We save the file part Path for later use
                 file_part_names.append(part_file_path)
                 # On first iteration will be 0
@@ -1303,7 +1323,7 @@ class OneDrive:
             # Join the downloaded file parts
             if verbose:
                 print("Joining individual segments into single file")
-            with open(file_name, "wb") as fw:
+            with open(file_path, "wb") as fw:
                 for file_part in file_part_names:
                     with open(file_part, "rb") as fr:
                         shutil.copyfileobj(fr, fw)
