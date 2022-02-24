@@ -2,10 +2,15 @@
 
 ## Unreleased
 
-* Add destination argument to download_file method (Issue [#30](https://github.com/dariobauer/graph-onedrive/issues/30))
-* Fixed bug in download_file method when verbose was set to false (Issue [#29](https://github.com/dariobauer/graph-onedrive/issues/29))
+
 
 ## Released
+
+### Version 0.4.0
+
+* Add destination argument to download_file method (Issue [#30](https://github.com/dariobauer/graph-onedrive/issues/30))
+* Fixed bug in download_file method when verbose was set to false (Issue [#29](https://github.com/dariobauer/graph-onedrive/issues/29))
+* Removed depreciated class constructors & deconstructors `graph_onedrive.create()`, `graph_onedrive.create_from_config_file()`, `graph_onedrive.save_to_config_file()`, `OneDrive.from_json()`, `OneDrive.to_json()`, `OneDrive.from_yaml()`, `OneDrive.to_yaml()`, `OneDrive.from_toml()`, `OneDrive.to_toml()`. Alternative methods are available, refer to the documentation
 
 ### Version 0.3.0
 

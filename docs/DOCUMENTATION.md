@@ -347,8 +347,6 @@ Returns:
 
 Create an instance of the OneDrive class from a configuration file.
 
-Note `from_json`, `from_yaml`, and `from_toml` are alias of `from_file` and are pending depreciation.
-
 To use yaml and toml config files the corresponding [optional dependencies](#dependencies) are required.
 
 ```python
@@ -370,8 +368,6 @@ Returns:
 #### to_file
 
 Save the configuration to a configuration file.
-
-Note `to_json`, `to_yaml`, and `to_toml` are alias of `to_file` and are pending depreciation.
 
 To use yaml or toml config files the corresponding [optional dependencies](#dependencies) are required.
 

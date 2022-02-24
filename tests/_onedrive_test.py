@@ -218,50 +218,6 @@ class TestConstructors:
         (msg,) = excinfo.value.args
         assert msg == exp_msg
 
-    def test_from_json(self, tmp_path, mock_graph_api, mock_auth_api):
-        # Make a temporary config file
-        config_key = "onedrive"
-        config = {
-            config_key: {
-                "tenant_id": TENANT,
-                "client_id": CLIENT_ID,
-                "client_secret_value": CLIENT_SECRET,
-                "redirect_url": REDIRECT,
-                "refresh_token": REFRESH_TOKEN,
-            }
-        }
-        temp_dir = Path(tmp_path, "temp_config")
-        temp_dir.mkdir()
-        config_path = Path(temp_dir, "config.json")
-        with open(config_path, "w") as fw:
-            json.dump(config, fw)
-        # Run the test
-        with pytest.deprecated_call():
-            onedrive_instance = OneDrive.from_json(config_path, config_key)
-        assert isinstance(onedrive_instance, OneDrive)
-
-    def test_from_yaml(self, tmp_path, mock_graph_api, mock_auth_api):
-        # Make a temporary config file
-        config_key = "onedrive"
-        config = {
-            config_key: {
-                "tenant_id": TENANT,
-                "client_id": CLIENT_ID,
-                "client_secret_value": CLIENT_SECRET,
-                "redirect_url": REDIRECT,
-                "refresh_token": REFRESH_TOKEN,
-            }
-        }
-        temp_dir = Path(tmp_path, "temp_config")
-        temp_dir.mkdir()
-        config_path = Path(temp_dir, "config.yaml")
-        with open(config_path, "w") as fw:
-            yaml.safe_dump(config, fw)
-        # Run the test
-        with pytest.deprecated_call():
-            onedrive_instance = OneDrive.from_yaml(config_path, config_key)
-        assert isinstance(onedrive_instance, OneDrive)
-
 
 class TestDeconstructors:
     """Tests the to_file, to_json, to_yaml methods."""
