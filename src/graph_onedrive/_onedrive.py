@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import platform
 import re
 import secrets
 import shutil
@@ -1465,12 +1466,11 @@ class OneDrive:
             # Windows OS
             file_created = os.path.getctime(file_path)
         else:
-            # Other OS
             stat = os.stat(file_path)
-            try:
-                # Likely Mac OS
+            if platform.system() == "Darwin":
+                # Mac OS
                 file_created = stat.st_birthtime
-            except AttributeError:
+            else:
                 # Likely Linux OS, fall back to last modified.
                 file_created = stat.st_mtime
         # Convert the seconds to UTC ISO timestamps
