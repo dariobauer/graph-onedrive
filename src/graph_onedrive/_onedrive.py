@@ -8,6 +8,7 @@ import os
 import re
 import secrets
 import shutil
+import sys
 import tempfile
 import urllib.parse
 import warnings
@@ -1461,16 +1462,15 @@ class OneDrive:
         # Get the file modified time
         file_modified = os.path.getmtime(file_path)
         # Get the file creation time (platform specific)
-        if os.name == "nt":
+        if sys.platform == "win32":
             # Windows OS
             file_created = os.path.getctime(file_path)
         else:
-            # Other OS
             stat = os.stat(file_path)
-            try:
-                # Likely Mac OS
+            if sys.platform == "darwin":
+                # Mac OS
                 file_created = stat.st_birthtime
-            except AttributeError:
+            else:
                 # Likely Linux OS, fall back to last modified.
                 file_created = stat.st_mtime
         # Convert the seconds to UTC ISO timestamps
