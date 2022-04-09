@@ -1469,7 +1469,7 @@ class OneDrive:
             stat = os.stat(file_path)
             try:
                 # Likely Mac OS
-                file_created = stat.st_birthtime
+                file_created = stat.st_birthtime  # type: ignore[override]
             except AttributeError:
                 # Likely Linux OS, fall back to last modified.
                 file_created = stat.st_mtime
