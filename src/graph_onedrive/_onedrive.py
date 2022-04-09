@@ -5,10 +5,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import platform
 import re
 import secrets
 import shutil
+import sys
 import tempfile
 import urllib.parse
 import warnings
@@ -1462,12 +1462,12 @@ class OneDrive:
         # Get the file modified time
         file_modified = os.path.getmtime(file_path)
         # Get the file creation time (platform specific)
-        if os.name == "nt":
+        if sys.platform == "win32":
             # Windows OS
             file_created = os.path.getctime(file_path)
         else:
             stat = os.stat(file_path)
-            if platform.system() == "Darwin":
+            if sys.platform == "darwin":
                 # Mac OS
                 file_created = stat.st_birthtime
             else:
