@@ -1057,7 +1057,7 @@ class OneDrive:
         """Downloads a file to the current working directory asynchronously.
         Note folders cannot be downloaded, you need to use a loop instead.
         Positional arguments:
-            item_id (str) -- item id of the file to be deleted
+            item_id (str) -- item id of the file to be downloaded
         Keyword arguments:
             max_connections (int) -- max concurrent open http requests, refer Docs regarding throttling limits
             dest_dir (str | Path) -- destination directory for the downloaded file, default is current working directory (default = None)
