@@ -52,4 +52,5 @@ repos:
     rev: v0.991
     hooks:
       - id: mypy
+        args: [--explicit-package-bases]
         additional_dependencies: [types-aiofiles, types-PyYAML, types-toml]
