@@ -27,6 +27,7 @@ strict_equality = true
 warn_redundant_casts = true
 warn_unused_configs = true
 warn_unused_ignores = true
+namespace_packages = false
 
 [[tool.mypy.overrides]]
 module = [
