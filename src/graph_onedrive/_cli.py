@@ -135,7 +135,6 @@ def config(config_path: str | None = None, config_key: str | None = None) -> Non
 
     # Set the export directory when not set as an argument
     if not config_path:
-
         if (
             input(
                 f"Save as {CONFIG_DEFAULT_FILENAME}.json in current working directory? [Y/n]: "
