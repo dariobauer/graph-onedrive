@@ -15,7 +15,6 @@ def main() -> None:
 
     # Use the context manager to manage a session instance
     with OneDriveManager(config_path="config.json", config_key="onedrive") as my_drive:
-
         # Get the details of all the items in the root directory
         items = my_drive.list_directory()
 

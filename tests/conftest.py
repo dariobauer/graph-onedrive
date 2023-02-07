@@ -47,7 +47,6 @@ def mock_graph_api():
     # Create the mocked routes
     # IMPORTANT: routes ordered by most specific top as respx it will use first match
     with respx.mock(base_url=api_url, assert_all_called=False) as respx_mock:
-
         # Make folder
         make_folder_route = respx_mock.post(
             path__regex=r"me/drive/(?:root|items/[0-9a-zA-Z-]+)/children$",
@@ -477,7 +476,6 @@ def mock_auth_api():
     auth_base_url = "https://login.microsoftonline.com/"
 
     with respx.mock(base_url=auth_base_url) as respx_mock:
-
         # Authorization Code and Refresh Token
         token_route = respx_mock.post(
             path__regex=r"[0-9a-zA-Z-]+/oauth2/v2.0/token$",

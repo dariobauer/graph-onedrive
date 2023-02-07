@@ -51,7 +51,6 @@ from graph_onedrive import OneDriveManager
 
 # Use a context manager to manage the session
 with OneDriveManager(config_path="config.json", config_key="onedrive") as my_drive:
-
     # Print the OneDrive usage
     my_drive.get_usage(verbose=True)
 
