@@ -669,7 +669,7 @@ Returns:
 
 #### download_file
 
-Downloads a file to the current working directory asynchronously with multiple concurrent http requests file files larger than 1mb.
+Downloads a file to the current working directory asynchronously with multiple concurrent http requests for files larger than 1mb.
 Note folders cannot be downloaded, you need to implement a loop instead.
 
 ```python
@@ -684,7 +684,7 @@ Positional arguments:
 
 Keyword arguments:
 
-* max_connections (int) -- max concurrent open http requests, refer throttling warning in the gotcha section at the bottom of the docs
+* max_connections (int) -- max concurrent open http requests, refer [throttling limits](#throttling-limits)
 * dest_dir (str | Path) -- destination directory for the downloaded file, default is current working directory (default = None)
 * verbose (bool) -- prints the download progress (default = False)
 
