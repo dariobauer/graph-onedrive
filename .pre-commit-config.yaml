@@ -3,26 +3,26 @@ ci:
   autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/asottile/setup-cfg-fmt
-    rev: v2.3.0
+    rev: v2.4.0
     hooks:
       - id: setup-cfg-fmt
   - repo: https://github.com/asottile/reorder-python-imports
-    rev: v3.9.0
+    rev: v3.10.0
     hooks:
       - id: reorder-python-imports
         name: Reorder Python imports (src, tests)
         args: ["--application-directories", "src"]
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.4.0
+    rev: v3.10.1
     hooks:
       - id: pyupgrade
         args: ["--py37-plus"]
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.7.0
     hooks:
     - id: black
   - repo: https://github.com/asottile/blacken-docs
-    rev: 1.13.0
+    rev: 1.15.0
     hooks:
       - id: blacken-docs
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -46,7 +46,7 @@ repos:
       - id: fix-byte-order-marker
       - id: end-of-file-fixer
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.3.0
+    rev: v1.4.1
     hooks:
       - id: mypy
         additional_dependencies: [types-aiofiles, types-PyYAML, types-toml]
