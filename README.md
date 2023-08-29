@@ -22,7 +22,8 @@ Note that some Microsoft work and school accounts will not allow apps to connect
 
 ## Installation
 
-The package currently requires Python 3.7 or greater.
+The package currently requires Python 3.8 or greater.
+The last version to support Python 3.7 was release 0.4.0 which can still be installed.
 
 Install and update using [pip](https://pip.pypa.io/en/stable/getting-started/) which will use the releases hosted on [PyPI][pypi]. Further options in the docs.
 
