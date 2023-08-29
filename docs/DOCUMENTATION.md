@@ -15,20 +15,20 @@ Note that some Microsoft work and school accounts will not allow apps to connect
 
 To interact with the Graph API, an app needs to be registered through the [Azure portal](https://portal.azure.com/). Detailed documentation on how to do this is [available directly from Microsoft](https://docs.microsoft.com/en-us/graph/auth-register-app-v2?context=graph%2Fapi%2F1.0&view=graph-rest-1.0).
 
-Setup Option | Description
----|---
-Supported account types | This is related to the tenant described in the next section. Essentially the more restrictive, the easier it is to get the app registered.
-Redirect URI | It is recommended this is left as `Web` to `http://localhost`.
+| Setup Option            | Description                                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Supported account types | This is related to the tenant described in the next section. Essentially the more restrictive, the easier it is to get the app registered. |
+| Redirect URI            | It is recommended this is left as `Web` to `http://localhost`.                                                                             |
 
 #### Step 2: Obtain authentication details
 
 You need to obtain your registered app's authentication details from the [Azure portal](https://portal.azure.com/) to use in the package for authentication.
 
-Parameter | Location within Azure Portal | Description
----|---|---
-Directory (tenant) ID | App registrations > *your app name* > Overview | The tenant is used to restrict an app to certain accounts. `common` allows both personal Microsoft accounts as well as work/school accounts to use the app. `organizations`, and `consumers` each only allow these account types. All of these types are known as multi-tenant and require more security processes be passed to ensure that you are a legitimate developer. On the contrary, single-tenant apps restrict the app to only one work/school account (i.e. typically one company) and therefore have far fewer security requirements. Single tenants are either a GUID or domain. Refer to the [Azure docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-v2-protocols#endpoints) for details.
-Application (client) ID | App registrations > *your app name* > Overview | The application ID that's assigned to your app. You can find this information in the portal where you registered your app. Note that this is not the client secret id but the id of the app itself.
-Client secret value | App registrations > *your app name* > Certificates & secrets | The client secret that you generated for your app in the app registration portal. Note that this allows you to set an expiry and should be checked if your app stops working. The client secret is hidden after the initial generation so it is important to copy it and keep it secure.
+| Parameter               | Location within Azure Portal                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Directory (tenant) ID   | App registrations > *your app name* > Overview               | The tenant is used to restrict an app to certain accounts. `common` allows both personal Microsoft accounts as well as work/school accounts to use the app. `organizations`, and `consumers` each only allow these account types. All of these types are known as multi-tenant and require more security processes be passed to ensure that you are a legitimate developer. On the contrary, single-tenant apps restrict the app to only one work/school account (i.e. typically one company) and therefore have far fewer security requirements. Single tenants are either a GUID or domain. Refer to the [Azure docs](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-v2-protocols#endpoints) for details. |
+| Application (client) ID | App registrations > *your app name* > Overview               | The application ID that's assigned to your app. You can find this information in the portal where you registered your app. Note that this is not the client secret id but the id of the app itself.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Client secret value     | App registrations > *your app name* > Certificates & secrets | The client secret that you generated for your app in the app registration portal. Note that this allows you to set an expiry and should be checked if your app stops working. The client secret is hidden after the initial generation so it is important to copy it and keep it secure.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 WARNING: The client secret presents a security risk if exposed. It is recommended to revoke the client secret immediately if it becomes exposed.
 
@@ -60,7 +60,8 @@ The `redirect_url` and `refresh_token` values are default so these lines can be 
 
 #### Requirements
 
-The package currently requires Python 3.7 or greater.
+The package currently requires Python 3.8 or greater.
+The last version to support Python 3.7 was release 0.4.0 which can still be installed.
 
 #### Install
 
@@ -113,11 +114,11 @@ graph-onedrive [-h] [-c] [-a] [-i] [-V] [-f PATH] [-k KEY]
 
 One of the main actions must be given as an input.
 
-Action argument | Description
----|---
--c, --configure | Create a new configuration file, or add to an existing one with a different dictionary key
--a, --authenticate | Authenticate a configuration file
--i, --instance | Interact with OneDrive to test your config and perform simple tasks
+| Action argument    | Description                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| -c, --configure    | Create a new configuration file, or add to an existing one with a different dictionary key |
+| -a, --authenticate | Authenticate a configuration file                                                          |
+| -i, --instance     | Interact with OneDrive to test your config and perform simple tasks                        |
 
 You can combine these to run multiple tasks in succession, with a common one being `graph-onedrive -cai` which will create a config file, authenticate it, and then run an instance.
 
@@ -125,10 +126,10 @@ You can combine these to run multiple tasks in succession, with a common one bei
 
 You can use flags to specify the config file path and/or dictionary key.
 
-Optional argument | Description
----|---
--f, --file PATH | Optional path to config file
--k, --key KEY | Optional config file dictionary key
+| Optional argument | Description                         |
+| ----------------- | ----------------------------------- |
+| -f, --file PATH   | Optional path to config file        |
+| -k, --key KEY     | Optional config file dictionary key |
 
 Use these flags by using the flag followed by the input, for example:
 
@@ -138,10 +139,10 @@ graph-onedrive -cai -f "config.json" -k "onedrive"
 
 ### Other commands
 
-Other arguments | Description
----|---
--V, --version | Returns the version of Graph-Onedrive installed
--h, --help | Displays help, including a list of attributes
+| Other arguments | Description                                     |
+| --------------- | ----------------------------------------------- |
+| -V, --version   | Returns the version of Graph-Onedrive installed |
+| -h, --help      | Displays help, including a list of attributes   |
 
 ## Limitations
 
