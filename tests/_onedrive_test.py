@@ -1272,7 +1272,7 @@ class TestUpload:
             file_modified_str,
         ) = onedrive._get_local_file_metadata(file_path)
         assert file_size == 0
-        timestamp_format = "^(?:20|19)[0-9]{2}-(?:0[0-9]|1[012])-(?:[0-2][0-9]|3[01])T(?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2}Z$"
+        timestamp_format = "^(?:20|19)[0-9]{2}-(?:0[1-9]|1[012])-(?:[0-2][0-9]|3[01])T(?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2}Z$"
         assert re.search(timestamp_format, file_created_str)
         assert re.search(timestamp_format, file_modified_str)
         # These timestamp asserts are buggy on some platforms, take care if updating
