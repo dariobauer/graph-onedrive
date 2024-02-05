@@ -1,5 +1,6 @@
 """Decorators to wrap Graph-OneDrive package methods and functions.
 """
+
 import logging
 from datetime import datetime
 from functools import wraps
