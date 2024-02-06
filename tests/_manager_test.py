@@ -1,4 +1,5 @@
 """Tests the OneDrive context manager using pytest."""
+
 import json
 from pathlib import Path
 

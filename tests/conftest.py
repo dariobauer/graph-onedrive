@@ -1,4 +1,5 @@
 """Sets-up and tears-down configuration used for testing."""
+
 import json
 import os
 import re
@@ -244,9 +245,9 @@ def side_effect_search(request):
     if next:
         alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  # = string.ascii_letters + string.digits
         skip_token = "s!" + "".join(secrets.choice(alphabet) for _ in range(10))
-        response_json[
-            "@odata.nextLink"
-        ] = f"https://graph.microsoft.com/v1.0/me/drive/root/search(q='{query}')?$top={top}&$skiptoken={skip_token}"
+        response_json["@odata.nextLink"] = (
+            f"https://graph.microsoft.com/v1.0/me/drive/root/search(q='{query}')?$top={top}&$skiptoken={skip_token}"
+        )
     return httpx.Response(200, json=response_json)
 
 

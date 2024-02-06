@@ -1,6 +1,7 @@
 """Command line interface tools for the Python package Graph-OneDrive.
 Run terminal command 'graph-onedrive --help' or 'python -m graph-onedrive --help' for details.
 """
+
 from __future__ import annotations
 
 import argparse

@@ -1,4 +1,5 @@
 """Tests the OneDrive class using pytest."""
+
 import json
 import logging
 import os
@@ -601,8 +602,7 @@ class TestListingDirectories:
         assert items[0].get("id") == "01BYE5RZZWSN2ASHUEBJH2XJJ25WSEBUJ3"
 
     @pytest.mark.skip(reason="not implemented")
-    def test_list_directory_failure(self, onedrive):
-        ...
+    def test_list_directory_failure(self, onedrive): ...
 
     def test_list_directory_failure_type(self, onedrive):
         with pytest.raises(TypeError) as excinfo:
@@ -627,8 +627,7 @@ class TestSearch:
         assert len(items) == exp_len
 
     @pytest.mark.skip(reason="not implemented")
-    def test_search_failure(self, onedrive):
-        ...
+    def test_search_failure(self, onedrive): ...
 
     @pytest.mark.parametrize(
         "query, top, exp_msg",
@@ -713,8 +712,7 @@ class TestItemDetails:
         assert stdout == exp_stout
 
     @pytest.mark.skip(reason="not implemented")
-    def test_detail_item_failure(self):
-        ...
+    def test_detail_item_failure(self): ...
 
     # detail_item_path
     def test_detail_item_path(self, onedrive):
@@ -735,8 +733,7 @@ class TestItemDetails:
         assert item_type == exp_type
 
     @pytest.mark.skip(reason="not implemented")
-    def test_item_type_failure(self):
-        ...
+    def test_item_type_failure(self): ...
 
     # is_folder
     @pytest.mark.parametrize(
@@ -751,8 +748,7 @@ class TestItemDetails:
         assert is_folder == exp_bool
 
     @pytest.mark.skip(reason="not implemented")
-    def test_is_folder_failure(self):
-        ...
+    def test_is_folder_failure(self): ...
 
     # is_file
     @pytest.mark.parametrize(
@@ -767,8 +763,7 @@ class TestItemDetails:
         assert is_file == exp_bool
 
     @pytest.mark.skip(reason="not implemented")
-    def test_is_file_failure(self):
-        ...
+    def test_is_file_failure(self): ...
 
 
 class TestSharingLink:
@@ -932,7 +927,7 @@ class TestMakeFolder:
             ("tesy 1", "01BYE5RZ4CPC5XBOTZCFD2CT7SZFNICEYC", True, "ACEA49D1-144"),
             ("tesy 1", "01BYE5RZ4CPC5XBOTZCFD2CT7SZFNICEYC", False, "ACEA49D1-144"),
             ("tesy 1", None, True, "ACEA49D1-144"),
-            ("tesy 1", None, False, "ACEA49D1-144")
+            ("tesy 1", None, False, "ACEA49D1-144"),
             # To-do: allow for other folder names by using a side effect in the mock route
         ],
     )
@@ -943,8 +938,7 @@ class TestMakeFolder:
         assert item_id == exp_str
 
     @pytest.mark.skip(reason="not implemented")
-    def test_make_folder_failure(self):
-        ...
+    def test_make_folder_failure(self): ...
 
 
 class TestMove:
@@ -1098,8 +1092,7 @@ class TestRename:
         assert returned_name == new_name
 
     @pytest.mark.skip(reason="not implemented")
-    def test_rename_item_failure(self):
-        ...
+    def test_rename_item_failure(self): ...
 
 
 class TestDelete:
@@ -1149,12 +1142,10 @@ class TestDownload:
 
     # download_file
     @pytest.mark.skip(reason="not implemented")
-    def test_download_file(self):
-        ...
+    def test_download_file(self): ...
 
     @pytest.mark.skip(reason="not implemented")
-    def test_download_file_failure(self):
-        ...
+    def test_download_file_failure(self): ...
 
     """# _download_async
     @pytest.mark.skip(reason="not implemented")

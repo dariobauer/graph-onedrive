@@ -1,4 +1,5 @@
 """Tests the config functions using pytest."""
+
 import json
 import sys
 from pathlib import Path
@@ -87,8 +88,7 @@ class TestLoad:
         data = load_config(config_path)
         assert data == config
 
-    def test_load_config_failure(self):
-        ...
+    def test_load_config_failure(self): ...
 
 
 class TestDump:
@@ -140,8 +140,7 @@ class TestDump:
         initial_file[config_key]["refresh_token"] = "new"
         assert read_data == initial_file
 
-    def test_dump_config_failure(self):
-        ...
+    def test_dump_config_failure(self): ...
 
 
 class TestFileTypeCheck:
