@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @contextmanager
 def OneDriveManager(
     config_path: str | Path, config_key: str = "onedrive"
-) -> Generator[OneDrive, None, None]:
+) -> Generator[OneDrive]:
     """Context manager for the OneDrive class, only use this if you want to save and read from a file.
     Positional arguments:
         config_path (str|Path) -- path to configuration file
