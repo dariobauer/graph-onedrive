@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* Python 3.7 has reached end of life so removed support and upgraded package
+* Python 3.7 and 3.8 have reached end of life so support was removed and the code upgraded
 
 ## Released
 
