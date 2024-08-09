@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
 from graph_onedrive._onedrive import OneDrive
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @contextmanager
 def OneDriveManager(
     config_path: str | Path, config_key: str = "onedrive"
-) -> Generator[OneDrive, None, None]:
+) -> Generator[OneDrive]:
     """Context manager for the OneDrive class, only use this if you want to save and read from a file.
     Positional arguments:
         config_path (str|Path) -- path to configuration file

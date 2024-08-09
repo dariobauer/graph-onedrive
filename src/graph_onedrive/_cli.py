@@ -9,7 +9,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Sequence
+from collections.abc import Sequence
 
 from graph_onedrive.__init__ import __version__
 from graph_onedrive._config import CONFIG_EXTS

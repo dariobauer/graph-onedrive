@@ -100,7 +100,7 @@ class TestDump:
     )
     def test_dump_config(self, tmp_path, config_path):
         config_key: str = "onedrive"
-        initial_file: Dict[str, Any] = {
+        initial_file: dict[str, Any] = {
             config_key: {
                 "tenant_id": TENANT,
                 "client_id": CLIENT_ID,

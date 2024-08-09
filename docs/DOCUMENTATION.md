@@ -60,8 +60,8 @@ The `redirect_url` and `refresh_token` values are default so these lines can be 
 
 #### Requirements
 
-The package currently requires Python 3.8 or greater.
-The last version to support Python 3.7 was release 0.4.0 which can still be installed.
+The package currently requires Python 3.9 or greater.
+The last version to support Python 3.7 and 3.8 was release 0.4.0 which can still be installed.
 
 #### Install
 

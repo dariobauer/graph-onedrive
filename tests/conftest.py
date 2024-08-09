@@ -488,7 +488,7 @@ def mock_auth_api():
 
 def side_effect_access_token(request):
     # Parse and decode the request content, typed to help mypy
-    body_encoded: List[Tuple[bytes, bytes]] = urllib.parse.parse_qsl(request.content)
+    body_encoded: list[tuple[bytes, bytes]] = urllib.parse.parse_qsl(request.content)
     body = {key.decode(): value.decode() for (key, value) in body_encoded}
     # Check the content is as expected
     grant_type = body["grant_type"]
