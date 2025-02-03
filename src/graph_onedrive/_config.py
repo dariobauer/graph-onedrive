@@ -1,5 +1,4 @@
-"""Configuration file related functions.
-"""
+"""Configuration file related functions."""
 
 from __future__ import annotations
 

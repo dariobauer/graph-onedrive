@@ -1,5 +1,4 @@
-"""Contains the OneDrive object class to interact through the Graph API using the Python package Graph-OneDrive.
-"""
+"""Contains the OneDrive object class to interact through the Graph API using the Python package Graph-OneDrive."""
 
 from __future__ import annotations
 
