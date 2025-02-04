@@ -1,5 +1,4 @@
-"""OneDrive context manager.
-"""
+"""OneDrive context manager."""
 
 from __future__ import annotations
 
