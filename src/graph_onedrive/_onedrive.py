@@ -1229,7 +1229,9 @@ class OneDrive:
                 f"starting download segment={part_name} start={start} end={end}"
             )
             # Create an AsyncIterator over our GET request
-            async with client.stream("GET", download_url, headers=headers, follow_redirects=True) as response:
+            async with client.stream(
+                "GET", download_url, headers=headers, follow_redirects=True
+            ) as response:
                 # Iterates over incoming bytes in chunks and saves them to file
                 self._raise_unexpected_response(
                     response, [200, 206], "item not downloaded"
