@@ -1103,7 +1103,7 @@ class OneDrive:
             logger.warning(f"downloaded file size=0, empty file '{file_name}' created.")
             return file_name
         # Create request url based on input item id to be downloaded
-        download_url = self._api_drive_url + "items/" + item_id + "/content"
+        download_url = self._api_drive_url + "items/" + item_id  + "/content"
         logger.debug(f"download_url={download_url}")
         # Download the file asynchronously
         asyncio.run(
