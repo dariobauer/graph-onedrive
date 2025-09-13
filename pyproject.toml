@@ -41,7 +41,7 @@ disallow_untyped_defs = false
 legacy_tox_ini = """
 [tox]
 envlist =
-    py{38,39,310}
+    py{39,310,311,312,313}
     style-and-typing
 skip_missing_interpreters = true
 
