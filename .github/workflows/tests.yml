@@ -19,12 +19,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
           - os: windows-latest
-            python-version: "3.9"
+            python-version: "3.11"
           - os: macos-latest
-            python-version: "3.9"
+            python-version: "3.11"
 
     steps:
       - name: Check out repository code
@@ -36,6 +36,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip virtualenv setuptools wheel
-          pip install tox
+          pip install tox==4.29.0
       - name: Test using tox
         run: tox -e py
