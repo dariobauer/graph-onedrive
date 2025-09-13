@@ -1,7 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=54",
-    "wheel"
+    "setuptools>=54"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -38,24 +37,16 @@ module = [
 disallow_untyped_defs = false
 
 [tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist =
-    py{38,39,310}
-    style-and-typing
+requires = ["tox<4.30"]
+env_list = ["py39", "py310", "py311", "py312", "py313", "style-and-typing"]
 skip_missing_interpreters = true
 
-[testenv]
-setenv =
-    PYTHONPATH = {toxinidir}
-deps = -r{toxinidir}/requirements-dev.txt
-commands =
-    coverage erase
-    coverage run -m pytest {posargs:tests}
-    coverage report --fail-under 55
+[tool.tox.env_run_base]
+setenv = {PYTHONPATH = "{toxinidir}"}
+deps = ["-r{toxinidir}/requirements.txt", "-r{toxinidir}/requirements-dev.txt"]
+commands = [["coverage", "erase"], ["coverage", "run", "-m", "pytest", "{posargs:tests}"], ["coverage", "report", "--fail-under", "55"]]
 
-[testenv:style-and-typing]
+[tool.tox.env.style-and-typing]
 skip_install = true
-deps = pre-commit
-commands = pre-commit run --all-files
-"""
+deps = ["pre-commit"]
+commands = [["pre-commit", "run", "--all-files"]]
