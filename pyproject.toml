@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.black]
-target-version = ["py39", "py310", "py311", "py312"]
+target-version = ["py39", "py310", "py311", "py312", "py313"]
 
 [tool.coverage.run]
 plugins = ["covdefaults",]
@@ -40,6 +40,8 @@ disallow_untyped_defs = false
 [tool.tox]
 legacy_tox_ini = """
 [tox]
+requires =
+    tox >= 4.0
 envlist =
     py{38,39,310}
     style-and-typing
