@@ -37,6 +37,18 @@ Documentation can always be improved, whether as part of the official docs or in
 Please first discuss any deviations from the current documentation formats already in use in the package.
 
 
+## Testing
+
+Testing your code is fairly simple using the tests already set up.
+
+1. Install the Tox: `pip install tox == 4.29.0` (note that there currently is an [issue](https://github.com/tox-dev/tox/issues/3602) with versions >= 4.30)
+2. Ensure that you are within the graph-onedrive directory
+3. Enter `tox` into the console
+4. A testing environment should be created automatically, and tests commence
+
+You are of course welcome to add additional tests within the tests directory.
+
+
 ## Submitting patches
 
 If there is not an open issue for what you want to submit, the preference is for you to open one for discussion before working on a pull request. You can work on any issue that doesn't have an open PR linked to it or a maintainer assigned to it. These show up in the sidebar. There is no need to ask if you can work on an issue that interests you.

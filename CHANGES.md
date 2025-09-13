@@ -2,9 +2,17 @@
 
 ## Unreleased
 
-* Python 3.7 and 3.8 have reached end of life so support was removed and the code upgraded
+*
 
 ## Released
+
+### Version 0.5.0
+
+* Python 3.7 and 3.8 have reached end of life so support was removed and the code upgraded
+* Fixed a bug in download_file method which requested the download url. Instead allow redirects to redirect the request url. This also saves a web query so should have a minor efficiency improvement. (Issue [#74](https://github.com/dariobauer/graph-onedrive/issues/74))
+* DEV: Fixed a conflict between between code formatters Black 24.1 and reorder-python-imports (Issue [#57](https://github.com/dariobauer/graph-onedrive/issues/57))
+* DEV: Cleaned up code testing setups (Tox and GitHub Workflows). Also limited impact from (Tox Issue [#3602](https://github.com/tox-dev/tox/issues/3602))
+* DEV: Updated the contributing.md file to include guidance on testing
 
 ### Version 0.4.0
 
