@@ -40,8 +40,6 @@ disallow_untyped_defs = false
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-requires =
-    tox >= 4.0
 envlist =
     py{38,39,310}
     style-and-typing
