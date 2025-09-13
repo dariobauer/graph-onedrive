@@ -5,7 +5,7 @@ pytest-asyncio
 pyyaml
 respx
 toml
-tox
+tox == 4.29.0
 types-aiofiles
 types-PyYAML
 types-toml
