@@ -18,11 +18,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        tox-env: ["py39", "py310", "py311", "py312", "py313"]
         include:
-          # Linux: all versions
+          # Linux:
           - os: ubuntu-latest
             python-version: "3.9"
             tox-env: "py39"
@@ -38,10 +35,11 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.13"
             tox-env: "py313"
-          # macOS & Windows: only 3.11
+          # macOS:
           - os: macos-latest
-            python-version: "3.11"
-            tox-env: "py311"
+            python-version: "3.13"
+            tox-env: "py313"
+          # Windows:
           - os: windows-latest
             python-version: "3.11"
             tox-env: "py311"
