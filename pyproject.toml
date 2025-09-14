@@ -114,7 +114,7 @@ module = [
 disallow_untyped_defs = false
 
 [tool.tox]
-requires = ["tox>4.0,<4.30"]
+requires = ["tox>=4.0"]
 env_list = ["py39", "py310", "py311", "py312", "py313", "style-and-typing"]
 skip_missing_interpreters = true
 

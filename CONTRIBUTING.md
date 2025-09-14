@@ -41,7 +41,7 @@ Please first discuss any deviations from the current documentation formats alrea
 
 Testing your code is fairly simple using the tests already set up.
 
-1. Install the Tox: `pip install tox == 4.29.0` (note that there currently is an [issue](https://github.com/tox-dev/tox/issues/3602) with versions >= 4.30)
+1. Install the Tox: `pip install -U tox >= 4.0`
 2. Ensure that you are within the graph-onedrive directory
 3. Enter `tox` into the console
 4. A testing environment should be created automatically, and tests commence
