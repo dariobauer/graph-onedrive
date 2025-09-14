@@ -18,13 +18,33 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        tox-env: ["py39", "py310", "py311", "py312", "py313"]
         include:
-          - os: windows-latest
+          # Linux: all versions
+          - os: ubuntu-latest
+            python-version: "3.9"
+            tox-env: "py39"
+          - os: ubuntu-latest
+            python-version: "3.10"
+            tox-env: "py310"
+          - os: ubuntu-latest
             python-version: "3.11"
+            tox-env: "py311"
+          - os: ubuntu-latest
+            python-version: "3.12"
+            tox-env: "py312"
+          - os: ubuntu-latest
+            python-version: "3.13"
+            tox-env: "py313"
+          # macOS & Windows: only 3.11
           - os: macos-latest
             python-version: "3.11"
+            tox-env: "py311"
+          - os: windows-latest
+            python-version: "3.11"
+            tox-env: "py311"
 
     steps:
       # 1. Checkout code
@@ -44,6 +64,4 @@ jobs:
 
       # 4. Run tests with tox for the current Python version
       - name: Run tests
-        run: tox run -f py${PYTHON_VERSION//.}
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: tox run -f ${{ matrix.tox-env }}
