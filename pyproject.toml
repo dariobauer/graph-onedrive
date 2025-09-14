@@ -4,6 +4,83 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "graph-onedrive"
+dynamic = ["version"]
+
+description = "Perform simple tasks on OneDrive through the Graph API."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.9"
+license = { text = "BSD-3-Clause" }
+
+authors = [
+    { name = "Dario Bauer", email = "dariobauer@duck.com" }
+]
+
+keywords = ["onedrive", "graph", "microsoft"]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "License :: OSI Approved :: BSD License",
+]
+
+dependencies = [
+    "aiofiles",
+    "httpx",
+]
+
+[project.urls]
+Homepage = "https://github.com/dariobauer/graph-onedrive"
+Documentation = "https://github.com/dariobauer/graph-onedrive/blob/main/docs/DOCUMENTATION.md"
+"Issue Tracker" = "https://github.com/dariobauer/graph-onedrive/issues"
+Changes = "https://github.com/dariobauer/graph-onedrive/blob/main/CHANGES.md"
+"Source Code" = "https://github.com/dariobauer/graph-onedrive"
+
+[project.optional-dependencies]
+toml = ["toml"]
+yaml = ["pyyaml"]
+
+# Testing dependencies used by Tox
+# Note: contributors need to install tox before testing, refer CONTRIBUTING.md
+test = [
+    "covdefaults",
+    "coverage[toml]",
+    "pytest",
+    "pytest-asyncio",
+    "pyyaml",
+    "respx",
+    "toml",
+    "types-aiofiles",
+    "types-PyYAML",
+    "types-toml",
+]
+
+[project.scripts]
+graph-onedrive = "graph_onedrive._cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*", "testing*", "docs*"]
+
+[tool.setuptools.package-data]
+graph_onedrive = ["py.typed"]
+
+# ---- Tooling Configurations ----
+
 [tool.black]
 target-version = ["py39", "py310", "py311", "py312", "py313"]
 
@@ -12,7 +89,7 @@ plugins = ["covdefaults",]
 source = ["graph_onedrive"]
 
 [tool.pytest.ini_options]
-minversion = "6.0"
+minversion = "7.0"
 testpaths = ["tests",]
 
 [tool.mypy]
@@ -37,14 +114,18 @@ module = [
 disallow_untyped_defs = false
 
 [tool.tox]
-requires = ["tox>4.0,<4.30"]
+requires = ["tox>=4.0"]
 env_list = ["py39", "py310", "py311", "py312", "py313", "style-and-typing"]
 skip_missing_interpreters = true
 
 [tool.tox.env_run_base]
 setenv = {PYTHONPATH = "{toxinidir}"}
-deps = ["-r{toxinidir}/requirements.txt", "-r{toxinidir}/requirements-dev.txt"]
-commands = [["coverage", "erase"], ["coverage", "run", "-m", "pytest", "{posargs:tests}"], ["coverage", "report", "--fail-under", "55"]]
+deps = [".[test]"]
+commands = [
+    ["coverage", "erase"],
+    ["coverage", "run", "-m", "pytest", "{posargs:tests}"],
+    ["coverage", "report", "--fail-under", "55"],
+]
 
 [tool.tox.env.style-and-typing]
 skip_install = true

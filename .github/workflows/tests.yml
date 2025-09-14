@@ -1,7 +1,7 @@
 # Test the revised code on a push into the main branch
 # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#running-tests-with-tox
 
-name: Tests
+name: CI
 
 on:
   pull_request:
@@ -18,24 +18,48 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
+          # Linux:
+          - os: ubuntu-latest
+            python-version: "3.9"
+            tox-env: "py39"
+          - os: ubuntu-latest
+            python-version: "3.10"
+            tox-env: "py310"
+          - os: ubuntu-latest
+            python-version: "3.11"
+            tox-env: "py311"
+          - os: ubuntu-latest
+            python-version: "3.12"
+            tox-env: "py312"
+          - os: ubuntu-latest
+            python-version: "3.13"
+            tox-env: "py313"
+          # macOS:
+          - os: macos-latest
+            python-version: "3.13"
+            tox-env: "py313"
+          # Windows:
           - os: windows-latest
             python-version: "3.11"
-          - os: macos-latest
-            python-version: "3.11"
+            tox-env: "py311"
 
     steps:
+      # 1. Checkout code
       - name: Check out repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      # 2. Set up Python
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+
+          # 3. Install build tools and tox
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip virtualenv setuptools wheel
-          pip install tox==4.29.0
-      - name: Test using tox
-        run: tox -e py
+          python -m pip install --upgrade pip setuptools>=77 wheel tox>=4.0
+
+      # 4. Run tests with tox for the current Python version
+      - name: Run tests
+        run: tox run -f ${{ matrix.tox-env }}

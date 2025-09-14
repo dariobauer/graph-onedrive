@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-*
+* Updated to modern Python packaging (migrated setup.cfg, setup.py, requirements.txt, requirements-dev.txt to pyproject.toml)
+* Updated GitHub Workflows to test correctly with updated testing matrix
 
 ## Released
 
