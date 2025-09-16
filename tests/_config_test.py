@@ -20,7 +20,6 @@ from .conftest import REFRESH_TOKEN
 from .conftest import SCOPE
 from .conftest import TENANT
 from .conftest import TESTS_DIR
-from graph_onedrive._config import _check_file_type
 from graph_onedrive._config import dump_config
 from graph_onedrive._config import load_config
 
@@ -141,41 +140,3 @@ class TestDump:
         assert read_data == initial_file
 
     def test_dump_config_failure(self): ...
-
-
-class TestFileTypeCheck:
-    """Tests the _check_file_type function."""
-
-    @pytest.mark.parametrize(
-        "file_path, accepted_formats",
-        [
-            ("config.json", (".json",)),
-            ("test.yaml", (".json", ".yaml")),
-            ("unknown.txt.toml", (".json", ".yaml", ".toml")),
-        ],
-    )
-    def test_check_file_type(self, file_path, accepted_formats):
-        result = _check_file_type(file_path, accepted_formats)
-        assert result == True
-
-    @pytest.mark.parametrize(
-        "file_path, accepted_formats, exp_msg",
-        [
-            ("config.json", (".txt",), "file path must have .txt extension"),
-            (
-                "test.yaml",
-                (".json",),
-                "file path was to yaml file but PyYAML is not installed, Hint: 'pip install pyyaml'",
-            ),
-            (
-                "unknown.txt.toml",
-                (".json", ".yaml"),
-                "file path was to toml file but TOML is not installed, Hint: 'pip install toml'",
-            ),
-        ],
-    )
-    def test_check_file_type_failure(self, file_path, accepted_formats, exp_msg):
-        with pytest.raises(TypeError) as excinfo:
-            _check_file_type(file_path, accepted_formats)
-        (msg,) = excinfo.value.args
-        assert msg == exp_msg

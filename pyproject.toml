@@ -46,9 +46,6 @@ Changes = "https://github.com/dariobauer/graph-onedrive/blob/main/CHANGES.md"
 "Source Code" = "https://github.com/dariobauer/graph-onedrive"
 
 [project.optional-dependencies]
-toml = ["toml"]
-yaml = ["pyyaml"]
-
 # Testing dependencies used by Tox
 # Note: contributors need to install tox before testing, refer CONTRIBUTING.md
 test = [

@@ -5,41 +5,94 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
-from typing import Optional
+from typing import Any, Callable, Optional, IO
 
 # Set logger
 logger = logging.getLogger(__name__)
 
-# import the PyYAML optional dependency
+# Define type aliases for loader and dumper functions
+_load_toml: Callable[[IO[Any]], Any] | None = None
+_dump_toml: Callable[[Any, IO[str]], object] | None = None
+_load_yaml: Callable[[IO[bytes]], Any] | None = None
+_dump_yaml: Callable[[Any, IO[str]], None] | None = None
+
+# try to import PyYAML
 try:
     import yaml
 
-    optionals_yaml = True
+    _load_yaml = lambda f: yaml.safe_load(f)
+    _dump_yaml = lambda obj, fp: yaml.safe_dump(obj, fp)
     logger.debug("yaml imported successfully, YAML config files supported")
 except ImportError:
-    optionals_yaml = False
+    _load_yaml = None
+    _dump_yaml = None
     logger.debug("yaml could not be imported, YAML config files not supported")
 
-# import the TOML optional dependency
+# try to import a toml packages to read and write toml files
+# default: no dumper
+_dump_toml = None
+
+# Try tomllib (read only, Python 3.11+)
+try:
+    import tomllib
+
+    _load_toml = lambda f: tomllib.load(f)
+    logger.debug(
+        "tomllib imported successfully, reading of TOML config files supported"
+    )
+except ImportError:
+    try:
+        import tomli
+
+        _load_toml = lambda f: tomli.load(f)
+        logger.debug(
+            "tomli imported successfully, reading of TOML config files supported"
+        )
+    except ImportError:
+        _load_toml = None
+
+# Try toml (read/write)
 try:
     import toml
 
-    optionals_toml = True
-    logger.debug("toml imported successfully, TOML config files supported")
+    if _load_toml is None:
+        _load_toml = lambda f: toml.load(f)
+    _dump_toml = lambda obj, fp: toml.dump(obj, fp)
+    logger.debug(
+        "toml imported successfully, reading and writing of TOML config files supported"
+    )
 except ImportError:
-    optionals_toml = False
-    logger.debug("toml could not be imported, TOML config files not supported")
+    pass
 
-# Create a tuple of acceptable config file extensions, typically used for str.endswith()
-if optionals_yaml and optionals_toml:
-    CONFIG_EXTS: tuple[str, ...] = (".json", ".yaml", ".toml")
-elif optionals_yaml:
-    CONFIG_EXTS = (".json", ".yaml")
-elif optionals_toml:
-    CONFIG_EXTS = (".json", ".toml")
-else:
-    CONFIG_EXTS = (".json",)
+# Try tomli_w (write only)
+if _dump_toml is None:
+    try:
+        import tomli_w
+
+        _dump_toml = lambda obj, fp: fp.write(tomli_w.dumps(obj))
+        logger.debug(
+            "tomli_w imported successfully, writing of TOML config files supported"
+        )
+    except ImportError:
+        pass
+
+# Try tomlkit (read/write)
+if _dump_toml is None or _load_toml is None:
+    try:
+        import tomlkit
+
+        if _load_toml is None:
+            _load_toml = lambda f: tomlkit.parse(f.read())
+            logger.debug(
+                "tomlkit imported successfully, reading of TOML config files supported"
+            )
+        if _dump_toml is None:
+            _dump_toml = lambda obj, fp: fp.write(tomlkit.dumps(obj))
+            logger.debug(
+                "tomlkit imported successfully, writing of TOML config files supported"
+            )
+    except ImportError:
+        logger.debug("toml files are either not at all, or not fully supported")
 
 
 def load_config(
@@ -52,22 +105,37 @@ def load_config(
     Returns:
         config (dict) -- returns the decoded dictionary contents
     """
+    # convert to a Path object
+    config_path = Path(config_path)
+
+    # check that the file exists
+    if not config_path.is_file():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
     # check the file type
-    _check_file_type(config_path)
+    suffix = config_path.suffix.lower()
 
     # read the config file
-    with open(config_path) as config_file:
-        if str(config_path).endswith(".json"):
+    with config_path.open("rb") as config_file:
+        if suffix in (".json",):
             logger.debug(f"loading {config_path} as a json file")
             config = json.load(config_file)
-        elif str(config_path).endswith(".yaml"):
+        elif suffix in (".yaml", ".yml"):
+            if _load_yaml is None:
+                raise ImportError(
+                    "PyYAML is required to parse YAML files. Install with `pip install pyyaml`."
+                )
             logger.debug(f"loading {config_path} as a yaml file")
-            config = yaml.safe_load(config_file)
-        elif str(config_path).endswith(".toml"):
+            config = _load_yaml(config_file)
+        elif suffix in (".toml",):
+            if _load_toml is None:
+                raise ImportError(
+                    "No TOML parser available. Install one of: Python >=3.11 (tomllib), tomli, or toml."
+                )
             logger.debug(f"loading {config_path} as a toml file")
-            config = toml.load(config_file)
+            config = _load_toml(config_file)
         else:
-            raise NotImplementedError("config file type not supported")
+            raise NotImplementedError(f"Unsupported config format: {suffix}")
 
     # return raw data if option set
     if config_key is None:
@@ -78,9 +146,7 @@ def load_config(
     try:
         return config[config_key]
     except KeyError:
-        raise KeyError(
-            f"config_key '{config_key}' not found in '{Path(config_path).name}'"
-        )
+        raise KeyError(f"config_key '{config_key}' not found in '{config_path.name}'")
 
 
 def dump_config(
@@ -104,45 +170,24 @@ def dump_config(
     main_config.update({config_key: config})
 
     # Dump to file
-    with open(config_path, "w") as config_file:
-        if str(config_path).endswith(".json"):
+    suffix = Path(config_path).suffix.lower()
+    with open(config_path, "w", encoding="utf-8") as config_file:
+        if suffix in (".json",):
             logger.debug(f"dumping data to {config_path} as a json file")
             json.dump(main_config, config_file, indent=4)
-        elif str(config_path).endswith(".yaml"):
+        elif suffix in (".yaml", ".yml"):
+            if _dump_yaml is None:
+                raise ImportError(
+                    "PyYAML is required to write YAML files. Install with `pip install pyyaml`."
+                )
             logger.debug(f"dumping data to {config_path} as a yaml file")
-            yaml.safe_dump(main_config, config_file)
-        elif str(config_path).endswith(".toml"):
+            _dump_yaml(main_config, config_file)
+        elif suffix in (".toml",):
+            if _dump_toml is None:
+                raise ImportError(
+                    "No TOML writer available. Install the 'toml' package with `pip install toml`."
+                )
             logger.debug(f"dumping data to {config_path} as a toml file")
-            toml.dump(main_config, config_file)
+            _dump_toml(main_config, config_file)
         else:
-            raise NotImplementedError("config file type not supported")
-
-
-def _check_file_type(
-    file_path: str | Path, accepted_formats: tuple[str, ...] = CONFIG_EXTS
-) -> bool:
-    """INTERNAL: Checks a file extension type compared to a tuple of acceptable types.
-    Positional arguments:
-        file_path (str|Path) -- a path to a file
-    Keyword arguments:
-        accepted_formats (tuple) -- tuple of acceptable file extensions (default = (".json", ".yaml", ".toml"))
-    Returns:
-        (bool) -- True if acceptable, otherwise raises TypeError
-    """
-    # Return true if the file has an acceptable extension
-    if str(file_path).endswith(accepted_formats):
-        return True
-
-    # Raise TypeErrors but provide hints for toml and yaml files
-    if str(file_path).endswith(".yaml"):
-        raise TypeError(
-            f"file path was to yaml file but PyYAML is not installed, Hint: 'pip install pyyaml'"
-        )
-    elif str(file_path).endswith(".toml"):
-        raise TypeError(
-            f"file path was to toml file but TOML is not installed, Hint: 'pip install toml'"
-        )
-    else:
-        raise TypeError(
-            f"file path must have {' or '.join([i for i in accepted_formats])} extension"
-        )
+            raise NotImplementedError(f"Unsupported config file type: {suffix}")

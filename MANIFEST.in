@@ -3,3 +3,4 @@ include CHANGES.md
 include LICENSE
 include src/graph_onedrive/py.typed
 global-exclude *.pyc
+global-exclude __pycache__
