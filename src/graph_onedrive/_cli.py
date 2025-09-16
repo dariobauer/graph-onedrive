@@ -12,9 +12,9 @@ from pathlib import Path
 from collections.abc import Sequence
 
 from graph_onedrive.__init__ import __version__
-from graph_onedrive._config import CONFIG_EXTS
 from graph_onedrive._config import dump_config
 from graph_onedrive._config import load_config
+from graph_onedrive._config import _load_yaml, _load_toml, _dump_toml
 from graph_onedrive._main import OneDrive
 
 
@@ -30,6 +30,9 @@ handler = logging.StreamHandler()
 formatter = logging.Formatter("[%(levelname)s] %(message)s")
 handler.setFormatter(formatter)
 package_logger.addHandler(handler)
+
+# Define supported file extensions (assuming at least one parser is available for each type)
+CONFIG_EXTS = (".toml", ".yaml", ".yml", ".json")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -93,14 +96,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not (args.configure or args.authenticate or args.instance):
         parser.error("No action provided, use --help for details")
 
-    if args.file and not args.file.endswith(CONFIG_EXTS):
-        if args.file.endswith((".yaml",)):
-            parser.error(f"--file path was to yaml file but PyYAML is not installed")
-        elif args.file.endswith((".toml",)):
-            parser.error(f"--file path was to toml file but TOML is not installed")
-        else:
+    if args.file:
+        ext = Path(args.file).suffix.lower()
+
+        if ext not in CONFIG_EXTS:
             parser.error(
-                f"--file path must have {' or '.join([i for i in CONFIG_EXTS])} extension"
+                f"--file path must have one of: {', '.join(sorted(CONFIG_EXTS))}"
+            )
+
+        if ext in {".yaml", ".yml"} and _load_yaml is None:
+            parser.error(
+                "--file path points to a YAML file but PyYAML is not installed"
+            )
+
+        if ext == ".toml" and (_load_toml is None or _dump_toml is None):
+            parser.error(
+                "--file path points to a TOML file but no TOML parser is installed"
             )
 
     if args.key and args.key == "":

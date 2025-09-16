@@ -61,7 +61,8 @@ The `redirect_url` and `refresh_token` values are default so these lines can be 
 #### Requirements
 
 The package currently requires Python 3.9 or greater.
-The last version to support Python 3.7 and 3.8 was release 0.4.0 which can still be installed.
+
+Release 0.4.0 can be used with Python 3.7 and 3.8.
 
 #### Install
 
@@ -72,16 +73,10 @@ Depending on your installation you may need to use `pip3` instead.
 pip install -U graph-onedrive
 ```
 
-If you plan to use YAML and/or TOML formatted config files, then the optional install dependencies can be installed (yaml, toml, or both):
-
-```console
-pip install -U 'graph-onedrive[yaml,toml]'
-```
-
 You can also install the in-development version:
 
 ```console
-pip install https://github.com/dariobauer/graph-onedrive/archive/main.zip
+pip install -U https://github.com/dariobauer/graph-onedrive/archive/main.zip
 ```
 
 #### Dependencies
@@ -95,10 +90,10 @@ These dependencies provide critical functions for the package to run and will ty
 
 ##### Optional Dependencies
 
-Optional dependencies provide secondary features that are not part of the core package functionality and will not typically be installed automatically. These can be installed manually or as a package extra as described in [installation](#installation).
+Optional dependencies provide secondary features that are not part of the core package functionality. These can be installed manually (e.g. `pip install pyyaml`).
 
 * [PyYAML](https://pypi.org/project/PyYAML/) - enables .yaml config files
-* [TOML](https://pypi.org/project/TOML/) - enables .toml config files
+* [TOML](https://pypi.org/project/TOML/) or [TOML Kit](https://pypi.org/project/tomlkit/) - fully enables .toml config files (tomli, tomli-w, and tomllib can also be used but multiple need to be installed for both read and write file support)
 
 ## Command-line interface
 
