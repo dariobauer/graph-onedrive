@@ -3,12 +3,12 @@ ci:
   autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.21.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: ["--py39-plus"]
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 25.9.0
+    rev: 25.11.0
     hooks:
       - id: black
   - repo: https://github.com/asottile/blacken-docs
@@ -35,7 +35,7 @@ repos:
       - id: fix-byte-order-marker
       - id: end-of-file-fixer
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v1.19.0
     hooks:
       - id: mypy
         additional_dependencies: [types-aiofiles, types-PyYAML, types-toml]
