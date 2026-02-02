@@ -9,7 +9,6 @@ from collections.abc import Generator
 
 from graph_onedrive._onedrive import OneDrive
 
-
 # Set logger
 logger = logging.getLogger(__name__)
 

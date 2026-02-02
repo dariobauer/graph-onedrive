@@ -5,7 +5,6 @@ from datetime import datetime
 from functools import wraps
 from typing import no_type_check
 
-
 # Set logger
 logger = logging.getLogger(__name__)
 

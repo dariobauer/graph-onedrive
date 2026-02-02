@@ -14,7 +14,6 @@ import respx
 
 import graph_onedrive
 
-
 # Set the variables used to create the OneDrive instances in tests
 # Warning: certain tests require these to match the assertions in the tests
 CLIENT_ID = "1a2B3"

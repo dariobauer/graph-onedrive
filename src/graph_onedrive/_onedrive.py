@@ -29,7 +29,6 @@ from graph_onedrive._config import dump_config
 from graph_onedrive._config import load_config
 from graph_onedrive._decorators import token_required
 
-
 # Set logger
 logger = logging.getLogger(__name__)
 

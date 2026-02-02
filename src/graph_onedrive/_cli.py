@@ -17,7 +17,6 @@ from graph_onedrive._config import load_config
 from graph_onedrive._config import _load_yaml, _load_toml, _dump_toml
 from graph_onedrive._main import OneDrive
 
-
 CONFIG_DEFAULT_FILENAME = "config"
 CONFIG_DEFAULT_KEY = "onedrive"
 
