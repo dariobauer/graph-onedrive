@@ -141,7 +141,7 @@ def config(config_path: str | None = None, config_key: str | None = None) -> Non
 
     if config_path and not config_path.endswith(CONFIG_EXTS):
         raise ValueError(
-            f"config_path expected extension {' or '.join([i for i in CONFIG_EXTS])}"
+            f"config_path expected extension {' or '.join([*CONFIG_EXTS])}"
         )
 
     # Set the export directory when not set as an argument
@@ -160,7 +160,7 @@ def config(config_path: str | None = None, config_key: str | None = None) -> Non
             config_path = ""
             while not config_path.endswith(CONFIG_EXTS):
                 config_path = input(
-                    f"Path to config file (with extension {' or '.join([i for i in CONFIG_EXTS])}): "
+                    f"Path to config file (with extension {' or '.join([*CONFIG_EXTS])}): "
                 ).strip()
 
     # Set config dictionary key
